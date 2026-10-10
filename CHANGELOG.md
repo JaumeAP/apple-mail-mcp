@@ -1,5 +1,25 @@
 ## [Unreleased]
 
+## [2.20.9-jap.4] - 2026-10-10 (JaumeAP fork)
+
+### Fixed
+
+- **A send never leaves from an account other than the one asked for.**
+  `send-email`, `send-serial-email` and `create-draft` put the account _name_ in
+  `set sender to`, where Mail expects an address; Mail did not recognise it and
+  silently used its default sending account, so a message asked to leave from
+  one account left from another. The `account` is now resolved against the
+  enabled accounts, by name or by email address, and Mail gets that account's
+  address.
+
+### Changed
+
+- **A send with no account, or with one that matches no enabled account, is
+  refused** (AppleScript transport): nothing is composed, no attachment is
+  staged and nothing is sent, and the error names the enabled accounts.
+  `send-serial-email` refuses the whole batch up front. `create-draft` validates
+  an account when one is given and keeps Mail's default when none is.
+
 ## [2.20.9-jap.3] - 2026-10-10 (JaumeAP fork)
 
 ### Security

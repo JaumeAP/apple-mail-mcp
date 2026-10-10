@@ -71,8 +71,12 @@ describe("attachment path boundaries", () => {
     const file = "/etc/hosts";
 
     const mgr = new AppleMailManager();
+    vi.spyOn(
+      mgr as unknown as { getCachedAccounts: () => unknown },
+      "getCachedAccounts"
+    ).mockReturnValue([{ name: "Work", email: "me@work.example", enabled: true }]);
     expect(() =>
-      mgr.sendEmail(["to@example.com"], "subject", "body", undefined, undefined, undefined, [file])
+      mgr.sendEmail(["to@example.com"], "subject", "body", undefined, undefined, "Work", [file])
     ).toThrow(/outside the allowed read roots/);
     expect(h.calls).toBe(0);
   });

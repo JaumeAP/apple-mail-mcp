@@ -1455,7 +1455,14 @@ registerTool(
       body: z.string().min(1, "Body is required"),
       cc: z.array(z.string()).optional().describe("CC recipients"),
       bcc: z.array(z.string()).optional().describe("BCC recipients"),
-      account: z.string().optional().describe("Account to send from"),
+      account: z
+        .string()
+        .optional()
+        .describe(
+          "Account to send from: its name or its email address (see list-accounts). Required on " +
+            "the AppleScript transport; the send is refused when it is missing or matches no " +
+            "enabled account, rather than leaving from Mail's default account."
+        ),
       attachments: ATTACHMENTS_SCHEMA,
       inReplyTo: IN_REPLY_TO_SCHEMA,
       references: REFERENCES_SCHEMA,
@@ -1598,7 +1605,13 @@ registerTool(
         .string()
         .min(1, "Body is required")
         .describe("Email body — use {{Key}} for placeholders"),
-      account: z.string().optional().describe("Account to send from"),
+      account: z
+        .string()
+        .optional()
+        .describe(
+          "Account to send from: its name or its email address (see list-accounts). The whole " +
+            "batch is refused when it is missing or matches no enabled account."
+        ),
       delayMs: z
         .number()
         .min(0)
