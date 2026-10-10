@@ -37,7 +37,7 @@ afterEach(() => {
 
 describe("attachment path boundaries", () => {
   it("rejects an allowed-root symlink that resolves outside the allowed roots", () => {
-    const root = mkdtempSync(join(homedir(), ".apple-mail-mcp-test-"));
+    const root = mkdtempSync(join(homedir(), "apple-mail-mcp-test-"));
     cleanup.push(root);
     const link = join(root, "outside");
     symlinkSync("/etc", link, "dir");
@@ -48,7 +48,7 @@ describe("attachment path boundaries", () => {
   });
 
   it("rejects an existing symbolic-link destination", () => {
-    const root = mkdtempSync(join(homedir(), ".apple-mail-mcp-test-"));
+    const root = mkdtempSync(join(homedir(), "apple-mail-mcp-test-"));
     cleanup.push(root);
     symlinkSync("/etc/hosts", join(root, "hosts"));
 
@@ -58,7 +58,7 @@ describe("attachment path boundaries", () => {
   });
 
   it("rejects an existing regular-file destination", () => {
-    const root = mkdtempSync(join(homedir(), ".apple-mail-mcp-test-"));
+    const root = mkdtempSync(join(homedir(), "apple-mail-mcp-test-"));
     cleanup.push(root);
     writeFileSync(join(root, "hosts"), "keep me");
 
@@ -92,7 +92,8 @@ describe("attachment path boundaries", () => {
   });
 
   it("creates MIME fallback files with owner-only permissions", () => {
-    const root = mkdtempSync(join(homedir(), ".apple-mail-mcp-test-"));
+    // Save targets may not sit under a hidden folder, so this root is visible.
+    const root = mkdtempSync(join(homedir(), "apple-mail-mcp-test-"));
     cleanup.push(root);
     const mgr = new AppleMailManager();
     vi.spyOn(mgr, "getRawSource").mockReturnValue(`Content-Type: multipart/mixed; boundary="b"
@@ -111,7 +112,7 @@ cGF5bG9hZA==
   });
 
   it("stages AppleScript files privately and normalizes the final mode", () => {
-    const root = mkdtempSync(join(homedir(), ".apple-mail-mcp-test-"));
+    const root = mkdtempSync(join(homedir(), "apple-mail-mcp-test-"));
     cleanup.push(root);
     h.success = true;
     h.output = "ok";

@@ -1939,6 +1939,26 @@ User: "Send it"
 AI: [User opens Mail.app and sends manually, or AI calls send-email]
 ```
 
+#### Server-side tool gate (`APPLE_MAIL_MCP_MODE`)
+
+"Confirm before sending" in a tool description is advice to the model, and a
+prompt injection inside an email body can ignore it. `APPLE_MAIL_MCP_MODE`
+removes tools from the server instead, so they are neither listed nor callable:
+
+| Value            | Tools offered                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------- |
+| `full` (default) | All of them                                                                                       |
+| `no_send`        | All except `send-email`, `send-serial-email`, `reply-to-message`, `forward-message`              |
+| `read_only`      | Only tools that change nothing in Mail, on disk or in the template store                          |
+
+An unknown value stops the server rather than falling back to `full`. Tools that
+send or delete always carry `destructiveHint`, so a client that honours MCP
+annotations can ask before running them.
+
+Attachments are read from, and saved to, ordinary user folders only: hidden
+paths and `~/Library` are refused, except `~/Library/Mobile Documents` (iCloud
+Drive) and `~/Library/CloudStorage`.
+
 ### Sending Personalized Emails (Mail Merge)
 
 ```

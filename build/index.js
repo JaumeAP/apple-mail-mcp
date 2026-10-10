@@ -7770,7 +7770,8 @@ function isProtectedPath(candidate) {
   }
   if (!isWithinRoot(candidate, home)) return false;
   const relative = candidate.slice(home.length).split(sep).filter(Boolean);
-  return relative.length >= 4 && relative[0].toLowerCase() === "library" && relative[1].toLowerCase() === "application support" && relative.at(-1)?.toLowerCase() === "config.json";
+  if (relative[0]?.toLowerCase() !== "library") return false;
+  return !LIBRARY_DOCUMENT_FOLDERS.includes(relative[1]?.toLowerCase() ?? "");
 }
 function configuredRoots(env) {
   const raw = env[ATTACHMENT_READ_ROOTS_ENV];
@@ -7811,7 +7812,7 @@ function resolveAttachmentReadPath(filePath, env = process.env) {
   }
   if (isProtectedPath(canonical)) {
     throw new Error(
-      `Attachment path is in a protected location: "${filePath}". Hidden files and credential/configuration locations cannot be sent as attachments.`
+      `Attachment path is in a protected location: "${filePath}". Hidden files, credential locations and ~/Library (except iCloud Drive and CloudStorage) cannot be sent as attachments.`
     );
   }
   if (!configuredRoots(env).some((root) => isWithinRoot(canonical, root))) {
@@ -7821,7 +7822,7 @@ function resolveAttachmentReadPath(filePath, env = process.env) {
   }
   return canonical;
 }
-var ATTACHMENT_READ_ROOTS_ENV, DEFAULT_ATTACHMENT_READ_ROOTS, SENSITIVE_HOME_ROOTS;
+var ATTACHMENT_READ_ROOTS_ENV, DEFAULT_ATTACHMENT_READ_ROOTS, SENSITIVE_HOME_ROOTS, LIBRARY_DOCUMENT_FOLDERS;
 var init_attachmentReadPolicy = __esm({
   "src/utils/attachmentReadPolicy.ts"() {
     "use strict";
@@ -7833,6 +7834,7 @@ var init_attachmentReadPolicy = __esm({
       join3(homedir3(), ".config", "gh"),
       join3(homedir3(), "Library", "Keychains")
     ];
+    LIBRARY_DOCUMENT_FOLDERS = ["mobile documents", "cloudstorage"];
   }
 });
 
@@ -82978,6 +82980,7 @@ function splitSearchDiagnostics(output, account) {
 }
 var ALLOWED_SAVE_ROOTS = [homedir5(), "/tmp", "/private/tmp", "/Volumes"];
 function isPathWithinAllowedRoots(resolvedPath) {
+  if (isProtectedPath(resolvedPath)) return false;
   return ALLOWED_SAVE_ROOTS.some((root) => {
     const base2 = root.endsWith(sep2) ? root.slice(0, -1) : root;
     return resolvedPath === base2 || resolvedPath.startsWith(base2 + sep2);
@@ -89111,6 +89114,69 @@ function withJsonSchema2020_12(transport2) {
   return transport2;
 }
 
+// src/utils/toolMode.ts
+var TOOL_MODE_ENV = "APPLE_MAIL_MCP_MODE";
+var TOOL_MODES = ["full", "no_send", "read_only"];
+var SENDING_TOOLS = /* @__PURE__ */ new Set([
+  "send-email",
+  "send-serial-email",
+  "reply-to-message",
+  "forward-message"
+]);
+var WRITING_TOOLS = /* @__PURE__ */ new Set([
+  "create-draft",
+  "mark-as-read",
+  "mark-as-unread",
+  "flag-message",
+  "unflag-message",
+  "delete-message",
+  "move-message",
+  "batch-delete-messages",
+  "batch-move-messages",
+  "batch-mark-as-read",
+  "batch-mark-as-unread",
+  "batch-flag-messages",
+  "batch-unflag-messages",
+  "save-attachment",
+  "create-mailbox",
+  "delete-mailbox",
+  "rename-mailbox",
+  "create-smart-mailbox",
+  "delete-smart-mailbox",
+  "create-newsletter-smart-mailboxes",
+  "enable-rule",
+  "disable-rule",
+  "create-rule",
+  "delete-rule",
+  "save-template",
+  "delete-template",
+  "use-template"
+]);
+var DESTRUCTIVE_TOOLS = /* @__PURE__ */ new Set([
+  ...SENDING_TOOLS,
+  "delete-message",
+  "batch-delete-messages",
+  "delete-mailbox",
+  "delete-smart-mailbox",
+  "create-rule",
+  "delete-rule",
+  "delete-template"
+]);
+function parseToolMode(raw) {
+  const value = (raw ?? "").trim().toLowerCase() || "full";
+  if (TOOL_MODES.includes(value)) return value;
+  throw new Error(`${TOOL_MODE_ENV} must be one of ${TOOL_MODES.join(", ")}; got "${raw}".`);
+}
+function isToolAllowed(name2, mode) {
+  if (mode === "full") return true;
+  if (SENDING_TOOLS.has(name2)) return false;
+  return mode === "no_send" || !WRITING_TOOLS.has(name2);
+}
+function withSafetyAnnotations(name2, annotations) {
+  if (!DESTRUCTIVE_TOOLS.has(name2)) return annotations;
+  return { ...annotations, destructiveHint: true };
+}
+
 // src/index.ts
 init_auditLog();
 loadFileConfig();
@@ -89277,12 +89343,16 @@ var server = new McpServer(
 );
 function registerTool(name2, config2, cb) {
   const { outputSchema, ...rest } = config2;
-  return server.registerTool(
+  rest.annotations = withSafetyAnnotations(name2, rest.annotations);
+  const tool = server.registerTool(
     name2,
     outputSchema ? { ...rest, outputSchema: external_exports.object(outputSchema).passthrough() } : rest,
     cb
   );
+  if (!isToolAllowed(name2, toolMode)) tool.disable();
+  return tool;
 }
+var toolMode = parseToolMode(process.env[TOOL_MODE_ENV]);
 var mailManager = new AppleMailManager();
 registerResourcesAndPrompts(server, mailManager);
 function collectForensics(tool, args) {

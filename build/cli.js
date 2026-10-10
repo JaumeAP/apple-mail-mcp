@@ -12183,7 +12183,8 @@ function isProtectedPath(candidate) {
   }
   if (!isWithinRoot(candidate, home)) return false;
   const relative = candidate.slice(home.length).split(sep).filter(Boolean);
-  return relative.length >= 4 && relative[0].toLowerCase() === "library" && relative[1].toLowerCase() === "application support" && relative.at(-1)?.toLowerCase() === "config.json";
+  if (relative[0]?.toLowerCase() !== "library") return false;
+  return !LIBRARY_DOCUMENT_FOLDERS.includes(relative[1]?.toLowerCase() ?? "");
 }
 function configuredRoots(env) {
   const raw = env[ATTACHMENT_READ_ROOTS_ENV];
@@ -12224,7 +12225,7 @@ function resolveAttachmentReadPath(filePath, env = process.env) {
   }
   if (isProtectedPath(canonical)) {
     throw new Error(
-      `Attachment path is in a protected location: "${filePath}". Hidden files and credential/configuration locations cannot be sent as attachments.`
+      `Attachment path is in a protected location: "${filePath}". Hidden files, credential locations and ~/Library (except iCloud Drive and CloudStorage) cannot be sent as attachments.`
     );
   }
   if (!configuredRoots(env).some((root) => isWithinRoot(canonical, root))) {
@@ -12234,7 +12235,7 @@ function resolveAttachmentReadPath(filePath, env = process.env) {
   }
   return canonical;
 }
-var ATTACHMENT_READ_ROOTS_ENV, DEFAULT_ATTACHMENT_READ_ROOTS, SENSITIVE_HOME_ROOTS;
+var ATTACHMENT_READ_ROOTS_ENV, DEFAULT_ATTACHMENT_READ_ROOTS, SENSITIVE_HOME_ROOTS, LIBRARY_DOCUMENT_FOLDERS;
 var init_attachmentReadPolicy = __esm({
   "src/utils/attachmentReadPolicy.ts"() {
     "use strict";
@@ -12246,6 +12247,7 @@ var init_attachmentReadPolicy = __esm({
       join(homedir(), ".config", "gh"),
       join(homedir(), "Library", "Keychains")
     ];
+    LIBRARY_DOCUMENT_FOLDERS = ["mobile documents", "cloudstorage"];
   }
 });
 

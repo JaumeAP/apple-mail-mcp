@@ -44,7 +44,7 @@ import {
   STALLED_MAILBOX_TTL_MS,
 } from "@/services/stalledMailboxStore.js";
 import { materializeAttachments } from "@/utils/attachmentMaterialize.js";
-import { resolveAttachmentReadPath } from "@/utils/attachmentReadPolicy.js";
+import { isProtectedPath, resolveAttachmentReadPath } from "@/utils/attachmentReadPolicy.js";
 import { searchContactsDb } from "@/utils/contactsDb.js";
 import {
   isAuditEnabled,
@@ -559,6 +559,10 @@ const ALLOWED_SAVE_ROOTS = [homedir(), "/tmp", "/private/tmp", "/Volumes"];
  * (caller passes `resolve(...)` output).
  */
 export function isPathWithinAllowedRoots(resolvedPath: string): boolean {
+  // Same deny rules as outbound reads: no hidden segments (~/.ssh, ~/.zshrc),
+  // no ~/Library app state (LaunchAgents, Mail, Messages) outside its
+  // document folders. A new file there is as dangerous as an overwrite.
+  if (isProtectedPath(resolvedPath)) return false;
   return ALLOWED_SAVE_ROOTS.some((root) => {
     const base = root.endsWith(sep) ? root.slice(0, -1) : root;
     return resolvedPath === base || resolvedPath.startsWith(base + sep);

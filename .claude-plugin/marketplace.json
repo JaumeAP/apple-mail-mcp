@@ -1,24 +1,22 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "apple-mail-mcp",
-  "version": "2.20.9",
-  "description": "Apple Mail integration for Claude Code and Codex via MCP",
+  "name": "jaumeap-apple-mail",
+  "version": "2.20.9-jap.1",
+  "description": "JaumeAP's fork of sweetrb/apple-mail-mcp: Apple Mail via MCP with a server-side tool gate (APPLE_MAIL_MCP_MODE) and tighter attachment paths",
   "owner": {
-    "name": "Rob Sweet",
-    "email": "rob@superiortech.io"
+    "name": "JaumeAP"
   },
   "plugins": [
     {
       "name": "apple-mail",
       "displayName": "Apple Mail",
       "description": "Manage Apple Mail through natural language - read, search, send, and organize emails (macOS only)",
-      "version": "2.20.9",
+      "version": "2.20.9-jap.1",
       "author": {
-        "name": "Rob Sweet",
-        "email": "rob@superiortech.io"
+        "name": "Rob Sweet (upstream); fork by JaumeAP"
       },
-      "homepage": "https://github.com/sweetrb/apple-mail-mcp#readme",
-      "repository": "https://github.com/sweetrb/apple-mail-mcp",
+      "homepage": "https://github.com/JaumeAP/apple-mail-mcp#readme",
+      "repository": "https://github.com/JaumeAP/apple-mail-mcp",
       "license": "MIT",
       "keywords": [
         "mcp",

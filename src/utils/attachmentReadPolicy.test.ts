@@ -12,8 +12,10 @@ import { homedir, tmpdir } from "os";
 import { join } from "path";
 import {
   ATTACHMENT_READ_ROOTS_ENV,
+  isProtectedPath,
   resolveAttachmentReadPath,
 } from "@/utils/attachmentReadPolicy.js";
+import { isPathWithinAllowedRoots } from "@/services/appleMailManager.js";
 
 describe("outbound attachment read policy", () => {
   it("allows a regular file in the default temporary root", () => {
@@ -58,6 +60,31 @@ describe("outbound attachment read policy", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("rejects app state under the home Library but allows iCloud Drive", () => {
+    const appState = mkdtempSync(join(homedir(), "Library", "Caches", "amcp-read-policy-"));
+    try {
+      const file = join(appState, "chat.db");
+      writeFileSync(file, "db");
+      expect(() => resolveAttachmentReadPath(file)).toThrow(/protected location/);
+    } finally {
+      rmSync(appState, { recursive: true, force: true });
+    }
+
+    const home = realpathSync.native(homedir());
+    expect(isProtectedPath(join(home, "Library", "Mobile Documents", "x.pdf"))).toBe(false);
+    expect(isProtectedPath(join(home, "Library", "LaunchAgents", "x.plist"))).toBe(true);
+  });
+
+  it("refuses save targets in hidden folders and Library app state", () => {
+    const home = realpathSync.native(homedir());
+    expect(isPathWithinAllowedRoots(join(home, "Downloads", "report.pdf"))).toBe(true);
+    expect(isPathWithinAllowedRoots(join(home, "Library", "LaunchAgents", "evil.plist"))).toBe(
+      false
+    );
+    expect(isPathWithinAllowedRoots(join(home, ".ssh", "authorized_keys"))).toBe(false);
+    expect(isPathWithinAllowedRoots(join(home, "Downloads", ".zshrc"))).toBe(false);
   });
 
   it("authorizes an explicit absolute root outside the defaults", () => {
