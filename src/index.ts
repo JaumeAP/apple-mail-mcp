@@ -3059,6 +3059,34 @@ registerTool(
   }, "Error listing accounts")
 );
 
+// --- sync-mail ---
+
+registerTool(
+  "sync-mail",
+  {
+    description:
+      "Use when: new mail should be fetched now — for example just after sending, or before searching a mailbox that may be behind the server.\nReturns: which account was asked, and whether an IMAP synchronization was also requested. Mail does the work in the background: the call returns when Mail was asked, not when the mail has arrived.\nDo not use when: you only want the current state (use get-sync-status).",
+    inputSchema: {
+      account: z
+        .string()
+        .optional()
+        .describe("Account name or email address; omit to check every account"),
+    },
+    outputSchema: {
+      accounts: z.string().optional(),
+      synchronized: z.boolean().optional(),
+    },
+  },
+  withErrorHandling(({ account }) => {
+    const result = mailManager.syncMail(account);
+    const scope = result.accounts === "all" ? "all accounts" : `"${result.accounts}"`;
+    return successResponse(
+      `Asked Mail to check for new mail for ${scope}${result.synchronized ? " and to synchronize it with the server" : ""}.`,
+      result
+    );
+  }, "Error asking Mail to check for new mail")
+);
+
 // --- get-account-settings ---
 
 registerTool(

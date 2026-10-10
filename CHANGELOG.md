@@ -1,5 +1,23 @@
 ## [Unreleased]
 
+## [2.20.9-jap.6] - 2026-10-10 (JaumeAP fork)
+
+### Added
+
+- **`sync-mail`** asks Mail to check for new mail now, for one account or for
+  all (`check for new mail`), and for a named IMAP account to synchronize it
+  with the server. Mail works in the background: the call returns when Mail was
+  asked. Writing mode: not available in `read_only`.
+
+### Fixed
+
+- **`list-attachments` no longer reports "no attachments" for a message that
+  has them.** A numeric id is only meaningful inside the mailbox it was listed
+  from, but the lookup stopped at the first mailbox in any account holding that
+  number, which could be a different message. It now looks in the mailbox the
+  id was listed from, and without one it goes on past a hit that has no
+  attachments.
+
 ## [2.20.9-jap.5] - 2026-10-10 (JaumeAP fork)
 
 ### Added
