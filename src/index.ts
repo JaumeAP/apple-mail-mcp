@@ -3059,6 +3059,69 @@ registerTool(
   }, "Error listing accounts")
 );
 
+// --- get-account-settings ---
+
+registerTool(
+  "get-account-settings",
+  {
+    description:
+      "Use when: you need the settings of one Mail account — full name, email addresses, enabled, server and port, whether deleted mail goes to the Trash, when the Trash/Junk/Sent are emptied, which IMAP folders are kept on the server, and its outgoing (SMTP) server.\nReturns: the account name and a settings object. The password is never read or returned.\nDo not use when: you only need the account names (use list-accounts).",
+    inputSchema: {
+      account: z.string().min(1).describe("Account name or its email address (see list-accounts)"),
+    },
+    outputSchema: {
+      account: z.string().optional(),
+      settings: z.record(z.unknown()).optional(),
+    },
+  },
+  withErrorHandling(({ account }) => {
+    const result = mailManager.getAccountSettings(account);
+    const lines = Object.entries(result.settings).map(
+      ([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(", ") : String(value)}`
+    );
+    return successResponse(`Settings of "${result.account}":\n${lines.join("\n")}`, result);
+  }, "Error reading account settings")
+);
+
+// --- set-account-settings ---
+
+registerTool(
+  "set-account-settings",
+  {
+    description:
+      "Use when: the user asked to change a setting of a Mail account: turn it on or off (enabled), its full name, include it when getting new mail, move deleted messages to the Trash, empty Trash/Junk/Sent on quit, or the IMAP flags (store drafts, junk, sent, deleted on the server; compact mailboxes when closing).\nReturns: the settings read back, and any setting Mail refused.\nDo not use when: the change involves a password, server, port, user name or the account's email addresses — those cannot be changed with this tool.\nSafety: turning an account off stops its mail arriving and sending; confirm with the user first.",
+    inputSchema: {
+      account: z.string().min(1).describe("Account name or its email address (see list-accounts)"),
+      enabled: z.boolean().optional(),
+      fullName: z.string().min(1).optional(),
+      includeWhenGettingNewMail: z.boolean().optional(),
+      moveDeletedMessagesToTrash: z.boolean().optional(),
+      emptyTrashOnQuit: z.boolean().optional(),
+      emptyJunkOnQuit: z.boolean().optional(),
+      emptySentOnQuit: z.boolean().optional(),
+      storeDraftsOnServer: z.boolean().optional(),
+      storeJunkOnServer: z.boolean().optional(),
+      storeSentOnServer: z.boolean().optional(),
+      storeDeletedOnServer: z.boolean().optional(),
+      compactMailboxesWhenClosing: z.boolean().optional(),
+    },
+    outputSchema: {
+      account: z.string().optional(),
+      refused: z.array(z.string()).optional(),
+      settings: z.record(z.unknown()).optional(),
+    },
+  },
+  withErrorHandling(({ account, ...changes }) => {
+    const result = mailManager.setAccountSettings(account, changes);
+    if (result.refused.length > 0) {
+      return errorResponse(
+        `Mail refused part of the change on "${result.account}": ${result.refused.join("; ")}`
+      );
+    }
+    return successResponse(`Settings of "${result.account}" updated.`, result);
+  }, "Error changing account settings")
+);
+
 // =============================================================================
 // Mail Rules Tools
 // =============================================================================

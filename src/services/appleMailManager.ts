@@ -45,6 +45,14 @@ import {
 } from "@/services/stalledMailboxStore.js";
 import { materializeAttachments } from "@/utils/attachmentMaterialize.js";
 import {
+  buildAccountSettingsReadScript,
+  buildAccountSettingsWriteScript,
+  parseAccountSettings,
+  validateAccountSettingsChanges,
+  type AccountSettings,
+  type AccountSettingsChanges,
+} from "@/utils/accountSettings.js";
+import {
   canonicalRoots,
   canonicalTmpdir,
   isProtectedPath,
@@ -2612,6 +2620,58 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     // No accounts at all — return something rather than throw; downstream
     // AppleScript will surface a clear "account not found".
     return accounts[0]?.name ?? "iCloud";
+  }
+
+  /** Mail's own name for an account given by its name or its email address. */
+  private resolveAccountName(account: string): string {
+    const wanted = account.trim().toLowerCase();
+    const match = this.getCachedAccounts().find(
+      (a) => a.name.toLowerCase() === wanted || a.email.toLowerCase() === wanted
+    );
+    if (!match) {
+      throw new Error(
+        `Account "${account}" does not match any Mail account. Use list-accounts for the names.`
+      );
+    }
+    return match.name;
+  }
+
+  /**
+   * The settings of one account: identity, fetch and trash behaviour, the
+   * IMAP storage flags and its outgoing server. Never the password.
+   */
+  getAccountSettings(account: string): { account: string; settings: AccountSettings } {
+    const name = this.resolveAccountName(account);
+    const result = executeAppleScript(buildAppLevelScript(buildAccountSettingsReadScript(name)), {
+      timeoutMs: 30000,
+    });
+    if (!result.success) {
+      throw new Error(`Could not read the settings of "${name}": ${result.error}`);
+    }
+    return { account: name, settings: parseAccountSettings(result.output) };
+  }
+
+  /**
+   * Changes the settings of one account that cannot lock it out or redirect its
+   * mail (see utils/accountSettings). Returns the settings read back, and what
+   * Mail refused. One attempt: nothing here is retried.
+   */
+  setAccountSettings(
+    account: string,
+    changes: AccountSettingsChanges
+  ): { account: string; refused: string[]; settings: AccountSettings } {
+    validateAccountSettingsChanges(changes);
+    const name = this.resolveAccountName(account);
+    const result = executeAppleScript(
+      buildAppLevelScript(buildAccountSettingsWriteScript(name, changes)),
+      { timeoutMs: 30000, maxRetries: 1 }
+    );
+    if (!result.success) {
+      throw new Error(`Could not change the settings of "${name}": ${result.error}`);
+    }
+    const out = result.output.trim();
+    const refused = out === "ok" ? [] : out.split("\x1e").filter(Boolean);
+    return { account: name, refused, settings: this.getAccountSettings(name).settings };
   }
 
   /**
