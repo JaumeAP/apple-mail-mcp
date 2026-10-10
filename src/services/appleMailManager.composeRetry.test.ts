@@ -35,7 +35,14 @@ afterEach(() => {
 describe("compose mutations are single-attempt", () => {
   it("sendEmail runs the AppleScript send with maxRetries: 1", () => {
     const mgr = new AppleMailManager();
-    expect(mgr.sendEmail(["to@example.com"], "subject", "body")).toBe(false);
+    // A send needs a real account; the AppleScript mock above fails every call.
+    vi.spyOn(
+      mgr as unknown as { getCachedAccounts: () => unknown },
+      "getCachedAccounts"
+    ).mockReturnValue([{ name: "Work", email: "me@work.example", enabled: true }]);
+    expect(mgr.sendEmail(["to@example.com"], "subject", "body", undefined, undefined, "Work")).toBe(
+      false
+    );
     expect(h.calls).toHaveLength(1);
     expect(h.calls[0].script).toContain("send newMessage");
     expect(h.calls[0].options).toMatchObject({ maxRetries: 1 });

@@ -84318,6 +84318,38 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     return accounts[0]?.name ?? "iCloud";
   }
   /**
+   * The address Mail must send from, for an `account` that names an enabled
+   * account by its name or its email address.
+   *
+   * Throws when `account` is missing or matches no enabled account, instead of
+   * letting Mail fall back to its default sending account: `set sender to
+   * "<account name>"` is not a valid sender, so Mail silently used the default
+   * account and a message asked to leave from one account left from another
+   * (2026-10-10). Nothing is composed or sent when this throws.
+   */
+  resolveSendingAddress(account) {
+    const wanted = account?.trim().toLowerCase();
+    const enabled = this.getCachedAccounts().filter((a) => a.enabled);
+    const known = enabled.map((a) => `${a.name} <${a.email}>`).join(", ") || "none found";
+    if (!wanted) {
+      throw new Error(
+        `No sending account given, so nothing was sent. Pass \`account\` with the name or the email address of the account to send from. Enabled accounts: ${known}.`
+      );
+    }
+    const match = enabled.find(
+      (a) => a.name.toLowerCase() === wanted || a.email.toLowerCase() === wanted
+    );
+    if (!match) {
+      throw new Error(
+        `Account "${account}" does not match any enabled Mail account, so nothing was sent. Enabled accounts: ${known}.`
+      );
+    }
+    if (!match.email) {
+      throw new Error(`Account "${match.name}" has no email address to send from.`);
+    }
+    return match.email;
+  }
+  /**
    * Resolves a mailbox name to its actual name in the account.
    *
    * Different account types (IMAP, Exchange, iCloud) use different
@@ -85370,6 +85402,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
   // Tracking issue: https://github.com/sweetrb/apple-mail-mcp/issues/12
   // ───────────────────────────────────────────────────────────────────
   sendEmail(to, subject, body, cc, bcc, account, attachments) {
+    const sender = this.resolveSendingAddress(account);
     const safeSubject = escapeForAppleScript(subject);
     const safeBody = escapeForAppleScriptBody(body);
     let recipientCommands = "";
@@ -85395,38 +85428,24 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
         recipientCommands,
         safeSubject,
         safeBody,
-        account,
+        sender,
         buildAttachmentCommands(mat.paths)
       );
     } finally {
       mat.cleanup();
     }
   }
-  sendEmailWithPaths(recipientCommands, safeSubject, safeBody, account, attachmentCommands) {
-    let sendCommand;
-    if (account) {
-      const safeAccount = escapeForAppleScript(account);
-      sendCommand = `
+  sendEmailWithPaths(recipientCommands, safeSubject, safeBody, sender, attachmentCommands) {
+    const sendCommand = `
         set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:true}
         tell newMessage
           ${recipientCommands}
-          set sender to "${safeAccount}"
+          set sender to "${escapeForAppleScript(sender)}"
           ${attachmentCommands}
         end tell
         send newMessage
         return "sent"
       `;
-    } else {
-      sendCommand = `
-        set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:true}
-        tell newMessage
-          ${recipientCommands}
-          ${attachmentCommands}
-        end tell
-        send newMessage
-        return "sent"
-      `;
-    }
     const script = buildAppLevelScript(sendCommand);
     const result = executeAppleScript(script, { timeoutMs: 6e4, maxRetries: 1 });
     if (!result.success) {
@@ -85449,6 +85468,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * @returns Array of per-recipient results
    */
   sendSerialEmail(recipients, subject, body, account, delayMs = 500) {
+    this.resolveSendingAddress(account);
     const effectiveDelay = Math.min(Math.max(delayMs, 0), 1e4);
     const results = [];
     for (let i = 0; i < recipients.length; i++) {
@@ -85500,6 +85520,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * @returns true if draft created successfully
    */
   createDraft(to, subject, body, cc, bcc, account, attachments) {
+    const sender = account ? this.resolveSendingAddress(account) : void 0;
     const safeSubject = escapeForAppleScript(subject);
     const safeBody = escapeForAppleScriptBody(body);
     let recipientCommands = "";
@@ -85526,22 +85547,22 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
         recipientCommands,
         safeSubject,
         safeBody,
-        account,
+        sender,
         attachmentCommands
       );
     } finally {
       mat.cleanup();
     }
   }
-  createDraftWithCommands(recipientCommands, safeSubject, safeBody, account, attachmentCommands) {
+  createDraftWithCommands(recipientCommands, safeSubject, safeBody, sender, attachmentCommands) {
     let draftCommand;
-    if (account) {
-      const safeAccount = escapeForAppleScript(account);
+    if (sender) {
+      const safeSender = escapeForAppleScript(sender);
       draftCommand = `
         set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:false}
         tell newMessage
           ${recipientCommands}
-          set sender to "${safeAccount}"
+          set sender to "${safeSender}"
           ${attachmentCommands}
         end tell
         return "draft created"
@@ -90050,7 +90071,9 @@ registerTool(
       body: external_exports.string().min(1, "Body is required"),
       cc: external_exports.array(external_exports.string()).optional().describe("CC recipients"),
       bcc: external_exports.array(external_exports.string()).optional().describe("BCC recipients"),
-      account: external_exports.string().optional().describe("Account to send from"),
+      account: external_exports.string().optional().describe(
+        "Account to send from: its name or its email address (see list-accounts). Required on the AppleScript transport; the send is refused when it is missing or matches no enabled account, rather than leaving from Mail's default account."
+      ),
       attachments: ATTACHMENTS_SCHEMA,
       inReplyTo: IN_REPLY_TO_SCHEMA,
       references: REFERENCES_SCHEMA,
@@ -90144,7 +90167,9 @@ registerTool(
       ).min(1, "At least one recipient is required").max(100, "Cannot send to more than 100 recipients in a single batch").describe("List of recipients with personalization variables (max 100)"),
       subject: external_exports.string().min(1, "Subject is required").describe("Subject line \u2014 use {{Key}} for placeholders"),
       body: external_exports.string().min(1, "Body is required").describe("Email body \u2014 use {{Key}} for placeholders"),
-      account: external_exports.string().optional().describe("Account to send from"),
+      account: external_exports.string().optional().describe(
+        "Account to send from: its name or its email address (see list-accounts). The whole batch is refused when it is missing or matches no enabled account."
+      ),
       delayMs: external_exports.number().min(0).max(1e4).optional().describe("Delay between sends in ms (default: 500, max: 10000)")
     },
     outputSchema: {
