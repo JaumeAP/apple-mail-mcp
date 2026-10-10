@@ -136,6 +136,12 @@ import { loadFileConfig } from "@/services/fileConfig.js";
 import { isOrphaned } from "@/utils/orphan.js";
 import { withJsonSchema2020_12 } from "@/utils/jsonSchemaDialect.js";
 import {
+  TOOL_MODE_ENV,
+  isToolAllowed,
+  parseToolMode,
+  withSafetyAnnotations,
+} from "@/utils/toolMode.js";
+import {
   writeDestructiveAudit,
   reconciliationWarnings,
   type DestructiveOpReport,
@@ -487,12 +493,19 @@ function registerTool<
   cb: ToolCallback<InputArgs>
 ): RegisteredTool {
   const { outputSchema, ...rest } = config;
-  return server.registerTool(
+  rest.annotations = withSafetyAnnotations(name, rest.annotations);
+  const tool = server.registerTool(
     name,
     outputSchema ? { ...rest, outputSchema: z.object(outputSchema).passthrough() } : rest,
     cb
   );
+  // A disabled tool is neither listed nor callable (see toolMode.ts).
+  if (!isToolAllowed(name, toolMode)) tool.disable();
+  return tool;
 }
+
+/** Parsed once, after loadFileConfig() has filled the environment. */
+const toolMode = parseToolMode(process.env[TOOL_MODE_ENV]);
 
 /**
  * Singleton instance of the Apple Mail manager.

@@ -59,7 +59,20 @@ function hasHiddenPathSegment(candidate: string): boolean {
   return candidate.split(sep).some((segment) => segment.startsWith(".") && segment.length > 1);
 }
 
-function isProtectedPath(candidate: string): boolean {
+/**
+ * Folders under `~/Library` that hold ordinary user documents (iCloud Drive and
+ * File Provider clouds such as Dropbox or Google Drive). Everything else under
+ * `~/Library` is app state — Mail and Messages stores, browser cookies and
+ * logins, LaunchAgents — and is neither read nor written.
+ */
+const LIBRARY_DOCUMENT_FOLDERS = ["mobile documents", "cloudstorage"];
+
+/**
+ * True for a path that must never be attached or written: hidden segments,
+ * credential roots, and `~/Library` outside its document folders.
+ * `candidate` must already be canonical (`realpathSync.native`).
+ */
+export function isProtectedPath(candidate: string): boolean {
   if (hasHiddenPathSegment(candidate)) return true;
   if (sensitiveRoots().some((root) => isWithinRoot(candidate, root))) return true;
 
@@ -71,12 +84,8 @@ function isProtectedPath(candidate: string): boolean {
   }
   if (!isWithinRoot(candidate, home)) return false;
   const relative = candidate.slice(home.length).split(sep).filter(Boolean);
-  return (
-    relative.length >= 4 &&
-    relative[0].toLowerCase() === "library" &&
-    relative[1].toLowerCase() === "application support" &&
-    relative.at(-1)?.toLowerCase() === "config.json"
-  );
+  if (relative[0]?.toLowerCase() !== "library") return false;
+  return !LIBRARY_DOCUMENT_FOLDERS.includes(relative[1]?.toLowerCase() ?? "");
 }
 
 function configuredRoots(env: NodeJS.ProcessEnv): string[] {
@@ -143,7 +152,7 @@ export function resolveAttachmentReadPath(
   if (isProtectedPath(canonical)) {
     throw new Error(
       `Attachment path is in a protected location: "${filePath}". ` +
-        "Hidden files and credential/configuration locations cannot be sent as attachments."
+        "Hidden files, credential locations and ~/Library (except iCloud Drive and CloudStorage) cannot be sent as attachments."
     );
   }
 
