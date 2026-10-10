@@ -1373,6 +1373,14 @@ Change settings of one account that cannot lock it out or redirect its mail.
 
 **Returns:** the settings read back, or the settings Mail refused. Servers, ports, user names, passwords and the account's email addresses are read-only here. Allowed in `no_send` mode, not in `read_only`.
 
+#### `sync-mail`
+
+Ask Mail to check for new mail now, for one account or for all, and for a named IMAP account also to synchronize it with the server. Mail works in the background: the call returns when Mail was asked, not when the mail has arrived.
+
+**Parameters:** `account` (optional; name or email address — omit to check every account)
+
+**Returns:** `{ accounts, synchronized }`. Allowed in `no_send` mode, not in `read_only`.
+
 ---
 
 ### Rules
