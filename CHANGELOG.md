@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [2.20.9-jap.3] - 2026-10-10 (JaumeAP fork)
+
+### Security
+
+- `osascript` runs through `execFileSync` with the script as one argv entry
+  instead of a shell command line, so no shell ever parses the script (it
+  used to rely on single-quote escaping). Same change in
+  `scripts/jxa-comparison.ts`.
+
 ## [2.20.9-jap.2] - 2026-10-10 (JaumeAP fork)
 
 ### Security
