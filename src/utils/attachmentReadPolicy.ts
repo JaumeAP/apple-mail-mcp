@@ -60,21 +60,26 @@ function hasHiddenPathSegment(candidate: string): boolean {
 }
 
 /**
- * Folders under `~/Library` that hold ordinary user documents (iCloud Drive and
- * File Provider clouds such as Dropbox or Google Drive). Everything else under
- * `~/Library` is app state — Mail and Messages stores, browser cookies and
- * logins, LaunchAgents — and is neither read nor written.
+ * Folders under a user Library that hold ordinary user documents: iCloud Drive
+ * itself (not the per-app iCloud containers beside it) and File Provider
+ * clouds such as Dropbox or Google Drive. Everything else under a Library is
+ * app state — Mail and Messages stores, browser cookies and logins,
+ * LaunchAgents — and is neither read nor written.
  */
-const LIBRARY_DOCUMENT_FOLDERS = ["mobile documents", "cloudstorage"];
+const LIBRARY_DOCUMENT_FOLDERS = [["mobile documents", "com~apple~clouddocs"], ["cloudstorage"]];
 
 /**
- * True for a path that must never be attached or written: hidden segments,
- * credential roots, and `~/Library` outside its document folders.
- * `candidate` must already be canonical (`realpathSync.native`).
+ * The lower-cased segments below a user Library in `candidate`, or undefined
+ * when it is not inside one. Matches the live home's Library and any
+ * `…/Users/<name>/Library` — the same stores on a clone, a backup or another
+ * Data volume under /Volumes — whatever casing or HOME value the caller used.
  */
-export function isProtectedPath(candidate: string): boolean {
-  if (hasHiddenPathSegment(candidate)) return true;
-  if (sensitiveRoots().some((root) => isWithinRoot(candidate, root))) return true;
+function userLibraryTail(candidate: string): string[] | undefined {
+  const segments = candidate.split(sep).filter(Boolean);
+  const lower = segments.map((segment) => segment.toLowerCase());
+  for (let i = 0; i + 2 < lower.length; i++) {
+    if (lower[i] === "users" && lower[i + 2] === "library") return lower.slice(i + 3);
+  }
 
   let home: string;
   try {
@@ -82,13 +87,60 @@ export function isProtectedPath(candidate: string): boolean {
   } catch {
     home = resolve(homedir());
   }
-  if (!isWithinRoot(candidate, home)) return false;
+  if (home === sep || !isWithinRoot(candidate, home)) return undefined;
   const relative = candidate.slice(home.length).split(sep).filter(Boolean);
-  if (relative[0]?.toLowerCase() !== "library") return false;
-  return !LIBRARY_DOCUMENT_FOLDERS.includes(relative[1]?.toLowerCase() ?? "");
+  if (relative[0]?.toLowerCase() !== "library") return undefined;
+  return relative.slice(1).map((segment) => segment.toLowerCase());
 }
 
-function configuredRoots(env: NodeJS.ProcessEnv): string[] {
+function isLibraryDocument(tail: string[]): boolean {
+  return LIBRARY_DOCUMENT_FOLDERS.some((folder) => folder.every((name, i) => tail[i] === name));
+}
+
+/**
+ * True for a path that must never be attached or written: hidden segments,
+ * credential roots, and any user Library outside its document folders.
+ * `exemptRoots` (canonical) lift only the Library rule — for the server's own
+ * temporary directory and for roots the user named explicitly.
+ */
+export function isProtectedPath(candidate: string, exemptRoots: string[] = []): boolean {
+  if (hasHiddenPathSegment(candidate)) return true;
+  if (sensitiveRoots().some((root) => isWithinRoot(candidate, root))) return true;
+
+  const tail = userLibraryTail(candidate);
+  if (!tail || isLibraryDocument(tail)) return false;
+  return !exemptRoots.some((root) => isWithinRoot(candidate, root));
+}
+
+/** Canonical temporary directory, which the server itself writes to (attachment staging). */
+export function canonicalTmpdir(): string[] {
+  try {
+    return [canonicalize(tmpdir())];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Canonicalize roots, dropping the ones that do not exist and the filesystem
+ * root itself: an empty or "/" HOME must not turn "the home directory" into
+ * "everything".
+ */
+export function canonicalRoots(requested: string[]): string[] {
+  const resolved: string[] = [];
+  for (const root of requested) {
+    try {
+      const canonical = canonicalize(resolve(root));
+      if (canonical !== sep && !resolved.includes(canonical)) resolved.push(canonical);
+    } catch {
+      // A default user directory may not exist yet. It cannot authorize a
+      // file until it exists, so skip it and let the candidate check fail.
+    }
+  }
+  return resolved;
+}
+
+function explicitRoots(env: NodeJS.ProcessEnv): string[] {
   const raw = env[ATTACHMENT_READ_ROOTS_ENV];
   const extraRoots =
     raw === undefined
@@ -97,25 +149,12 @@ function configuredRoots(env: NodeJS.ProcessEnv): string[] {
           .split(delimiter)
           .map((root) => root.trim())
           .filter(Boolean);
-  const requested = [...DEFAULT_ATTACHMENT_READ_ROOTS, ...extraRoots];
-
-  for (const root of requested) {
+  for (const root of extraRoots) {
     if (!isAbsolute(root)) {
       throw new Error(`${ATTACHMENT_READ_ROOTS_ENV} entries must be absolute paths.`);
     }
   }
-
-  const resolved: string[] = [];
-  for (const root of requested) {
-    try {
-      const canonical = canonicalize(resolve(root));
-      if (!resolved.includes(canonical)) resolved.push(canonical);
-    } catch {
-      // A default user directory may not exist yet. It cannot authorize a
-      // file until it exists, so skip it and let the candidate check fail.
-    }
-  }
-  return resolved;
+  return canonicalRoots(extraRoots);
 }
 
 /**
@@ -149,14 +188,17 @@ export function resolveAttachmentReadPath(
     throw new Error(`Attachment file not found: "${filePath}"`);
   }
 
-  if (isProtectedPath(canonical)) {
+  const explicit = explicitRoots(env);
+  if (isProtectedPath(canonical, [...explicit, ...canonicalTmpdir()])) {
     throw new Error(
       `Attachment path is in a protected location: "${filePath}". ` +
-        "Hidden files, credential locations and ~/Library (except iCloud Drive and CloudStorage) cannot be sent as attachments."
+        "Hidden files, credential locations and user Library folders (except iCloud Drive and CloudStorage) " +
+        `cannot be sent as attachments unless ${ATTACHMENT_READ_ROOTS_ENV} names a root for them.`
     );
   }
 
-  if (!configuredRoots(env).some((root) => isWithinRoot(canonical, root))) {
+  const roots = [...canonicalRoots(DEFAULT_ATTACHMENT_READ_ROOTS), ...explicit];
+  if (!roots.some((root) => isWithinRoot(canonical, root))) {
     throw new Error(
       `Attachment path is outside the allowed read roots: "${filePath}". ` +
         `Use an ordinary home-directory, /Volumes, or temporary path, or configure ${ATTACHMENT_READ_ROOTS_ENV} for an additional explicit root.`

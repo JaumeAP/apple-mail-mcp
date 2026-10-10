@@ -1,5 +1,33 @@
 ## [Unreleased]
 
+## [2.20.9-jap.2] - 2026-10-10 (JaumeAP fork)
+
+### Security
+
+- **`APPLE_MAIL_MCP_MODE` server-side tool gate** (`full` | `no_send` |
+  `read_only`, added in 2.20.9-jap.1). `read_only` is now an allow-list, so
+  `get-message-rfc822` (whose `savePath` writes a file) and any tool added
+  later stay out until classified; a test fails while a registered tool is
+  unclassified. `no_send` also drops `enable-rule`, which can turn on a
+  forward or auto-reply rule. A `config.json` that names the mode but cannot
+  be applied stops the server instead of running as `full`.
+- **Attachment paths.** Reads and writes refuse hidden paths and every user
+  Library (live home and `…/Users/<name>/Library` under `/Volumes`) except
+  iCloud Drive (`com~apple~CloudDocs`) and `CloudStorage`. Save targets are
+  canonicalized with `realpathSync.native` and checked before and after
+  symlink resolution, so a respelled home or a hidden folder symlinked to a
+  visible one is refused; an empty or `/` HOME no longer widens the roots.
+- Sending and deleting tools carry `destructiveHint`; allow-listed reads
+  carry `readOnlyHint`.
+
+### Fixed
+
+- `fetch-attachment` works again for dot-named attachments (`.env`): the
+  server's private staging directory keeps the real name.
+- Inline base64 attachments staged under a `TMPDIR` inside `~/Library` are no
+  longer refused, and a root in `APPLE_MAIL_MCP_ATTACHMENT_READ_ROOTS` lifts
+  the Library rule beneath it.
+
 ## [2.20.9] - 2026-10-09
 
 ### Fixed

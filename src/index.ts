@@ -34,7 +34,7 @@ import {
   resolveAttachmentSaveTarget,
   LOCAL_STORE_LABEL,
 } from "@/services/appleMailManager.js";
-import { writeFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 import { join as joinPath } from "path";
 import {
   sendViaSmtp,
@@ -132,15 +132,10 @@ import { normalizeSubject, subjectFromGetMessage } from "@/tools/thread.js";
 import { extractRfcMessageIdFromSource } from "@/utils/mimeParse.js";
 import { headersStructured, isoOrUndefined, parseHeaderBlock } from "@/utils/headers.js";
 import { ImapIdleWatcher } from "@/services/imapIdle.js";
-import { loadFileConfig } from "@/services/fileConfig.js";
+import { fileConfigPath, loadFileConfig } from "@/services/fileConfig.js";
 import { isOrphaned } from "@/utils/orphan.js";
 import { withJsonSchema2020_12 } from "@/utils/jsonSchemaDialect.js";
-import {
-  TOOL_MODE_ENV,
-  isToolAllowed,
-  parseToolMode,
-  withSafetyAnnotations,
-} from "@/utils/toolMode.js";
+import { isToolAllowed, resolveToolMode, withSafetyAnnotations } from "@/utils/toolMode.js";
 import {
   writeDestructiveAudit,
   reconciliationWarnings,
@@ -505,7 +500,15 @@ function registerTool<
 }
 
 /** Parsed once, after loadFileConfig() has filled the environment. */
-const toolMode = parseToolMode(process.env[TOOL_MODE_ENV]);
+const toolMode = resolveToolMode(process.env, readConfigText());
+
+function readConfigText(): string | undefined {
+  try {
+    return readFileSync(fileConfigPath(), "utf8");
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Singleton instance of the Apple Mail manager.
