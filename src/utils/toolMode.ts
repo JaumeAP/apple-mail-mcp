@@ -7,12 +7,13 @@
  * caller cannot reach them at all.
  *
  * - `full` (default): every tool, as upstream.
- * - `no_send`: everything except the tools that send mail.
- * - `read_only`: only tools that leave Mail, the filesystem and the template
- *   store untouched.
+ * - `no_send`: everything except the tools that send mail or can make Mail send
+ *   on its own (enabling a forward/redirect/auto-reply rule).
+ * - `read_only`: only the tools in READ_ONLY_TOOLS. It is an allow-list, so a
+ *   tool added upstream stays out until someone classifies it.
  *
- * Every sending or deleting tool is also advertised with `destructiveHint`, so
- * a client that honours annotations can ask before running it in `full` mode.
+ * Every tool is classified in exactly one of the three sets below;
+ * toolMode.test.ts fails when src/index.ts registers a tool that is not.
  */
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 
@@ -22,16 +23,43 @@ export type ToolMode = "full" | "no_send" | "read_only";
 
 const TOOL_MODES: readonly ToolMode[] = ["full", "no_send", "read_only"];
 
-/** Tools that put a message on the wire. */
+/** Tools that put a message on the wire, or let Mail do it unattended. */
 export const SENDING_TOOLS = new Set([
   "send-email",
   "send-serial-email",
   "reply-to-message",
   "forward-message",
+  // A disabled rule can forward, redirect or auto-reply once enabled.
+  "enable-rule",
 ]);
 
-/** Tools that change Mail, the disk or the template store, beyond sending. */
-const WRITING_TOOLS = new Set([
+/** Tools that change nothing in Mail, on disk or in the template store. */
+export const READ_ONLY_TOOLS = new Set([
+  "search-messages",
+  "get-message",
+  "get-message-headers",
+  "get-thread",
+  "list-messages",
+  "resolve-message-id",
+  "list-attachments",
+  "fetch-attachment",
+  "list-mailboxes",
+  "get-unread-count",
+  "list-smart-mailboxes",
+  "list-accounts",
+  "list-rules",
+  "search-contacts",
+  "list-templates",
+  "get-template",
+  "health-check",
+  "doctor",
+  "get-mail-stats",
+  "get-sync-status",
+]);
+
+/** Tools that write without sending. get-message-rfc822 writes a file when given savePath. */
+export const WRITING_TOOLS = new Set([
+  "get-message-rfc822",
   "create-draft",
   "mark-as-read",
   "mark-as-unread",
@@ -52,7 +80,6 @@ const WRITING_TOOLS = new Set([
   "create-smart-mailbox",
   "delete-smart-mailbox",
   "create-newsletter-smart-mailboxes",
-  "enable-rule",
   "disable-rule",
   "create-rule",
   "delete-rule",
@@ -80,18 +107,37 @@ export function parseToolMode(raw: string | undefined): ToolMode {
   throw new Error(`${TOOL_MODE_ENV} must be one of ${TOOL_MODES.join(", ")}; got "${raw}".`);
 }
 
+/**
+ * Resolve the mode after loadFileConfig(). `configText` is the raw config file,
+ * or undefined when there is none. loadFileConfig tolerates a corrupt file and
+ * skips non-string values; if that left the mode unset although the file names
+ * it, the user asked for a mode the server could not read — stop rather than
+ * run as `full`.
+ */
+export function resolveToolMode(env: NodeJS.ProcessEnv, configText: string | undefined): ToolMode {
+  const raw = env[TOOL_MODE_ENV];
+  if ((raw === undefined || raw === "") && configText?.includes(TOOL_MODE_ENV)) {
+    throw new Error(
+      `The config file mentions ${TOOL_MODE_ENV} but it was not applied (invalid JSON, a nested ` +
+        `block, or a non-string value). Fix the file; the server will not fall back to "full".`
+    );
+  }
+  return parseToolMode(raw);
+}
+
 /** True when `name` may be offered under `mode`. */
 export function isToolAllowed(name: string, mode: ToolMode): boolean {
   if (mode === "full") return true;
-  if (SENDING_TOOLS.has(name)) return false;
-  return mode === "no_send" || !WRITING_TOOLS.has(name);
+  if (mode === "read_only") return READ_ONLY_TOOLS.has(name);
+  return !SENDING_TOOLS.has(name);
 }
 
-/** Add `destructiveHint` to the tools that send or delete; leave the rest untouched. */
+/** Mark sending and deleting tools destructive and read-only tools read-only. */
 export function withSafetyAnnotations(
   name: string,
   annotations: ToolAnnotations | undefined
 ): ToolAnnotations | undefined {
-  if (!DESTRUCTIVE_TOOLS.has(name)) return annotations;
-  return { ...annotations, destructiveHint: true };
+  if (DESTRUCTIVE_TOOLS.has(name)) return { ...annotations, destructiveHint: true };
+  if (READ_ONLY_TOOLS.has(name)) return { ...annotations, readOnlyHint: true };
+  return annotations;
 }

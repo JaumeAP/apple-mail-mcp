@@ -29,7 +29,7 @@ import {
   realpathSync,
   lstatSync,
 } from "fs";
-import { resolve, sep, join } from "path";
+import { dirname, resolve, sep, join } from "path";
 import { homedir } from "os";
 import { randomUUID } from "crypto";
 import { executeAppleScript, isPermissionDenied } from "@/utils/applescript.js";
@@ -44,7 +44,12 @@ import {
   STALLED_MAILBOX_TTL_MS,
 } from "@/services/stalledMailboxStore.js";
 import { materializeAttachments } from "@/utils/attachmentMaterialize.js";
-import { isProtectedPath, resolveAttachmentReadPath } from "@/utils/attachmentReadPolicy.js";
+import {
+  canonicalRoots,
+  canonicalTmpdir,
+  isProtectedPath,
+  resolveAttachmentReadPath,
+} from "@/utils/attachmentReadPolicy.js";
 import { searchContactsDb } from "@/utils/contactsDb.js";
 import {
   isAuditEnabled,
@@ -560,33 +565,46 @@ const ALLOWED_SAVE_ROOTS = [homedir(), "/tmp", "/private/tmp", "/Volumes"];
  */
 export function isPathWithinAllowedRoots(resolvedPath: string): boolean {
   // Same deny rules as outbound reads: no hidden segments (~/.ssh, ~/.zshrc),
-  // no ~/Library app state (LaunchAgents, Mail, Messages) outside its
-  // document folders. A new file there is as dangerous as an overwrite.
-  if (isProtectedPath(resolvedPath)) return false;
-  return ALLOWED_SAVE_ROOTS.some((root) => {
-    const base = root.endsWith(sep) ? root.slice(0, -1) : root;
-    return resolvedPath === base || resolvedPath.startsWith(base + sep);
-  });
+  // no Library app state (LaunchAgents, Mail, Messages) outside its document
+  // folders, on this volume or under /Volumes. A new file there is as
+  // dangerous as an overwrite. The server's own tmpdir stays writable.
+  if (isProtectedPath(resolvedPath, canonicalTmpdir())) return false;
+  // Literal roots (`/tmp`) and their canonical form (`/private/tmp`); never
+  // "/" or "", which an empty or root HOME would otherwise make match anything.
+  const literal = ALLOWED_SAVE_ROOTS.map((root) => (root.endsWith(sep) ? root.slice(0, -1) : root));
+  const roots = [...literal.filter(Boolean), ...canonicalRoots(ALLOWED_SAVE_ROOTS)];
+  return roots.some((base) => resolvedPath === base || resolvedPath.startsWith(base + sep));
 }
 
-/** Resolve and validate an attachment save directory and its final output path. */
+/**
+ * Resolve and validate an attachment save directory and its final output path.
+ *
+ * Paths are checked as given and again after `realpathSync.native`, so a
+ * hidden folder that is a symlink to a visible one (`~/.config/nvim` →
+ * `~/dotfiles/nvim`) and a respelled home (`/Users/JAP`) are both refused.
+ * `stagingDirectory` is for the server's own private mkdtemp: there the
+ * attachment keeps its real name even when that name starts with a dot.
+ */
 export function resolveAttachmentSaveTarget(
   savePath: string,
-  attachmentName: string
+  attachmentName: string,
+  { stagingDirectory = false }: { stagingDirectory?: boolean } = {}
 ): { saveDirectory: string; savedPath: string } {
+  const requested = resolve(savePath);
   let saveDirectory: string;
   try {
-    saveDirectory = realpathSync(resolve(savePath));
+    saveDirectory = realpathSync.native(requested);
   } catch {
     throw new Error(`Save directory "${savePath}" does not exist`);
   }
 
-  if (!isPathWithinAllowedRoots(saveDirectory)) {
+  if (isProtectedPath(requested, canonicalTmpdir()) || !isPathWithinAllowedRoots(saveDirectory)) {
     throw new Error(`Save path "${savePath}" is outside allowed directories`);
   }
 
   const savedPath = resolve(saveDirectory, attachmentName);
-  if (!isPathWithinAllowedRoots(savedPath)) {
+  const checkedPath = stagingDirectory ? saveDirectory : savedPath;
+  if (dirname(savedPath) !== saveDirectory || !isPathWithinAllowedRoots(checkedPath)) {
     throw new Error(`Output path "${savedPath}" is outside allowed directories`);
   }
   if (existsSync(savedPath)) {
@@ -5409,7 +5427,12 @@ ${this.errorEmit("              ")}
    * Tries AppleScript first, falls back to MIME source extraction
    * when AppleScript can't find the attachment.
    */
-  saveAttachment(id: string, attachmentName: string, savePath: string): boolean {
+  saveAttachment(
+    id: string,
+    attachmentName: string,
+    savePath: string,
+    options: { stagingDirectory?: boolean } = {}
+  ): boolean {
     // Validate attachment name: block path separators, traversal, null bytes, and backslashes
     if (/[/\\\0]/.test(attachmentName) || attachmentName.includes("..")) {
       console.error(`Invalid attachment name: "${attachmentName}"`);
@@ -5418,7 +5441,7 @@ ${this.errorEmit("              ")}
 
     let target: { saveDirectory: string; savedPath: string };
     try {
-      target = resolveAttachmentSaveTarget(savePath, attachmentName);
+      target = resolveAttachmentSaveTarget(savePath, attachmentName, options);
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));
       return false;
@@ -5548,7 +5571,8 @@ ${this.errorEmit("              ")}
     try {
       dir = mkdtempSync("/private/tmp/amcp-fetch-");
       const dest = join(dir, attachmentName.replace(/[/\\]/g, "_"));
-      const ok = this.saveAttachment(id, attachmentName, dir);
+      // Our own mkdtemp: a dot-named attachment (".env") keeps its name here.
+      const ok = this.saveAttachment(id, attachmentName, dir, { stagingDirectory: true });
       if (!ok) {
         return {
           success: false,

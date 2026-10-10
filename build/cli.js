@@ -12172,38 +12172,60 @@ function isWithinRoot(candidate, root) {
 function hasHiddenPathSegment(candidate) {
   return candidate.split(sep).some((segment) => segment.startsWith(".") && segment.length > 1);
 }
-function isProtectedPath(candidate) {
-  if (hasHiddenPathSegment(candidate)) return true;
-  if (sensitiveRoots().some((root) => isWithinRoot(candidate, root))) return true;
+function userLibraryTail(candidate) {
+  const segments = candidate.split(sep).filter(Boolean);
+  const lower = segments.map((segment) => segment.toLowerCase());
+  for (let i = 0; i + 2 < lower.length; i++) {
+    if (lower[i] === "users" && lower[i + 2] === "library") return lower.slice(i + 3);
+  }
   let home;
   try {
     home = canonicalize(homedir());
   } catch {
     home = resolve3(homedir());
   }
-  if (!isWithinRoot(candidate, home)) return false;
+  if (home === sep || !isWithinRoot(candidate, home)) return void 0;
   const relative = candidate.slice(home.length).split(sep).filter(Boolean);
-  if (relative[0]?.toLowerCase() !== "library") return false;
-  return !LIBRARY_DOCUMENT_FOLDERS.includes(relative[1]?.toLowerCase() ?? "");
+  if (relative[0]?.toLowerCase() !== "library") return void 0;
+  return relative.slice(1).map((segment) => segment.toLowerCase());
 }
-function configuredRoots(env) {
-  const raw = env[ATTACHMENT_READ_ROOTS_ENV];
-  const extraRoots = raw === void 0 ? [] : raw.split(delimiter2).map((root) => root.trim()).filter(Boolean);
-  const requested = [...DEFAULT_ATTACHMENT_READ_ROOTS, ...extraRoots];
-  for (const root of requested) {
-    if (!isAbsolute(root)) {
-      throw new Error(`${ATTACHMENT_READ_ROOTS_ENV} entries must be absolute paths.`);
-    }
+function isLibraryDocument(tail) {
+  return LIBRARY_DOCUMENT_FOLDERS.some((folder) => folder.every((name2, i) => tail[i] === name2));
+}
+function isProtectedPath(candidate, exemptRoots = []) {
+  if (hasHiddenPathSegment(candidate)) return true;
+  if (sensitiveRoots().some((root) => isWithinRoot(candidate, root))) return true;
+  const tail = userLibraryTail(candidate);
+  if (!tail || isLibraryDocument(tail)) return false;
+  return !exemptRoots.some((root) => isWithinRoot(candidate, root));
+}
+function canonicalTmpdir() {
+  try {
+    return [canonicalize(tmpdir())];
+  } catch {
+    return [];
   }
+}
+function canonicalRoots(requested) {
   const resolved = [];
   for (const root of requested) {
     try {
       const canonical = canonicalize(resolve3(root));
-      if (!resolved.includes(canonical)) resolved.push(canonical);
+      if (canonical !== sep && !resolved.includes(canonical)) resolved.push(canonical);
     } catch {
     }
   }
   return resolved;
+}
+function explicitRoots(env) {
+  const raw = env[ATTACHMENT_READ_ROOTS_ENV];
+  const extraRoots = raw === void 0 ? [] : raw.split(delimiter2).map((root) => root.trim()).filter(Boolean);
+  for (const root of extraRoots) {
+    if (!isAbsolute(root)) {
+      throw new Error(`${ATTACHMENT_READ_ROOTS_ENV} entries must be absolute paths.`);
+    }
+  }
+  return canonicalRoots(extraRoots);
 }
 function resolveAttachmentReadPath(filePath, env = process.env) {
   if (!isAbsolute(filePath)) {
@@ -12223,12 +12245,14 @@ function resolveAttachmentReadPath(filePath, env = process.env) {
     if (error2 instanceof Error && error2.message.includes("not a regular file")) throw error2;
     throw new Error(`Attachment file not found: "${filePath}"`);
   }
-  if (isProtectedPath(canonical)) {
+  const explicit = explicitRoots(env);
+  if (isProtectedPath(canonical, [...explicit, ...canonicalTmpdir()])) {
     throw new Error(
-      `Attachment path is in a protected location: "${filePath}". Hidden files, credential locations and ~/Library (except iCloud Drive and CloudStorage) cannot be sent as attachments.`
+      `Attachment path is in a protected location: "${filePath}". Hidden files, credential locations and user Library folders (except iCloud Drive and CloudStorage) cannot be sent as attachments unless ${ATTACHMENT_READ_ROOTS_ENV} names a root for them.`
     );
   }
-  if (!configuredRoots(env).some((root) => isWithinRoot(canonical, root))) {
+  const roots = [...canonicalRoots(DEFAULT_ATTACHMENT_READ_ROOTS), ...explicit];
+  if (!roots.some((root) => isWithinRoot(canonical, root))) {
     throw new Error(
       `Attachment path is outside the allowed read roots: "${filePath}". Use an ordinary home-directory, /Volumes, or temporary path, or configure ${ATTACHMENT_READ_ROOTS_ENV} for an additional explicit root.`
     );
@@ -12247,7 +12271,7 @@ var init_attachmentReadPolicy = __esm({
       join(homedir(), ".config", "gh"),
       join(homedir(), "Library", "Keychains")
     ];
-    LIBRARY_DOCUMENT_FOLDERS = ["mobile documents", "cloudstorage"];
+    LIBRARY_DOCUMENT_FOLDERS = [["mobile documents", "com~apple~clouddocs"], ["cloudstorage"]];
   }
 });
 

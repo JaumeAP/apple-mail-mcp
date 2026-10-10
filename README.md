@@ -1941,23 +1941,37 @@ AI: [User opens Mail.app and sends manually, or AI calls send-email]
 
 #### Server-side tool gate (`APPLE_MAIL_MCP_MODE`)
 
+> **Fork only.** This gate exists in the
+> [JaumeAP/apple-mail-mcp](https://github.com/JaumeAP/apple-mail-mcp) build.
+> The npm package and the sweetrb marketplace in the install sections above run
+> upstream, which ignores `APPLE_MAIL_MCP_MODE`. Install the fork with
+> `claude plugin marketplace add JaumeAP/apple-mail-mcp` and
+> `claude plugin install apple-mail@jaumeap-apple-mail`.
+
 "Confirm before sending" in a tool description is advice to the model, and a
 prompt injection inside an email body can ignore it. `APPLE_MAIL_MCP_MODE`
 removes tools from the server instead, so they are neither listed nor callable:
 
-| Value            | Tools offered                                                                                     |
-| ---------------- | ------------------------------------------------------------------------------------------------- |
-| `full` (default) | All of them                                                                                       |
-| `no_send`        | All except `send-email`, `send-serial-email`, `reply-to-message`, `forward-message`              |
-| `read_only`      | Only tools that change nothing in Mail, on disk or in the template store                          |
+| Value            | Tools offered                                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------------------------- |
+| `full` (default) | All of them                                                                                                     |
+| `no_send`        | All except `send-email`, `send-serial-email`, `reply-to-message`, `forward-message` and `enable-rule`           |
+| `read_only`      | Only an explicit allow-list of reads (`src/utils/toolMode.ts`); `get-message-rfc822` is out, its `savePath` writes |
 
-An unknown value stops the server rather than falling back to `full`. Tools that
-send or delete always carry `destructiveHint`, so a client that honours MCP
-annotations can ask before running them.
+An unknown value stops the server rather than falling back to `full`, and so
+does a `config.json` that names `APPLE_MAIL_MCP_MODE` but could not be applied
+(invalid JSON, a nested `env` block, a non-string value). `read_only` is an
+allow-list: a tool added later stays out until it is classified, and a test
+fails while any registered tool is unclassified. Tools that send or delete carry
+`destructiveHint` and allow-listed reads carry `readOnlyHint`.
 
 Attachments are read from, and saved to, ordinary user folders only: hidden
-paths and `~/Library` are refused, except `~/Library/Mobile Documents` (iCloud
-Drive) and `~/Library/CloudStorage`.
+paths (checked before and after resolving symlinks) and every user Library —
+the live `~/Library` and any `…/Users/<name>/Library` under `/Volumes` — are
+refused, except iCloud Drive (`Library/Mobile Documents/com~apple~CloudDocs`)
+and `Library/CloudStorage`. A root named in
+`APPLE_MAIL_MCP_ATTACHMENT_READ_ROOTS` lifts the Library rule for reads under
+it; hidden and credential paths stay refused.
 
 ### Sending Personalized Emails (Mail Merge)
 
@@ -2048,11 +2062,12 @@ The entrypoint is written as:
 - **Email safety** - Use `create-draft` to review emails before sending.
 - **Attachment read boundary** - Outbound file attachments may come from
   ordinary files under the home directory, `/Volumes`, or temporary directories
-  by default. Hidden files and known credential/configuration locations
-  (including `.ssh`, `.aws`, `.config/gh`, Keychains, and
-  application `config.json` files) are denied. Set
+  by default. Hidden files, known credential locations (`.ssh`, `.aws`,
+  `.config/gh`, Keychains) and user Library folders other than iCloud Drive and
+  CloudStorage — on this disk or under `/Volumes` — are denied. Set
   `APPLE_MAIL_MCP_ATTACHMENT_READ_ROOTS` to a colon-separated list of explicit
-  absolute additional roots when a deliberate other location is required.
+  absolute additional roots when a deliberate other location is required; a
+  root named there also lifts the Library rule beneath it.
   Paths are canonicalized before use, so symlink escapes are rejected. `/tmp`
   is world-writable and is a convenience root, not a user-content trust
   boundary. Inline base64 attachments are unaffected.
@@ -2065,7 +2080,7 @@ The entrypoint is written as:
 | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | macOS only                                                                   | Apple Mail and AppleScript are macOS-specific                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | MCP `send-email` is plain-text                                               | The `send-email` tool sends plain text (reading HTML content is supported). To send HTML, use the bundled `apple-mail-send` CLI with `--html-body-file` (sends `multipart/alternative` via SMTP)                                                                                                                                                                                                                                                                                                                                                                                                     |
-| Attachment read path restrictions                                            | Outbound file attachments must use full absolute paths inside the default home-directory, `/Volumes`, or temporary roots, except hidden files and protected credential/configuration locations. Set `APPLE_MAIL_MCP_ATTACHMENT_READ_ROOTS` to add an explicit absolute root for another deliberate location; symlink escapes are rejected.                                                                                                                                                                                                                                                           |
+| Attachment read path restrictions                                            | Outbound file attachments must use full absolute paths inside the default home-directory, `/Volumes`, or temporary roots, except hidden files, credential locations and user Library folders other than iCloud Drive and CloudStorage. Set `APPLE_MAIL_MCP_ATTACHMENT_READ_ROOTS` to add an explicit absolute root for another deliberate location (it also lifts the Library rule beneath it); symlink escapes are rejected.                                                                                                                                                                                                                                                           |
 | Smart mailboxes need Mail quit                                               | Smart mailboxes are supported (see [Smart Mailbox Operations](#smart-mailbox-operations-intelligente-postfächer)), but `create-`/`delete-smart-mailbox` edit `SyncedSmartMailboxes.plist` directly — a running Mail may not show a new one until relaunched, and can overwrite plist edits it didn't make. Quit Mail first. Reading them needs Full Disk Access for the Node runtime                                                                                                                                                                                                                 |
 | Very large mailboxes not searchable _via AppleScript_                        | Apple Mail's AppleScript bridge times out on mailboxes with tens of thousands of messages, so unscoped `search-messages` skips mailboxes above `APPLE_MAIL_MAX_SEARCH_MAILBOX` (default 5000) and reports them as a partial result. Scope with `mailbox` + a date window — or configure the [IMAP backend](#imap-backend--opt-in), which searches these server-side in well under a second. ([#24](https://github.com/sweetrb/apple-mail-mcp/issues/24))                                                                                                                                             |
 | Can't delete/rename server-side mailboxes or mutate drafts _via AppleScript_ | Mail.app's AppleScript bridge can only `delete`/`rename` **local "On My Mac"** mailboxes and cannot delete/move drafts — it throws `AppleEvent handler failed` for IMAP/Gmail/Workspace/iCloud/Exchange mailboxes (the GUI can do it). Without IMAP configured, `delete-mailbox`/`rename-mailbox`/`delete-message`/`move-message` return a clear "do it in Mail.app directly" error instead of a generic failure. With the [IMAP backend](#imap-backend--opt-in) configured for the account, these operations run via IMAP and succeed. ([#42](https://github.com/sweetrb/apple-mail-mcp/issues/42)) |

@@ -12,10 +12,14 @@ import { homedir, tmpdir } from "os";
 import { join } from "path";
 import {
   ATTACHMENT_READ_ROOTS_ENV,
+  canonicalRoots,
   isProtectedPath,
   resolveAttachmentReadPath,
 } from "@/utils/attachmentReadPolicy.js";
-import { isPathWithinAllowedRoots } from "@/services/appleMailManager.js";
+import {
+  isPathWithinAllowedRoots,
+  resolveAttachmentSaveTarget,
+} from "@/services/appleMailManager.js";
 
 describe("outbound attachment read policy", () => {
   it("allows a regular file in the default temporary root", () => {
@@ -73,8 +77,32 @@ describe("outbound attachment read policy", () => {
     }
 
     const home = realpathSync.native(homedir());
-    expect(isProtectedPath(join(home, "Library", "Mobile Documents", "x.pdf"))).toBe(false);
+    const icloud = join(home, "Library", "Mobile Documents", "com~apple~CloudDocs", "x.pdf");
+    expect(isProtectedPath(icloud)).toBe(false);
+    expect(isProtectedPath(join(home, "Library", "CloudStorage", "Dropbox", "x.pdf"))).toBe(false);
     expect(isProtectedPath(join(home, "Library", "LaunchAgents", "x.plist"))).toBe(true);
+    // Per-app iCloud containers are app state, not iCloud Drive.
+    expect(
+      isProtectedPath(join(home, "Library", "Mobile Documents", "iCloud~com~app", "db.sqlite"))
+    ).toBe(true);
+  });
+
+  it("protects a user Library on any volume and in any spelling", () => {
+    for (const path of [
+      "/Volumes/Clone/Users/someone/Library/Messages/chat.db",
+      "/Volumes/Backup/users/SOMEONE/library/Keychains/login.keychain-db",
+      "/Users/JAP/Library/LaunchAgents/x.plist",
+    ]) {
+      expect(isProtectedPath(path), path).toBe(true);
+    }
+    expect(isProtectedPath("/Volumes/Clone/Users/someone/Documents/report.pdf")).toBe(false);
+  });
+
+  it("lets an explicit root, and the server's tmpdir, lift only the Library rule", () => {
+    const mailDownloads = "/Users/someone/Library/Containers/com.apple.mail/Data/Downloads";
+    expect(isProtectedPath(join(mailDownloads, "a.pdf"))).toBe(true);
+    expect(isProtectedPath(join(mailDownloads, "a.pdf"), [mailDownloads])).toBe(false);
+    expect(isProtectedPath(join(mailDownloads, ".hidden"), [mailDownloads])).toBe(true);
   });
 
   it("refuses save targets in hidden folders and Library app state", () => {
@@ -85,6 +113,38 @@ describe("outbound attachment read policy", () => {
     );
     expect(isPathWithinAllowedRoots(join(home, ".ssh", "authorized_keys"))).toBe(false);
     expect(isPathWithinAllowedRoots(join(home, "Downloads", ".zshrc"))).toBe(false);
+  });
+
+  it("refuses a save through a hidden folder that symlinks to a visible one", () => {
+    const visible = mkdtempSync(join(homedir(), "amcp-dotfiles-"));
+    const hidden = join(homedir(), `.amcp-link-${process.pid}`);
+    try {
+      symlinkSync(visible, hidden, "dir");
+      expect(() => resolveAttachmentSaveTarget(hidden, "evil.lua")).toThrow(/outside allowed/);
+      expect(resolveAttachmentSaveTarget(visible, "ok.pdf").savedPath).toBe(
+        join(realpathSync.native(visible), "ok.pdf")
+      );
+    } finally {
+      rmSync(hidden, { force: true });
+      rmSync(visible, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a dot-named attachment's name only in a staging directory", () => {
+    // Same root as getAttachmentBase64's staging dir (tmpdir() is not a save root).
+    const dir = mkdtempSync("/private/tmp/amcp-stage-");
+    try {
+      expect(() => resolveAttachmentSaveTarget(dir, ".env")).toThrow(/outside allowed/);
+      expect(resolveAttachmentSaveTarget(dir, ".env", { stagingDirectory: true }).savedPath).toBe(
+        join(realpathSync.native(dir), ".env")
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("never treats the filesystem root as a home-directory root", () => {
+    expect(canonicalRoots(["/", "/tmp"])).toEqual([realpathSync.native("/tmp")]);
   });
 
   it("authorizes an explicit absolute root outside the defaults", () => {

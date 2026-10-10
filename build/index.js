@@ -7759,38 +7759,60 @@ function isWithinRoot(candidate, root) {
 function hasHiddenPathSegment(candidate) {
   return candidate.split(sep).some((segment) => segment.startsWith(".") && segment.length > 1);
 }
-function isProtectedPath(candidate) {
-  if (hasHiddenPathSegment(candidate)) return true;
-  if (sensitiveRoots().some((root) => isWithinRoot(candidate, root))) return true;
+function userLibraryTail(candidate) {
+  const segments = candidate.split(sep).filter(Boolean);
+  const lower = segments.map((segment) => segment.toLowerCase());
+  for (let i = 0; i + 2 < lower.length; i++) {
+    if (lower[i] === "users" && lower[i + 2] === "library") return lower.slice(i + 3);
+  }
   let home;
   try {
     home = canonicalize(homedir3());
   } catch {
     home = resolve(homedir3());
   }
-  if (!isWithinRoot(candidate, home)) return false;
+  if (home === sep || !isWithinRoot(candidate, home)) return void 0;
   const relative = candidate.slice(home.length).split(sep).filter(Boolean);
-  if (relative[0]?.toLowerCase() !== "library") return false;
-  return !LIBRARY_DOCUMENT_FOLDERS.includes(relative[1]?.toLowerCase() ?? "");
+  if (relative[0]?.toLowerCase() !== "library") return void 0;
+  return relative.slice(1).map((segment) => segment.toLowerCase());
 }
-function configuredRoots(env) {
-  const raw = env[ATTACHMENT_READ_ROOTS_ENV];
-  const extraRoots = raw === void 0 ? [] : raw.split(delimiter).map((root) => root.trim()).filter(Boolean);
-  const requested = [...DEFAULT_ATTACHMENT_READ_ROOTS, ...extraRoots];
-  for (const root of requested) {
-    if (!isAbsolute(root)) {
-      throw new Error(`${ATTACHMENT_READ_ROOTS_ENV} entries must be absolute paths.`);
-    }
+function isLibraryDocument(tail) {
+  return LIBRARY_DOCUMENT_FOLDERS.some((folder) => folder.every((name2, i) => tail[i] === name2));
+}
+function isProtectedPath(candidate, exemptRoots = []) {
+  if (hasHiddenPathSegment(candidate)) return true;
+  if (sensitiveRoots().some((root) => isWithinRoot(candidate, root))) return true;
+  const tail = userLibraryTail(candidate);
+  if (!tail || isLibraryDocument(tail)) return false;
+  return !exemptRoots.some((root) => isWithinRoot(candidate, root));
+}
+function canonicalTmpdir() {
+  try {
+    return [canonicalize(tmpdir())];
+  } catch {
+    return [];
   }
+}
+function canonicalRoots(requested) {
   const resolved = [];
   for (const root of requested) {
     try {
       const canonical = canonicalize(resolve(root));
-      if (!resolved.includes(canonical)) resolved.push(canonical);
+      if (canonical !== sep && !resolved.includes(canonical)) resolved.push(canonical);
     } catch {
     }
   }
   return resolved;
+}
+function explicitRoots(env) {
+  const raw = env[ATTACHMENT_READ_ROOTS_ENV];
+  const extraRoots = raw === void 0 ? [] : raw.split(delimiter).map((root) => root.trim()).filter(Boolean);
+  for (const root of extraRoots) {
+    if (!isAbsolute(root)) {
+      throw new Error(`${ATTACHMENT_READ_ROOTS_ENV} entries must be absolute paths.`);
+    }
+  }
+  return canonicalRoots(extraRoots);
 }
 function resolveAttachmentReadPath(filePath, env = process.env) {
   if (!isAbsolute(filePath)) {
@@ -7810,12 +7832,14 @@ function resolveAttachmentReadPath(filePath, env = process.env) {
     if (error3 instanceof Error && error3.message.includes("not a regular file")) throw error3;
     throw new Error(`Attachment file not found: "${filePath}"`);
   }
-  if (isProtectedPath(canonical)) {
+  const explicit = explicitRoots(env);
+  if (isProtectedPath(canonical, [...explicit, ...canonicalTmpdir()])) {
     throw new Error(
-      `Attachment path is in a protected location: "${filePath}". Hidden files, credential locations and ~/Library (except iCloud Drive and CloudStorage) cannot be sent as attachments.`
+      `Attachment path is in a protected location: "${filePath}". Hidden files, credential locations and user Library folders (except iCloud Drive and CloudStorage) cannot be sent as attachments unless ${ATTACHMENT_READ_ROOTS_ENV} names a root for them.`
     );
   }
-  if (!configuredRoots(env).some((root) => isWithinRoot(canonical, root))) {
+  const roots = [...canonicalRoots(DEFAULT_ATTACHMENT_READ_ROOTS), ...explicit];
+  if (!roots.some((root) => isWithinRoot(canonical, root))) {
     throw new Error(
       `Attachment path is outside the allowed read roots: "${filePath}". Use an ordinary home-directory, /Volumes, or temporary path, or configure ${ATTACHMENT_READ_ROOTS_ENV} for an additional explicit root.`
     );
@@ -7834,7 +7858,7 @@ var init_attachmentReadPolicy = __esm({
       join3(homedir3(), ".config", "gh"),
       join3(homedir3(), "Library", "Keychains")
     ];
-    LIBRARY_DOCUMENT_FOLDERS = ["mobile documents", "cloudstorage"];
+    LIBRARY_DOCUMENT_FOLDERS = [["mobile documents", "com~apple~clouddocs"], ["cloudstorage"]];
   }
 });
 
@@ -82215,7 +82239,7 @@ import {
   realpathSync as realpathSync2,
   lstatSync
 } from "fs";
-import { resolve as resolve2, sep as sep2, join as join6 } from "path";
+import { dirname as dirname3, resolve as resolve2, sep as sep2, join as join6 } from "path";
 import { homedir as homedir5 } from "os";
 import { randomUUID } from "crypto";
 
@@ -82980,24 +83004,25 @@ function splitSearchDiagnostics(output, account) {
 }
 var ALLOWED_SAVE_ROOTS = [homedir5(), "/tmp", "/private/tmp", "/Volumes"];
 function isPathWithinAllowedRoots(resolvedPath) {
-  if (isProtectedPath(resolvedPath)) return false;
-  return ALLOWED_SAVE_ROOTS.some((root) => {
-    const base2 = root.endsWith(sep2) ? root.slice(0, -1) : root;
-    return resolvedPath === base2 || resolvedPath.startsWith(base2 + sep2);
-  });
+  if (isProtectedPath(resolvedPath, canonicalTmpdir())) return false;
+  const literal2 = ALLOWED_SAVE_ROOTS.map((root) => root.endsWith(sep2) ? root.slice(0, -1) : root);
+  const roots = [...literal2.filter(Boolean), ...canonicalRoots(ALLOWED_SAVE_ROOTS)];
+  return roots.some((base2) => resolvedPath === base2 || resolvedPath.startsWith(base2 + sep2));
 }
-function resolveAttachmentSaveTarget(savePath, attachmentName) {
+function resolveAttachmentSaveTarget(savePath, attachmentName, { stagingDirectory = false } = {}) {
+  const requested = resolve2(savePath);
   let saveDirectory;
   try {
-    saveDirectory = realpathSync2(resolve2(savePath));
+    saveDirectory = realpathSync2.native(requested);
   } catch {
     throw new Error(`Save directory "${savePath}" does not exist`);
   }
-  if (!isPathWithinAllowedRoots(saveDirectory)) {
+  if (isProtectedPath(requested, canonicalTmpdir()) || !isPathWithinAllowedRoots(saveDirectory)) {
     throw new Error(`Save path "${savePath}" is outside allowed directories`);
   }
   const savedPath = resolve2(saveDirectory, attachmentName);
-  if (!isPathWithinAllowedRoots(savedPath)) {
+  const checkedPath = stagingDirectory ? saveDirectory : savedPath;
+  if (dirname3(savedPath) !== saveDirectory || !isPathWithinAllowedRoots(checkedPath)) {
     throw new Error(`Output path "${savedPath}" is outside allowed directories`);
   }
   if (existsSync3(savedPath)) {
@@ -86466,14 +86491,14 @@ ${this.errorEmit("              ")}
    * Tries AppleScript first, falls back to MIME source extraction
    * when AppleScript can't find the attachment.
    */
-  saveAttachment(id, attachmentName, savePath) {
+  saveAttachment(id, attachmentName, savePath, options = {}) {
     if (/[/\\\0]/.test(attachmentName) || attachmentName.includes("..")) {
       console.error(`Invalid attachment name: "${attachmentName}"`);
       return false;
     }
     let target;
     try {
-      target = resolveAttachmentSaveTarget(savePath, attachmentName);
+      target = resolveAttachmentSaveTarget(savePath, attachmentName, options);
     } catch (error3) {
       console.error(error3 instanceof Error ? error3.message : String(error3));
       return false;
@@ -86574,7 +86599,7 @@ ${this.errorEmit("              ")}
     try {
       dir = mkdtempSync2("/private/tmp/amcp-fetch-");
       const dest = join6(dir, attachmentName.replace(/[/\\]/g, "_"));
-      const ok = this.saveAttachment(id, attachmentName, dir);
+      const ok = this.saveAttachment(id, attachmentName, dir, { stagingDirectory: true });
       if (!ok) {
         return {
           success: false,
@@ -87816,7 +87841,7 @@ ${actionStmts.join("\n")}
 
 // src/index.ts
 init_smtpMailer();
-import { writeFileSync as writeFileSync5 } from "fs";
+import { readFileSync as readFileSync5, writeFileSync as writeFileSync5 } from "fs";
 import { join as joinPath } from "path";
 
 // src/tools/compose.ts
@@ -89121,36 +89146,31 @@ var SENDING_TOOLS = /* @__PURE__ */ new Set([
   "send-email",
   "send-serial-email",
   "reply-to-message",
-  "forward-message"
+  "forward-message",
+  // A disabled rule can forward, redirect or auto-reply once enabled.
+  "enable-rule"
 ]);
-var WRITING_TOOLS = /* @__PURE__ */ new Set([
-  "create-draft",
-  "mark-as-read",
-  "mark-as-unread",
-  "flag-message",
-  "unflag-message",
-  "delete-message",
-  "move-message",
-  "batch-delete-messages",
-  "batch-move-messages",
-  "batch-mark-as-read",
-  "batch-mark-as-unread",
-  "batch-flag-messages",
-  "batch-unflag-messages",
-  "save-attachment",
-  "create-mailbox",
-  "delete-mailbox",
-  "rename-mailbox",
-  "create-smart-mailbox",
-  "delete-smart-mailbox",
-  "create-newsletter-smart-mailboxes",
-  "enable-rule",
-  "disable-rule",
-  "create-rule",
-  "delete-rule",
-  "save-template",
-  "delete-template",
-  "use-template"
+var READ_ONLY_TOOLS = /* @__PURE__ */ new Set([
+  "search-messages",
+  "get-message",
+  "get-message-headers",
+  "get-thread",
+  "list-messages",
+  "resolve-message-id",
+  "list-attachments",
+  "fetch-attachment",
+  "list-mailboxes",
+  "get-unread-count",
+  "list-smart-mailboxes",
+  "list-accounts",
+  "list-rules",
+  "search-contacts",
+  "list-templates",
+  "get-template",
+  "health-check",
+  "doctor",
+  "get-mail-stats",
+  "get-sync-status"
 ]);
 var DESTRUCTIVE_TOOLS = /* @__PURE__ */ new Set([
   ...SENDING_TOOLS,
@@ -89167,14 +89187,24 @@ function parseToolMode(raw) {
   if (TOOL_MODES.includes(value)) return value;
   throw new Error(`${TOOL_MODE_ENV} must be one of ${TOOL_MODES.join(", ")}; got "${raw}".`);
 }
+function resolveToolMode(env, configText) {
+  const raw = env[TOOL_MODE_ENV];
+  if ((raw === void 0 || raw === "") && configText?.includes(TOOL_MODE_ENV)) {
+    throw new Error(
+      `The config file mentions ${TOOL_MODE_ENV} but it was not applied (invalid JSON, a nested block, or a non-string value). Fix the file; the server will not fall back to "full".`
+    );
+  }
+  return parseToolMode(raw);
+}
 function isToolAllowed(name2, mode) {
   if (mode === "full") return true;
-  if (SENDING_TOOLS.has(name2)) return false;
-  return mode === "no_send" || !WRITING_TOOLS.has(name2);
+  if (mode === "read_only") return READ_ONLY_TOOLS.has(name2);
+  return !SENDING_TOOLS.has(name2);
 }
 function withSafetyAnnotations(name2, annotations) {
-  if (!DESTRUCTIVE_TOOLS.has(name2)) return annotations;
-  return { ...annotations, destructiveHint: true };
+  if (DESTRUCTIVE_TOOLS.has(name2)) return { ...annotations, destructiveHint: true };
+  if (READ_ONLY_TOOLS.has(name2)) return { ...annotations, readOnlyHint: true };
+  return annotations;
 }
 
 // src/index.ts
@@ -89352,7 +89382,14 @@ function registerTool(name2, config2, cb) {
   if (!isToolAllowed(name2, toolMode)) tool.disable();
   return tool;
 }
-var toolMode = parseToolMode(process.env[TOOL_MODE_ENV]);
+var toolMode = resolveToolMode(process.env, readConfigText());
+function readConfigText() {
+  try {
+    return readFileSync5(fileConfigPath(), "utf8");
+  } catch {
+    return void 0;
+  }
+}
 var mailManager = new AppleMailManager();
 registerResourcesAndPrompts(server, mailManager);
 function collectForensics(tool, args) {
