@@ -1,5 +1,20 @@
 ## [Unreleased]
 
+## [2.20.9-jap.5] - 2026-10-10 (JaumeAP fork)
+
+### Added
+
+- **`get-account-settings`** reads one account's settings through AppleScript:
+  full name, email addresses, enabled, server/port/SSL, fetch and Trash
+  behaviour, the IMAP storage flags and the outgoing server. Read-only mode.
+- **`set-account-settings`** changes the settings that cannot lock an account
+  out or redirect its mail (enabled, full name, include when getting new mail,
+  move deleted to Trash, empty Trash/Junk/Sent on quit, the IMAP flags). Each
+  `set` is guarded and the settings are read back; what Mail refuses is
+  reported. Writing tool: not available in `read_only`.
+- The password of an account or of its SMTP server is never read, written or
+  returned; servers, ports, user names and email addresses are read-only.
+
 ## [2.20.9-jap.4] - 2026-10-10 (JaumeAP fork)
 
 ### Fixed
