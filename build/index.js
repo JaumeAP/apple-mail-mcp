@@ -84449,6 +84449,33 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     }
     return accounts[0]?.name ?? "iCloud";
   }
+  /**
+   * Asks Mail to fetch new mail now (`check for new mail`), for one account or
+   * for all, and, for a named IMAP account, to synchronize it with the server.
+   * Mail does this in the background: the call returns once it was asked, not
+   * when the mail has arrived.
+   */
+  syncMail(account) {
+    const name2 = account ? this.resolveAccountName(account) : void 0;
+    const body = name2 ? `
+      check for new mail for account "${escapeForAppleScript(name2)}"
+      set synced to "false"
+      try
+        synchronize with account "${escapeForAppleScript(name2)}"
+        set synced to "true"
+      end try
+      return synced` : `
+      check for new mail
+      return "false"`;
+    const result = executeAppleScript(buildAppLevelScript(body), {
+      timeoutMs: 6e4,
+      maxRetries: 1
+    });
+    if (!result.success) {
+      throw new Error(`Mail did not accept the request to check for new mail: ${result.error}`);
+    }
+    return { accounts: name2 ?? "all", synchronized: result.output.trim() === "true" };
+  }
   /** Mail's own name for an account given by its name or its email address. */
   resolveAccountName(account) {
     const wanted = account.trim().toLowerCase();
@@ -86627,14 +86654,7 @@ ${this.errorEmit("              ")}
    * when AppleScript returns empty (known issue across all account types).
    */
   listAttachments(id) {
-    const script = buildAppLevelScript(`
-      try
-        repeat with acct in accounts
-          repeat with mb in mailboxes of acct
-            try
-              set matchingMsgs to (messages of mb whose id is ${Number(id)})
-              if (count of matchingMsgs) > 0 then
-                set msg to item 1 of matchingMsgs
+    const attachmentLoop = `
                 set outputText to ""
                 set attCount to 0
                 repeat with att in mail attachments of msg
@@ -86644,13 +86664,34 @@ ${this.errorEmit("              ")}
                   if attCount > 0 then set outputText to outputText & "${RECORD_SEP2}"
                   set outputText to outputText & attName & "${FIELD_SEP2}" & attType & "${FIELD_SEP2}" & attSize
                   set attCount to attCount + 1
-                end repeat
-                return outputText
+                end repeat`;
+    const loc = this.locationFor(id);
+    const lookup = loc ? `
+        ${this.resolveMailboxFragment(loc.account, loc.mailbox)}
+        if _tmb is missing value then return ""
+        set matchingMsgs to (messages of _tmb whose id is ${Number(id)})
+        if (count of matchingMsgs) > 0 then
+          set msg to item 1 of matchingMsgs
+          ${attachmentLoop}
+          return outputText
+        end if
+        return ""` : `
+        repeat with acct in accounts
+          repeat with mb in mailboxes of acct
+            try
+              set matchingMsgs to (messages of mb whose id is ${Number(id)})
+              if (count of matchingMsgs) > 0 then
+                set msg to item 1 of matchingMsgs
+                ${attachmentLoop}
+                if outputText is not "" then return outputText
               end if
             end try
           end repeat
         end repeat
-        return ""
+        return ""`;
+    const script = buildAppLevelScript(`
+      try
+        ${lookup}
       on error errMsg
         return ""
       end try
@@ -91459,6 +91500,27 @@ registerTool(
     return successResponse(`Found ${accounts.length} account(s):
 ${accountList}`, structured);
   }, "Error listing accounts")
+);
+registerTool(
+  "sync-mail",
+  {
+    description: "Use when: new mail should be fetched now \u2014 for example just after sending, or before searching a mailbox that may be behind the server.\nReturns: which account was asked, and whether an IMAP synchronization was also requested. Mail does the work in the background: the call returns when Mail was asked, not when the mail has arrived.\nDo not use when: you only want the current state (use get-sync-status).",
+    inputSchema: {
+      account: external_exports.string().optional().describe("Account name or email address; omit to check every account")
+    },
+    outputSchema: {
+      accounts: external_exports.string().optional(),
+      synchronized: external_exports.boolean().optional()
+    }
+  },
+  withErrorHandling(({ account }) => {
+    const result = mailManager.syncMail(account);
+    const scope = result.accounts === "all" ? "all accounts" : `"${result.accounts}"`;
+    return successResponse(
+      `Asked Mail to check for new mail for ${scope}${result.synchronized ? " and to synchronize it with the server" : ""}.`,
+      result
+    );
+  }, "Error asking Mail to check for new mail")
 );
 registerTool(
   "get-account-settings",

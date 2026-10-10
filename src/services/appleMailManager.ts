@@ -2622,6 +2622,36 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     return accounts[0]?.name ?? "iCloud";
   }
 
+  /**
+   * Asks Mail to fetch new mail now (`check for new mail`), for one account or
+   * for all, and, for a named IMAP account, to synchronize it with the server.
+   * Mail does this in the background: the call returns once it was asked, not
+   * when the mail has arrived.
+   */
+  syncMail(account?: string): { accounts: string; synchronized: boolean } {
+    const name = account ? this.resolveAccountName(account) : undefined;
+    const body = name
+      ? `
+      check for new mail for account "${escapeForAppleScript(name)}"
+      set synced to "false"
+      try
+        synchronize with account "${escapeForAppleScript(name)}"
+        set synced to "true"
+      end try
+      return synced`
+      : `
+      check for new mail
+      return "false"`;
+    const result = executeAppleScript(buildAppLevelScript(body), {
+      timeoutMs: 60000,
+      maxRetries: 1,
+    });
+    if (!result.success) {
+      throw new Error(`Mail did not accept the request to check for new mail: ${result.error}`);
+    }
+    return { accounts: name ?? "all", synchronized: result.output.trim() === "true" };
+  }
+
   /** Mail's own name for an account given by its name or its email address. */
   private resolveAccountName(account: string): string {
     const wanted = account.trim().toLowerCase();
@@ -5450,15 +5480,17 @@ ${this.errorEmit("              ")}
    * when AppleScript returns empty (known issue across all account types).
    */
   listAttachments(id: string): Attachment[] {
-    // Attempt 1: AppleScript mail attachments
-    const script = buildAppLevelScript(`
-      try
-        repeat with acct in accounts
-          repeat with mb in mailboxes of acct
-            try
-              set matchingMsgs to (messages of mb whose id is ${Number(id)})
-              if (count of matchingMsgs) > 0 then
-                set msg to item 1 of matchingMsgs
+    // Attempt 1: AppleScript mail attachments.
+    //
+    // A numeric id is only meaningful inside the mailbox it was listed from:
+    // Mail numbers messages per mailbox, so the same number can exist in
+    // several. The scan used to stop at the FIRST mailbox holding the id and
+    // return its attachments, so a different message with the same id answered
+    // "no attachments" for a message that had them (2026-10-10: the copy of an
+    // email with two PDFs listed none, while saving them by name worked). The
+    // mailbox the id was listed from is used when known; otherwise the scan
+    // goes on past a hit that has no attachments.
+    const attachmentLoop = `
                 set outputText to ""
                 set attCount to 0
                 repeat with att in mail attachments of msg
@@ -5468,13 +5500,36 @@ ${this.errorEmit("              ")}
                   if attCount > 0 then set outputText to outputText & "${RECORD_SEP}"
                   set outputText to outputText & attName & "${FIELD_SEP}" & attType & "${FIELD_SEP}" & attSize
                   set attCount to attCount + 1
-                end repeat
-                return outputText
+                end repeat`;
+    const loc = this.locationFor(id);
+    const lookup = loc
+      ? `
+        ${this.resolveMailboxFragment(loc.account, loc.mailbox)}
+        if _tmb is missing value then return ""
+        set matchingMsgs to (messages of _tmb whose id is ${Number(id)})
+        if (count of matchingMsgs) > 0 then
+          set msg to item 1 of matchingMsgs
+          ${attachmentLoop}
+          return outputText
+        end if
+        return ""`
+      : `
+        repeat with acct in accounts
+          repeat with mb in mailboxes of acct
+            try
+              set matchingMsgs to (messages of mb whose id is ${Number(id)})
+              if (count of matchingMsgs) > 0 then
+                set msg to item 1 of matchingMsgs
+                ${attachmentLoop}
+                if outputText is not "" then return outputText
               end if
             end try
           end repeat
         end repeat
-        return ""
+        return ""`;
+    const script = buildAppLevelScript(`
+      try
+        ${lookup}
       on error errMsg
         return ""
       end try
