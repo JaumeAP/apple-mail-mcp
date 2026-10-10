@@ -8,7 +8,7 @@
  * Run with: npx tsx scripts/jxa-comparison.ts
  */
 
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 interface TestResult {
   name: string;
@@ -23,10 +23,12 @@ function runAppleScript(script: string): {
   time: number;
   error?: string;
 } {
-  const escaped = script.trim().replace(/'/g, "'\\''");
   const start = Date.now();
   try {
-    const output = execSync(`osascript -e '${escaped}'`, { encoding: "utf8", timeout: 30000 });
+    const output = execFileSync("osascript", ["-e", script.trim()], {
+      encoding: "utf8",
+      timeout: 30000,
+    });
     return { success: true, output: output.trim(), time: Date.now() - start };
   } catch (e) {
     return { success: false, output: "", time: Date.now() - start, error: (e as Error).message };
@@ -39,10 +41,9 @@ function runJXA(script: string): {
   time: number;
   error?: string;
 } {
-  const escaped = script.trim().replace(/'/g, "'\\''");
   const start = Date.now();
   try {
-    const output = execSync(`osascript -l JavaScript -e '${escaped}'`, {
+    const output = execFileSync("osascript", ["-l", "JavaScript", "-e", script.trim()], {
       encoding: "utf8",
       timeout: 30000,
     });
