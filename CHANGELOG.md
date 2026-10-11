@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Fixed
+
+- **`forward-message` leaves from the account the message arrived in.** Same
+  defect as the reply fixed in 2.20.9-jap.7: the AppleScript forward set no
+  sender, so Mail used its default sending account. The forward now takes the
+  address of the original's to/cc recipients that belongs to the account the
+  message sits in, else that account's first address, and fails instead of
+  falling back to Mail's default.
+
 ## [2.20.9-jap.7] - 2026-10-11 (JaumeAP fork)
 
 ### Fixed
