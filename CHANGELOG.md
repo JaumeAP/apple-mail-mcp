@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+## [2.20.9-jap.7] - 2026-10-11 (JaumeAP fork)
+
+### Fixed
+
+- **`reply-to-message` answers from the account the message arrived in.** The
+  AppleScript reply set no sender, so Mail used its default sending account and
+  a mail received in one account was answered from another. The reply now takes
+  the address of the original's to/cc recipients that belongs to the account the
+  message sits in, else that account's first address, and fails instead of
+  falling back to Mail's default. Forwards are unchanged.
+
 ## [2.20.9-jap.6] - 2026-10-10 (JaumeAP fork)
 
 ### Added
