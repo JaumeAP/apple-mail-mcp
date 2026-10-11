@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [2.20.9-jap.7] - 2026-10-11 (JaumeAP fork)
+
 ### Fixed
 
 - **`reply-to-message` answers from the account the message arrived in.** The
