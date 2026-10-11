@@ -85741,7 +85741,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * @returns true if draft created successfully
    */
   createDraft(to, subject, body, cc, bcc, account, attachments) {
-    const sender = account ? this.resolveSendingAddress(account) : void 0;
+    const sender = this.resolveSendingAddress(account);
     const safeSubject = escapeForAppleScript(subject);
     const safeBody = escapeForAppleScriptBody(body);
     let recipientCommands = "";
@@ -85776,28 +85776,15 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     }
   }
   createDraftWithCommands(recipientCommands, safeSubject, safeBody, sender, attachmentCommands) {
-    let draftCommand;
-    if (sender) {
-      const safeSender = escapeForAppleScript(sender);
-      draftCommand = `
+    const draftCommand = `
         set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:false}
         tell newMessage
           ${recipientCommands}
-          set sender to "${safeSender}"
+          set sender to "${escapeForAppleScript(sender)}"
           ${attachmentCommands}
         end tell
         return "draft created"
       `;
-    } else {
-      draftCommand = `
-        set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:false}
-        tell newMessage
-          ${recipientCommands}
-          ${attachmentCommands}
-        end tell
-        return "draft created"
-      `;
-    }
     const script = buildAppLevelScript(draftCommand);
     const result = executeAppleScript(script, { timeoutMs: 6e4, maxRetries: 1 });
     if (!result.success) {
@@ -87828,7 +87815,7 @@ ${actionStmts.join("\n")}
     const subject = overrides?.subject ?? template.subject;
     const body = overrides?.body ?? template.body;
     if (to.length === 0) return false;
-    return this.createDraft(to, subject, body, cc);
+    return this.createDraft(to, subject, body, cc, void 0, overrides?.account);
   }
   // ===========================================================================
   // Diagnostics
@@ -90461,7 +90448,7 @@ registerTool(
       cc: external_exports.array(external_exports.string()).optional().describe("CC recipients"),
       bcc: external_exports.array(external_exports.string()).optional().describe("BCC recipients"),
       account: external_exports.string().optional().describe(
-        "Account to create draft in. With inReplyTo/references this must name a configured IMAP account (label or login); when omitted, the IMAP account matching the SMTP identity, else the only IMAP account, is used."
+        "Account to create the draft from (name or email address of an enabled account). Required for a plain draft: without it nothing is created, so Mail's default sending account is never used silently. With inReplyTo/references this must name a configured IMAP account (label or login); when omitted, the IMAP account matching the SMTP identity, else the only IMAP account, is used."
       ),
       attachments: ATTACHMENTS_SCHEMA,
       inReplyTo: IN_REPLY_TO_SCHEMA,
@@ -91873,15 +91860,18 @@ registerTool(
       to: external_exports.array(external_exports.string()).optional().describe("Override recipients"),
       cc: external_exports.array(external_exports.string()).optional().describe("Override CC recipients"),
       subject: external_exports.string().optional().describe("Override subject"),
-      body: external_exports.string().optional().describe("Override body")
+      body: external_exports.string().optional().describe("Override body"),
+      account: external_exports.string().describe(
+        "Account to create the draft from (name or email address of an enabled account). Required: without it Mail would use its default sending account."
+      )
     },
     outputSchema: {
       ok: external_exports.boolean().optional(),
       id: external_exports.string().optional()
     }
   },
-  withErrorHandling(({ id, to, cc, subject, body }) => {
-    const success = mailManager.useTemplate(id, { to, cc, subject, body });
+  withErrorHandling(({ id, to, cc, subject, body, account }) => {
+    const success = mailManager.useTemplate(id, { to, cc, subject, body, account });
     if (!success) {
       return errorResponse(`Failed to use template "${id}". Template not found or no recipients.`);
     }

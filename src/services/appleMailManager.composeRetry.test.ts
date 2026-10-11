@@ -50,7 +50,13 @@ describe("compose mutations are single-attempt", () => {
 
   it("createDraft runs the AppleScript compose with maxRetries: 1", () => {
     const mgr = new AppleMailManager();
-    expect(mgr.createDraft(["to@example.com"], "subject", "body")).toBe(false);
+    vi.spyOn(
+      mgr as unknown as { getCachedAccounts: () => unknown },
+      "getCachedAccounts"
+    ).mockReturnValue([{ name: "Work", email: "me@work.example", enabled: true }]);
+    expect(
+      mgr.createDraft(["to@example.com"], "subject", "body", undefined, undefined, "Work")
+    ).toBe(false);
     expect(h.calls).toHaveLength(1);
     expect(h.calls[0].script).toContain("make new outgoing message");
     expect(h.calls[0].options).toMatchObject({ maxRetries: 1 });

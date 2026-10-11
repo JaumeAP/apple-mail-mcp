@@ -88,9 +88,40 @@ describe("createDraft sending account", () => {
     expect(h.scripts[0]).toContain('set sender to "me@icloud.example"');
   });
 
-  it("with no account keeps Mail's default and sets no sender", () => {
-    manager().createDraft(["to@example.com"], "subject", "body");
-    expect(h.scripts[0]).not.toContain("set sender");
+  it("refuses a draft with no account and composes nothing", () => {
+    expect(() => manager().createDraft(["to@example.com"], "subject", "body")).toThrow(
+      /No sending account given/
+    );
+    expect(h.scripts).toHaveLength(0);
+  });
+});
+
+describe("useTemplate sending account", () => {
+  const template = {
+    id: "t1",
+    name: "T",
+    subject: "s",
+    body: "b",
+    to: ["to@example.com"],
+  };
+
+  function withTemplate(): AppleMailManager {
+    const mgr = manager();
+    vi.spyOn(
+      (mgr as unknown as { templateStore: { get: (id: string) => unknown } }).templateStore,
+      "get"
+    ).mockReturnValue(template);
+    return mgr;
+  }
+
+  it("refuses a template draft with no account and composes nothing", () => {
+    expect(() => withTemplate().useTemplate("t1")).toThrow(/No sending account given/);
+    expect(h.scripts).toHaveLength(0);
+  });
+
+  it("creates the draft from the given account's address", () => {
+    withTemplate().useTemplate("t1", { account: "iCloud" });
+    expect(h.scripts[0]).toContain('set sender to "me@icloud.example"');
   });
 });
 
