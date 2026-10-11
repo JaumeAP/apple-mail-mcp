@@ -1,11 +1,11 @@
 /**
- * A reply leaves from the account the message arrived in.
+ * A reply or forward leaves from the account the message arrived in.
  *
  * `reply msg without opening window` does not set a sender, so Mail answered
  * from its default sending account: a mail received in one account was answered
- * from another (2026-10-11). The reply script must fix the sender to the address
- * the original was sent to, before the content is set, and must not fall back
- * silently.
+ * from another (2026-10-11). `forward msg` has the same default. The script must
+ * fix the sender to the address the original was sent to, before the content is
+ * set, and must not fall back silently.
  *
  * executeAppleScript is mocked, so these tests inspect the generated AppleScript.
  */
@@ -59,8 +59,16 @@ describe("reply sender", () => {
     expect(lastScript()).toContain("if (count of _rsAddrs) is 0 then error");
   });
 
-  it("leaves forwards alone: they start a new conversation", () => {
-    mgr.forwardMessage("42", ["to@example.com"], undefined, false);
-    expect(lastScript()).not.toContain("_rsFrom");
+  it("sets the sender of a forward from the account of the original, before the content", () => {
+    expect(mgr.forwardMessage("42", ["to@example.com"], "Fwd body", false)).toMatchObject({
+      success: true,
+    });
+    const script = lastScript();
+    expect(script).toContain("email addresses of (account of (mailbox of msg))");
+    expect(script).toContain("set sender of theForward to _rsFrom");
+    expect(script).toContain("has no email address to forward from.");
+    expect(script.indexOf("set sender of theForward")).toBeLessThan(
+      script.indexOf("set content of theForward")
+    );
   });
 });

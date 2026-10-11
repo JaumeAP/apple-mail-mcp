@@ -159,6 +159,7 @@ The `to`, `cc`, and `bcc` parameters must always be arrays:
 - Optional `body` to prepend a message
 - Optional `attachments` (2.20.0), same rules as `reply-to-message`; on AppleScript with no `body`, the forwarded-message block is built so the files have a paragraph to anchor to
 - Set `send: false` to save as draft
+- **Sender (AppleScript path):** same rule as `reply-to-message`: the forward leaves from the account the original message arrived in, never from Mail's default sending account, and fails if that account has no address
 - **Transport (v2.5.0):** when SMTP is configured, sends via **clean direct SMTP** (a forward starts a new conversation — no threading headers). Reads `imap:` sources directly over IMAP. A selected SMTP path never silently falls back. With transport omitted, uses AppleScript `forward … without opening window` when SMTP is unconfigured or a draft is requested — same background-process fix as reply-to-message
 
 ### Multi-account
