@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [2.20.9-jap.8] - 2026-10-11 (JaumeAP fork)
+
 ### Fixed
 
 - **`forward-message` leaves from the account the message arrived in.** Same
