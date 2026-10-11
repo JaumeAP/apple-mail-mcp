@@ -1687,9 +1687,11 @@ registerTool(
         .string()
         .optional()
         .describe(
-          "Account to create draft in. With inReplyTo/references this must name a configured " +
-            "IMAP account (label or login); when omitted, the IMAP account matching the SMTP " +
-            "identity, else the only IMAP account, is used."
+          "Account to create the draft from (name or email address of an enabled account). " +
+            "Required for a plain draft: without it nothing is created, so Mail's default " +
+            "sending account is never used silently. With inReplyTo/references this must name a " +
+            "configured IMAP account (label or login); when omitted, the IMAP account matching " +
+            "the SMTP identity, else the only IMAP account, is used."
         ),
       attachments: ATTACHMENTS_SCHEMA,
       inReplyTo: IN_REPLY_TO_SCHEMA,
@@ -3518,14 +3520,20 @@ registerTool(
       cc: z.array(z.string()).optional().describe("Override CC recipients"),
       subject: z.string().optional().describe("Override subject"),
       body: z.string().optional().describe("Override body"),
+      account: z
+        .string()
+        .describe(
+          "Account to create the draft from (name or email address of an enabled account). " +
+            "Required: without it Mail would use its default sending account."
+        ),
     },
     outputSchema: {
       ok: z.boolean().optional(),
       id: z.string().optional(),
     },
   },
-  withErrorHandling(({ id, to, cc, subject, body }) => {
-    const success = mailManager.useTemplate(id, { to, cc, subject, body });
+  withErrorHandling(({ id, to, cc, subject, body, account }) => {
+    const success = mailManager.useTemplate(id, { to, cc, subject, body, account });
 
     if (!success) {
       return errorResponse(`Failed to use template "${id}". Template not found or no recipients.`);

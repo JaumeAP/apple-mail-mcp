@@ -4272,9 +4272,9 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     account?: string,
     attachments?: AttachmentInput[]
   ): boolean {
-    // A named account must be a real, enabled one; with none named, Mail's own
-    // default account is used, as before.
-    const sender = account ? this.resolveSendingAddress(account) : undefined;
+    // Same rule as sendEmail: no valid account, no draft. Mail's own default
+    // account is never used silently (2026-10-11).
+    const sender = this.resolveSendingAddress(account);
     const safeSubject = escapeForAppleScript(subject);
     const safeBody = escapeForAppleScriptBody(body);
 
@@ -4314,31 +4314,18 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     recipientCommands: string,
     safeSubject: string,
     safeBody: string,
-    sender: string | undefined,
+    sender: string,
     attachmentCommands: string
   ): boolean {
-    let draftCommand: string;
-    if (sender) {
-      const safeSender = escapeForAppleScript(sender);
-      draftCommand = `
+    const draftCommand = `
         set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:false}
         tell newMessage
           ${recipientCommands}
-          set sender to "${safeSender}"
+          set sender to "${escapeForAppleScript(sender)}"
           ${attachmentCommands}
         end tell
         return "draft created"
       `;
-    } else {
-      draftCommand = `
-        set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:false}
-        tell newMessage
-          ${recipientCommands}
-          ${attachmentCommands}
-        end tell
-        return "draft created"
-      `;
-    }
 
     const script = buildAppLevelScript(draftCommand);
     // Exactly one attempt, for the same reason as sendEmailWithPaths: a
@@ -7016,7 +7003,7 @@ ${actionStmts.join("\n")}
    */
   useTemplate(
     id: string,
-    overrides?: { to?: string[]; cc?: string[]; subject?: string; body?: string }
+    overrides?: { to?: string[]; cc?: string[]; subject?: string; body?: string; account?: string }
   ): boolean {
     const template = this.templateStore.get(id);
     if (!template) return false;
@@ -7031,7 +7018,7 @@ ${actionStmts.join("\n")}
 
     if (to.length === 0) return false;
 
-    return this.createDraft(to, subject, body, cc);
+    return this.createDraft(to, subject, body, cc, undefined, overrides?.account);
   }
 
   // ===========================================================================

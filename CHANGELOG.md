@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+### Fixed
+
+- **`create-draft` and `use-template` need a sending account.** Without
+  `account` the AppleScript draft set no sender, so Mail used its default
+  sending account, the defect fixed for replies and forwards. A plain draft now
+  fails, composing nothing, when `account` is missing or matches no enabled
+  account, as `send-email` already did; the error lists the enabled accounts.
+  `use-template` gains a required `account`: a template still stores no account,
+  it is chosen when the template is used. A threaded draft (`inReplyTo` /
+  `references`) is unchanged.
+
 ## [2.20.9-jap.8] - 2026-10-11 (JaumeAP fork)
 
 ### Fixed
