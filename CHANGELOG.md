@@ -1,6 +1,16 @@
 ## [Unreleased]
 
-## [2.20.9-jap.9] - 2026-10-11 (JaumeAP fork)
+## [2.20.9-jap.10] - 2026-10-12 (JaumeAP fork)
+
+### Added
+
+- **`send-email` takes `draftId`.** Names the draft the email was written in. The
+  draft is checked before anything is sent: it must be in a Drafts mailbox with
+  the same subject, or nothing is sent. After the send, the draft is deleted only
+  when a Sent copy with that subject is found (SMTP: `sentCopy`; AppleScript: a
+  search of the account's mailboxes for the subject, dated after the send began).
+  Without that copy the draft is kept and `draftError` says why. Prefer an
+  `imap:` id; a numeric id is bound to the mailbox it was listed from.
 
 ### Fixed
 

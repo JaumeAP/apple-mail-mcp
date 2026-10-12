@@ -88868,6 +88868,25 @@ async function routeMessage(id, opts) {
   return opts.apple();
 }
 
+// src/tools/draftCleanup.ts
+var SEND_CLOCK_SLACK_MS = 6e4;
+function isDraftMailbox(mailbox) {
+  return /draft/i.test(mailbox);
+}
+function isSentMailbox(mailbox) {
+  return /sent/i.test(mailbox);
+}
+function isDraftForSend(draft, subject) {
+  return draft !== null && draft.subject === subject && isDraftMailbox(draft.mailbox);
+}
+function hasSentCopy(hits, subject, sentAfter) {
+  return hits.some((m) => {
+    if (m.subject !== subject || !isSentMailbox(m.mailbox)) return false;
+    const when = m.dateSent ?? m.dateReceived;
+    return when.getTime() >= sentAfter.getTime() - SEND_CLOCK_SLACK_MS;
+  });
+}
+
 // src/tools/doctor.ts
 init_imapClient();
 init_smtpMailer();
@@ -90286,6 +90305,28 @@ var SENT_COPY_SCHEMA = external_exports.boolean().optional().describe(
   "SMTP only: whether a best-effort copy was filed to the account's Sent mailbox over IMAP (issue #220). Absent when no configured IMAP account matches the SMTP identity \u2014 not a failure, the feature simply wasn't engaged."
 );
 var SENT_COPY_ERROR_SCHEMA = external_exports.string().optional().describe("Present only when sentCopy is false: why the Sent-folder copy failed.");
+async function checkDraftForSend(draftId, subject) {
+  const mismatch = `draftId "${draftId}" is not a draft with subject "${subject}"; nothing was sent.`;
+  const ref = decodeImapId(draftId);
+  if (ref) {
+    const read = await imapGetMessage(draftId, false);
+    if (!read.success) return read.error ?? `Draft "${draftId}" could not be read.`;
+    const draftSubject = /^Subject: (.*)$/m.exec(read.info ?? "")?.[1] ?? "";
+    return isDraftForSend({ subject: draftSubject, mailbox: ref.path }, subject) ? null : mismatch;
+  }
+  return isDraftForSend(mailManager.getMessageById(draftId), subject) ? null : mismatch;
+}
+async function deleteDraftAfterSend(draftId) {
+  const r = decodeImapId(draftId) ? await imapDeleteMessageById(draftId) : mailManager.deleteMessage(draftId);
+  return r.success ? { deleted: true } : { deleted: false, error: r.error };
+}
+async function cleanUpDraft(draftId, sentCopy) {
+  if (!sentCopy) {
+    return { draftDeleted: false, draftError: "No Sent copy found; the draft was kept." };
+  }
+  const d = await deleteDraftAfterSend(draftId);
+  return d.deleted ? { draftDeleted: true } : { draftDeleted: false, draftError: d.error };
+}
 registerTool(
   "send-email",
   {
@@ -90307,6 +90348,9 @@ registerTool(
       ),
       transport: external_exports.enum(["applescript", "smtp"]).optional().describe(
         "Send transport. 'smtp' submits clean MIME directly via SMTP, avoiding the macOS 15+ Mail.app <blockquote> wrapping (issue #12); requires APPLE_MAIL_MCP_SMTP_* env config. 'applescript' sends through Mail.app. If omitted, SMTP is used automatically when APPLE_MAIL_MCP_SMTP_* is configured, otherwise AppleScript."
+      ),
+      draftId: external_exports.string().optional().describe(
+        "The draft this email was written in (its id from list-messages or search-messages in Drafts; an imap: id is preferred). Checked before sending: it must be a draft with the same subject, or nothing is sent. After a send that files a Sent copy, the draft is deleted; without that copy it is kept."
       )
     },
     outputSchema: {
@@ -90316,7 +90360,9 @@ registerTool(
       transport: external_exports.string().optional(),
       messageId: external_exports.string().optional(),
       sentCopy: SENT_COPY_SCHEMA,
-      sentCopyError: SENT_COPY_ERROR_SCHEMA
+      sentCopyError: SENT_COPY_ERROR_SCHEMA,
+      draftDeleted: external_exports.boolean().optional(),
+      draftError: external_exports.string().optional().describe("Present only when draftId was given and the draft was kept or not deleted.")
     }
   },
   withErrorHandling(
@@ -90331,10 +90377,16 @@ registerTool(
       transport: transport2,
       replyTo,
       inReplyTo,
-      references
+      references,
+      draftId
     }) => {
       const attachInfo = attachments?.length ? ` with ${attachments.length} attachment(s)` : "";
       const attachmentCount = attachments?.length ?? 0;
+      if (draftId) {
+        const refusal = await checkDraftForSend(draftId, subject);
+        if (refusal) return errorResponse(refusal);
+      }
+      const sentAfter = /* @__PURE__ */ new Date();
       const useSmtp = shouldUseSmtp(transport2, account);
       const threading = sendEmailThreading({ inReplyTo, references }, useSmtp);
       if (!threading.ok) return errorResponse(threading.error);
@@ -90355,6 +90407,7 @@ registerTool(
           return errorResponse(result.error ?? "Failed to send email via SMTP.");
         }
         const copyNote = result.sentCopy === true ? " (Sent-folder copy filed)" : result.sentCopy === false ? ` (Sent-folder copy NOT filed: ${result.sentCopyError ?? "unknown error"})` : "";
+        const draft2 = draftId ? await cleanUpDraft(draftId, result.sentCopy === true) : {};
         return successResponse(`Email sent via SMTP to ${to.join(", ")}${attachInfo}${copyNote}`, {
           ok: true,
           recipients: to,
@@ -90362,18 +90415,37 @@ registerTool(
           transport: "smtp",
           ...result.messageId ? { messageId: result.messageId } : {},
           ...result.sentCopy !== void 0 ? { sentCopy: result.sentCopy } : {},
-          ...result.sentCopyError !== void 0 ? { sentCopyError: result.sentCopyError } : {}
+          ...result.sentCopyError !== void 0 ? { sentCopyError: result.sentCopyError } : {},
+          ...draft2
         });
       }
       const success = mailManager.sendEmail(to, subject, body, cc, bcc, account, attachments);
       if (!success) {
         return errorResponse("Failed to send email. Check Mail.app configuration.");
       }
+      const draft = draftId ? await cleanUpDraft(
+        draftId,
+        hasSentCopy(
+          mailManager.searchMessages(
+            void 0,
+            void 0,
+            account,
+            50,
+            void 0,
+            void 0,
+            void 0,
+            subject
+          ),
+          subject,
+          sentAfter
+        )
+      ) : {};
       return successResponse(`Email sent to ${to.join(", ")}${attachInfo}`, {
         ok: true,
         recipients: to,
         attachmentCount,
-        transport: "applescript"
+        transport: "applescript",
+        ...draft
       });
     },
     "Error sending email"

@@ -118,6 +118,7 @@ import {
 } from "@/services/imapMultiAccount.js";
 import type { Account, SearchDiagnostics, SearchResult } from "@/types.js";
 import { routeMessage } from "@/services/messageRouter.js";
+import { hasSentCopy, isDraftForSend } from "@/tools/draftCleanup.js";
 import { runDoctor, formatDoctorReport } from "@/tools/doctor.js";
 import { registerResourcesAndPrompts } from "@/tools/resourcesAndPrompts.js";
 import {
@@ -1442,6 +1443,50 @@ const SENT_COPY_ERROR_SCHEMA = z
   .optional()
   .describe("Present only when sentCopy is false: why the Sent-folder copy failed.");
 
+// --- send-email: draftId clean-up ---
+
+/**
+ * Before sending: `draftId` must name a draft whose subject is the one being
+ * sent. Returns the refusal text, or null when the draft checks out. Refusing
+ * here keeps a wrong id from sending anything.
+ */
+async function checkDraftForSend(draftId: string, subject: string): Promise<string | null> {
+  const mismatch = `draftId "${draftId}" is not a draft with subject "${subject}"; nothing was sent.`;
+  const ref = decodeImapId(draftId);
+  if (ref) {
+    const read = await imapGetMessage(draftId, false);
+    if (!read.success) return read.error ?? `Draft "${draftId}" could not be read.`;
+    const draftSubject = /^Subject: (.*)$/m.exec(read.info ?? "")?.[1] ?? "";
+    return isDraftForSend({ subject: draftSubject, mailbox: ref.path }, subject) ? null : mismatch;
+  }
+  return isDraftForSend(mailManager.getMessageById(draftId), subject) ? null : mismatch;
+}
+
+/** Deletes the draft: IMAP moves it to Trash, AppleScript deletes it by its bound id. */
+async function deleteDraftAfterSend(
+  draftId: string
+): Promise<{ deleted: boolean; error?: string }> {
+  const r = decodeImapId(draftId)
+    ? await imapDeleteMessageById(draftId)
+    : mailManager.deleteMessage(draftId);
+  return r.success ? { deleted: true } : { deleted: false, error: r.error };
+}
+
+/**
+ * Deletes the draft only when a Sent copy was filed. Without that copy the email
+ * may not have gone out, so the draft stays.
+ */
+async function cleanUpDraft(
+  draftId: string,
+  sentCopy: boolean
+): Promise<{ draftDeleted: boolean; draftError?: string }> {
+  if (!sentCopy) {
+    return { draftDeleted: false, draftError: "No Sent copy found; the draft was kept." };
+  }
+  const d = await deleteDraftAfterSend(draftId);
+  return d.deleted ? { draftDeleted: true } : { draftDeleted: false, draftError: d.error };
+}
+
 // --- send-email ---
 
 registerTool(
@@ -1485,6 +1530,15 @@ registerTool(
             "If omitted, SMTP is used automatically when APPLE_MAIL_MCP_SMTP_* is " +
             "configured, otherwise AppleScript."
         ),
+      draftId: z
+        .string()
+        .optional()
+        .describe(
+          "The draft this email was written in (its id from list-messages or " +
+            "search-messages in Drafts; an imap: id is preferred). Checked before sending: " +
+            "it must be a draft with the same subject, or nothing is sent. After a send " +
+            "that files a Sent copy, the draft is deleted; without that copy it is kept."
+        ),
     },
     outputSchema: {
       ok: z.boolean().optional(),
@@ -1494,6 +1548,11 @@ registerTool(
       messageId: z.string().optional(),
       sentCopy: SENT_COPY_SCHEMA,
       sentCopyError: SENT_COPY_ERROR_SCHEMA,
+      draftDeleted: z.boolean().optional(),
+      draftError: z
+        .string()
+        .optional()
+        .describe("Present only when draftId was given and the draft was kept or not deleted."),
     },
   },
   withErrorHandling(
@@ -1509,10 +1568,17 @@ registerTool(
       replyTo,
       inReplyTo,
       references,
+      draftId,
     }) => {
       const attachInfo = attachments?.length ? ` with ${attachments.length} attachment(s)` : "";
 
       const attachmentCount = attachments?.length ?? 0;
+
+      if (draftId) {
+        const refusal = await checkDraftForSend(draftId, subject);
+        if (refusal) return errorResponse(refusal);
+      }
+      const sentAfter = new Date();
 
       // Prefer SMTP when explicitly requested, or automatically when it is
       // configured and no transport was specified — except when a non-email
@@ -1549,6 +1615,7 @@ registerTool(
             : result.sentCopy === false
               ? ` (Sent-folder copy NOT filed: ${result.sentCopyError ?? "unknown error"})`
               : "";
+        const draft = draftId ? await cleanUpDraft(draftId, result.sentCopy === true) : {};
         return successResponse(`Email sent via SMTP to ${to.join(", ")}${attachInfo}${copyNote}`, {
           ok: true,
           recipients: to,
@@ -1557,6 +1624,7 @@ registerTool(
           ...(result.messageId ? { messageId: result.messageId } : {}),
           ...(result.sentCopy !== undefined ? { sentCopy: result.sentCopy } : {}),
           ...(result.sentCopyError !== undefined ? { sentCopyError: result.sentCopyError } : {}),
+          ...draft,
         });
       }
 
@@ -1566,11 +1634,31 @@ registerTool(
         return errorResponse("Failed to send email. Check Mail.app configuration.");
       }
 
+      const draft = draftId
+        ? await cleanUpDraft(
+            draftId,
+            hasSentCopy(
+              mailManager.searchMessages(
+                undefined,
+                undefined,
+                account,
+                50,
+                undefined,
+                undefined,
+                undefined,
+                subject
+              ),
+              subject,
+              sentAfter
+            )
+          )
+        : {};
       return successResponse(`Email sent to ${to.join(", ")}${attachInfo}`, {
         ok: true,
         recipients: to,
         attachmentCount,
         transport: "applescript",
+        ...draft,
       });
     },
     "Error sending email"
