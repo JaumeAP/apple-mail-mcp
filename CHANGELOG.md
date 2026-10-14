@@ -1,5 +1,21 @@
 ## [Unreleased]
 
+## [2.20.9-jap.11] - 2026-10-14 (JaumeAP fork)
+
+### Added
+
+- **Mail.app is opened or restarted by the server when it needs it.** Before an
+  AppleScript call the server checks that Mail answers: if Mail is not running
+  it opens it (`open -g -a Mail`) and waits until it answers; if Mail is running
+  but a probe (`count of accounts`) times out, it quits Mail, force-kills it if
+  it will not quit, opens it again and waits. A failed call is never retried, so
+  a send that timed out is not sent twice; the next call finds a healthy Mail.
+  At most one restart per 10 minutes, only the current user's Mail process, and
+  never for a permission refusal (-1743). Set `APPLE_MAIL_MCP_AUTO_RECOVER=0` to
+  turn it off. An unsaved draft in a wedged Mail is lost.
+- **`restart-mail` tool.** The same restart on demand, ignoring the cooldown.
+  Classified as a writing tool, so `read_only` mode does not offer it.
+
 ## [2.20.9-jap.10] - 2026-10-12 (JaumeAP fork)
 
 ### Added

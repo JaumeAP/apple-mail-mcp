@@ -9,6 +9,7 @@
 
 import { execFileSync, spawnSync } from "child_process";
 import type { AppleScriptResult, AppleScriptOptions } from "@/types.js";
+import { ensureMailReady, markMailUnhealthy } from "@/utils/mailRecovery.js";
 
 /**
  * Default execution timeout for AppleScript commands in milliseconds.
@@ -431,6 +432,10 @@ export function executeAppleScript(
     maxRetries,
   });
 
+  // Open Mail if it is closed, restart it if it is wedged (utils/mailRecovery).
+  // Before the call, never after a failure: a failed send is not retried.
+  ensureMailReady();
+
   let lastError: AppleScriptResult | null = null;
   const startTime = Date.now();
 
@@ -479,6 +484,7 @@ export function executeAppleScript(
       // Check for timeout first - provide specific message
       if (isTimeoutError(error)) {
         isTimeout = true;
+        markMailUnhealthy();
         const timeoutSecs = Math.round(timeoutMs / 1000);
         errorMessage = `Operation timed out after ${timeoutSecs} seconds. Mail.app may be unresponsive or the operation involves too many messages.`;
       } else if (error instanceof Error) {
