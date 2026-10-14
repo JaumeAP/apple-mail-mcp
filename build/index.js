@@ -48,9 +48,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/code.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = void 0;
@@ -202,9 +202,9 @@ var require_code = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/scope.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/scope.js
 var require_scope = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = void 0;
@@ -347,9 +347,9 @@ var require_scope = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/index.js
 var require_codegen = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = void 0;
@@ -1067,9 +1067,9 @@ var require_codegen = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/util.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/util.js
 var require_util = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/util.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = void 0;
@@ -1234,9 +1234,9 @@ var require_util = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/names.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/names.js
 var require_names = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/names.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/names.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -1273,9 +1273,9 @@ var require_names = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/errors.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/errors.js
 var require_errors = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/errors.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = void 0;
@@ -1395,9 +1395,9 @@ var require_errors = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/boolSchema.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/boolSchema.js
 var require_boolSchema = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = void 0;
@@ -1446,9 +1446,9 @@ var require_boolSchema = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/rules.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/rules.js
 var require_rules = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/rules.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/rules.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRules = exports.isJSONType = void 0;
@@ -1477,9 +1477,9 @@ var require_rules = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/applicability.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/applicability.js
 var require_applicability = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = void 0;
@@ -1500,9 +1500,9 @@ var require_applicability = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/dataType.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/dataType.js
 var require_dataType = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = void 0;
@@ -1684,9 +1684,9 @@ var require_dataType = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/defaults.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/defaults.js
 var require_defaults = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.assignDefaults = void 0;
@@ -1721,9 +1721,9 @@ var require_defaults = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/code.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/code.js
 var require_code2 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/code.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = void 0;
@@ -1854,9 +1854,9 @@ var require_code2 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/keyword.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/keyword.js
 var require_keyword = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = void 0;
@@ -1972,9 +1972,9 @@ var require_keyword = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/subschema.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/subschema.js
 var require_subschema = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
@@ -2055,9 +2055,9 @@ var require_subschema = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/fast-deep-equal@3.1.3/node_modules/fast-deep-equal/index.js
+// node_modules/.pnpm/fast-deep-equal@3.1.3/node_modules/fast-deep-equal/index.js
 var require_fast_deep_equal = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/fast-deep-equal@3.1.3/node_modules/fast-deep-equal/index.js"(exports, module) {
+  "node_modules/.pnpm/fast-deep-equal@3.1.3/node_modules/fast-deep-equal/index.js"(exports, module) {
     "use strict";
     module.exports = function equal(a, b) {
       if (a === b) return true;
@@ -2090,9 +2090,9 @@ var require_fast_deep_equal = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/json-schema-traverse@1.0.0/node_modules/json-schema-traverse/index.js
+// node_modules/.pnpm/json-schema-traverse@1.0.0/node_modules/json-schema-traverse/index.js
 var require_json_schema_traverse = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/json-schema-traverse@1.0.0/node_modules/json-schema-traverse/index.js"(exports, module) {
+  "node_modules/.pnpm/json-schema-traverse@1.0.0/node_modules/json-schema-traverse/index.js"(exports, module) {
     "use strict";
     var traverse = module.exports = function(schema, opts, cb) {
       if (typeof opts == "function") {
@@ -2178,9 +2178,9 @@ var require_json_schema_traverse = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/resolve.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/resolve.js
 var require_resolve = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/resolve.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/resolve.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = void 0;
@@ -2334,9 +2334,9 @@ var require_resolve = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/index.js
 var require_validate = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getData = exports.KeywordCxt = exports.validateFunctionCode = void 0;
@@ -2842,9 +2842,9 @@ var require_validate = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/validation_error.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/validation_error.js
 var require_validation_error = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ValidationError = class extends Error {
@@ -2858,9 +2858,9 @@ var require_validation_error = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/ref_error.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/ref_error.js
 var require_ref_error = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/ref_error.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/ref_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var resolve_1 = require_resolve();
@@ -2875,9 +2875,9 @@ var require_ref_error = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/index.js
 var require_compile = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = void 0;
@@ -3099,9 +3099,9 @@ var require_compile = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/data.json
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/data.json
 var require_data = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/data.json"(exports, module) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/data.json"(exports, module) {
     module.exports = {
       $id: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
       description: "Meta-schema for $data reference (JSON AnySchema extension proposal)",
@@ -3118,9 +3118,9 @@ var require_data = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/lib/utils.js
+// node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/lib/utils.js
 var require_utils = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/lib/utils.js"(exports, module) {
+  "node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/lib/utils.js"(exports, module) {
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
@@ -3620,9 +3620,9 @@ var require_utils = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/lib/schemes.js
+// node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/lib/schemes.js
 var require_schemes = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/lib/schemes.js"(exports, module) {
+  "node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/lib/schemes.js"(exports, module) {
     "use strict";
     var { isUUID } = require_utils();
     var URN_REG = /^([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-./:;=@]|%[\da-f]{2})+)$/iu;
@@ -3831,9 +3831,9 @@ var require_schemes = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/index.js
+// node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/index.js
 var require_fast_uri = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/index.js"(exports, module) {
+  "node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, serializePathEncoding, normalizeQueryFragmentEncoding, encodeQuery, encodeFragment, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
@@ -4237,9 +4237,9 @@ var require_fast_uri = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/uri.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/uri.js
 var require_uri = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/uri.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/uri.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var uri = require_fast_uri();
@@ -4248,9 +4248,9 @@ var require_uri = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/core.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/core.js
 var require_core = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/core.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/core.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
@@ -4859,9 +4859,9 @@ var require_core = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/id.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/id.js
 var require_id = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var def = {
@@ -4874,9 +4874,9 @@ var require_id = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/ref.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/ref.js
 var require_ref = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.callRef = exports.getValidate = void 0;
@@ -4996,9 +4996,9 @@ var require_ref = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/index.js
 var require_core2 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var id_1 = require_id();
@@ -5017,9 +5017,9 @@ var require_core2 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
 var require_limitNumber = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5049,9 +5049,9 @@ var require_limitNumber = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
 var require_multipleOf = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5077,9 +5077,9 @@ var require_multipleOf = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/ucs2length.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/ucs2length.js
 var require_ucs2length = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str2) {
@@ -5103,9 +5103,9 @@ var require_ucs2length = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitLength.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitLength.js
 var require_limitLength = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5135,9 +5135,9 @@ var require_limitLength = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/pattern.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/pattern.js
 var require_pattern = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5172,9 +5172,9 @@ var require_pattern = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
 var require_limitProperties = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5201,9 +5201,9 @@ var require_limitProperties = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/required.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/required.js
 var require_required = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5283,9 +5283,9 @@ var require_required = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitItems.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitItems.js
 var require_limitItems = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5312,9 +5312,9 @@ var require_limitItems = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/equal.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/equal.js
 var require_equal = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/equal.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/equal.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var equal = require_fast_deep_equal();
@@ -5323,9 +5323,9 @@ var require_equal = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
 var require_uniqueItems = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dataType_1 = require_dataType();
@@ -5390,9 +5390,9 @@ var require_uniqueItems = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/const.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/const.js
 var require_const = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5419,9 +5419,9 @@ var require_const = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/enum.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/enum.js
 var require_enum = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5468,9 +5468,9 @@ var require_enum = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/index.js
 var require_validation = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var limitNumber_1 = require_limitNumber();
@@ -5506,9 +5506,9 @@ var require_validation = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
 var require_additionalItems = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateAdditionalItems = void 0;
@@ -5559,9 +5559,9 @@ var require_additionalItems = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items.js
 var require_items = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateTuple = void 0;
@@ -5616,9 +5616,9 @@ var require_items = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
 var require_prefixItems = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var items_1 = require_items();
@@ -5633,9 +5633,9 @@ var require_prefixItems = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items2020.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items2020.js
 var require_items2020 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5668,9 +5668,9 @@ var require_items2020 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/contains.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/contains.js
 var require_contains = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5762,9 +5762,9 @@ var require_contains = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
 var require_dependencies = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = void 0;
@@ -5856,9 +5856,9 @@ var require_dependencies = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
 var require_propertyNames = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5899,9 +5899,9 @@ var require_propertyNames = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
 var require_additionalProperties = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -6005,9 +6005,9 @@ var require_additionalProperties = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/properties.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/properties.js
 var require_properties = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var validate_1 = require_validate();
@@ -6063,9 +6063,9 @@ var require_properties = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
 var require_patternProperties = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -6137,9 +6137,9 @@ var require_patternProperties = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/not.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/not.js
 var require_not = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6168,9 +6168,9 @@ var require_not = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
 var require_anyOf = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -6185,9 +6185,9 @@ var require_anyOf = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
 var require_oneOf = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6243,9 +6243,9 @@ var require_oneOf = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/allOf.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/allOf.js
 var require_allOf = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6270,9 +6270,9 @@ var require_allOf = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/if.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/if.js
 var require_if = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6339,9 +6339,9 @@ var require_if = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
 var require_thenElse = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6357,9 +6357,9 @@ var require_thenElse = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/index.js
 var require_applicator = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var additionalItems_1 = require_additionalItems();
@@ -6405,9 +6405,9 @@ var require_applicator = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/format.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/format.js
 var require_format = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6495,9 +6495,9 @@ var require_format = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/index.js
 var require_format2 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var format_1 = require_format();
@@ -6506,9 +6506,9 @@ var require_format2 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/metadata.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/metadata.js
 var require_metadata = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.contentVocabulary = exports.metadataVocabulary = void 0;
@@ -6529,9 +6529,9 @@ var require_metadata = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/draft7.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/draft7.js
 var require_draft7 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/draft7.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/draft7.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var core_1 = require_core2();
@@ -6551,9 +6551,9 @@ var require_draft7 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/types.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/types.js
 var require_types = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiscrError = void 0;
@@ -6565,9 +6565,9 @@ var require_types = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/index.js
 var require_discriminator = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6670,9 +6670,9 @@ var require_discriminator = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-draft-07.json
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-draft-07.json
 var require_json_schema_draft_07 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-draft-07.json"(exports, module) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-draft-07.json"(exports, module) {
     module.exports = {
       $schema: "http://json-schema.org/draft-07/schema#",
       $id: "http://json-schema.org/draft-07/schema#",
@@ -6827,9 +6827,9 @@ var require_json_schema_draft_07 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/ajv.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/ajv.js
 var require_ajv = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/ajv.js"(exports, module) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/ajv.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv = void 0;
@@ -6897,9 +6897,9 @@ var require_ajv = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv-formats@3.0.1_ajv@8.20.0/node_modules/ajv-formats/dist/formats.js
+// node_modules/.pnpm/ajv-formats@3.0.1_ajv@8.20.0/node_modules/ajv-formats/dist/formats.js
 var require_formats = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv-formats@3.0.1_ajv@8.20.0/node_modules/ajv-formats/dist/formats.js"(exports) {
+  "node_modules/.pnpm/ajv-formats@3.0.1_ajv@8.20.0/node_modules/ajv-formats/dist/formats.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatNames = exports.fastFormats = exports.fullFormats = void 0;
@@ -7100,9 +7100,9 @@ var require_formats = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv-formats@3.0.1_ajv@8.20.0/node_modules/ajv-formats/dist/limit.js
+// node_modules/.pnpm/ajv-formats@3.0.1_ajv@8.20.0/node_modules/ajv-formats/dist/limit.js
 var require_limit = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv-formats@3.0.1_ajv@8.20.0/node_modules/ajv-formats/dist/limit.js"(exports) {
+  "node_modules/.pnpm/ajv-formats@3.0.1_ajv@8.20.0/node_modules/ajv-formats/dist/limit.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatLimitDefinition = void 0;
@@ -7172,9 +7172,9 @@ var require_limit = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ajv-formats@3.0.1_ajv@8.20.0/node_modules/ajv-formats/dist/index.js
+// node_modules/.pnpm/ajv-formats@3.0.1_ajv@8.20.0/node_modules/ajv-formats/dist/index.js
 var require_dist = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ajv-formats@3.0.1_ajv@8.20.0/node_modules/ajv-formats/dist/index.js"(exports, module) {
+  "node_modules/.pnpm/ajv-formats@3.0.1_ajv@8.20.0/node_modules/ajv-formats/dist/index.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var formats_1 = require_formats();
@@ -7252,6 +7252,30 @@ function isInlineDisposition(headers) {
   const dispHeader = getHeader(headers, "Content-Disposition");
   if (!dispHeader) return false;
   return dispHeader.toLowerCase().startsWith("inline");
+}
+function extractContentId(headers) {
+  const raw = getHeader(headers, "Content-ID");
+  if (!raw) return null;
+  const id = raw.replace(/^<+/, "").replace(/>+$/, "").trim().toLowerCase();
+  return id || null;
+}
+function isEmbeddedResource(headers, htmlBodies) {
+  if (!isInlineDisposition(headers)) return false;
+  const cid = extractContentId(headers);
+  if (!cid) return false;
+  const needle = `cid:${cid}`;
+  return htmlBodies.some((html) => html.includes(needle));
+}
+function collectHtmlBodies(parts) {
+  const bodies = [];
+  for (const part of parts) {
+    if (extractMimeType(part.headers) !== "text/html") continue;
+    const encoding = getHeader(part.headers, "Content-Transfer-Encoding");
+    bodies.push(
+      decodePartText(decodeBody(part.body, encoding), extractCharset(part.headers)).toLowerCase()
+    );
+  }
+  return bodies;
 }
 function extractSize(headers) {
   const dispHeader = getHeader(headers, "Content-Disposition");
@@ -7358,11 +7382,12 @@ function parseMimeAttachments(source) {
   const boundary = extractBoundary(source);
   if (!boundary) return [];
   const parts = walkLeafParts(source, boundary);
+  const htmlBodies = collectHtmlBodies(parts);
   const attachments = [];
   for (const part of parts) {
     const filename = extractFilename(part.headers);
     if (!filename) continue;
-    if (isInlineDisposition(part.headers)) continue;
+    if (isEmbeddedResource(part.headers, htmlBodies)) continue;
     const encoding = getHeader(part.headers, "Content-Transfer-Encoding");
     attachments.push({
       name: filename,
@@ -7948,7 +7973,7 @@ var init_auditLog = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/punycode/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/punycode/index.js
 function error2(type) {
   throw new RangeError(errors[type]);
 }
@@ -7994,7 +8019,7 @@ function ucs2decode(string3) {
 }
 var maxInt, base, tMin, tMax, skew, damp, initialBias, initialN, delimiter2, regexPunycode, regexNonASCII, regexSeparators, errors, baseMinusTMin, floor, stringFromCharCode, basicToDigit, digitToBasic, adapt, decode, encode, toUnicode, toASCII;
 var init_punycode = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/punycode/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/punycode/index.js"() {
     maxInt = 2147483647;
     base = 36;
     tMin = 1;
@@ -8165,7 +8190,7 @@ var init_punycode = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/shared/url.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/shared/url.js
 import net from "node:net";
 import urllib from "node:url";
 function invalidUrl(input) {
@@ -8218,7 +8243,7 @@ function normalizeHostname(raw, href) {
 }
 var SLASHLESS_AUTHORITY, SURROUNDING_WHITESPACE, LEGACY_TRIM, AUTHORITY, FORBIDDEN_HOST_CHARS, CONTROL_CHARS, parse3, resolve3;
 var init_url = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/shared/url.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/shared/url.js"() {
     init_punycode();
     SLASHLESS_AUTHORITY = /^([a-zA-Z][a-zA-Z0-9+.-]*:)(?!\/\/)([\s\S]+)$/;
     SURROUNDING_WHITESPACE = /^[\x00-\x20]+|[\x00-\x20]+$/g;
@@ -8294,11 +8319,11 @@ var init_url = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/fetch/cookies.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/fetch/cookies.js
 import net2 from "node:net";
 var SESSION_TIMEOUT, Cookies, cookies_default;
 var init_cookies = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/fetch/cookies.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/fetch/cookies.js"() {
     init_url();
     SESSION_TIMEOUT = 1800;
     Cookies = class {
@@ -8508,20 +8533,20 @@ var init_cookies = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/package-info.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/package-info.js
 var name, version2, homepage;
 var init_package_info = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/package-info.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/package-info.js"() {
     name = "nodemailer";
     version2 = "10.0.13";
     homepage = "https://nodemailer.com/";
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/errors.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/errors.js
 var ECONNECTION, ENOAUTH, EOAUTH2, EMAXLIMIT, EMAXRECIPIENTS, ESENDMAIL, ESES, ECONFIG, EPROXY, EFILEACCESS, EURLACCESS, EFETCH;
 var init_errors = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/errors.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/errors.js"() {
     ECONNECTION = "ECONNECTION";
     ENOAUTH = "ENOAUTH";
     EOAUTH2 = "EOAUTH2";
@@ -8537,10 +8562,10 @@ var init_errors = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/shared/objects.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/shared/objects.js
 var isProtoKey, copyOwnKeys;
 var init_objects = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/shared/objects.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/shared/objects.js"() {
     isProtoKey = (key) => key === "__proto__";
     copyOwnKeys = (target, source, skip) => {
       Object.keys(source || {}).forEach((key) => {
@@ -8554,7 +8579,7 @@ var init_objects = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/fetch/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/fetch/index.js
 import http from "node:http";
 import https from "node:https";
 import zlib from "node:zlib";
@@ -8801,7 +8826,7 @@ function nmfetch(url, options) {
 }
 var MAX_REDIRECTS, DEFAULT_TIMEOUT, DEFAULT_MAX_BYTES, TLS_OPTION_KEYS, fetch_default;
 var init_fetch = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/fetch/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/fetch/index.js"() {
     init_url();
     init_cookies();
     init_package_info();
@@ -8839,7 +8864,7 @@ var init_fetch = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/shared/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/shared/index.js
 import util2 from "node:util";
 import fs from "node:fs";
 import dns from "node:dns";
@@ -8980,7 +9005,7 @@ function createDefaultLogger(levels) {
 }
 var DNS_TTL, CACHE_CLEANUP_INTERVAL, MAX_CACHE_SIZE, lastCacheCleanup, networkInterfaces, isFamilySupported, resolve4, dnsCache, formatDNSValue, resolveHostname, parseConnectionUrl, _logFunc, getLogger, callbackPromise, parseDataURI, assign, encodeXText;
 var init_shared = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/shared/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/shared/index.js"() {
     init_url();
     init_fetch();
     init_errors();
@@ -9360,7 +9385,7 @@ var init_shared = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-funcs/mime-types.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-funcs/mime-types.js
 import path from "node:path";
 function detectMimeType(filename) {
   if (!filename) {
@@ -9397,7 +9422,7 @@ function detectExtension(mimeType) {
 }
 var defaultMimeType, defaultExtension, mimeTypes, extensions;
 var init_mime_types = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-funcs/mime-types.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-funcs/mime-types.js"() {
     defaultMimeType = "application/octet-stream";
     defaultExtension = "bin";
     mimeTypes = /* @__PURE__ */ new Map([
@@ -11462,7 +11487,7 @@ var init_mime_types = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/base64/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/base64/index.js
 var base64_exports = {};
 __export(base64_exports, {
   Encoder: () => Encoder,
@@ -11495,7 +11520,7 @@ function wrap(str2, lineLength) {
 }
 var Encoder;
 var init_base64 = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/base64/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/base64/index.js"() {
     Encoder = class extends Transform {
       constructor(options) {
         super();
@@ -11563,7 +11588,7 @@ var init_base64 = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/qp/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/qp/index.js
 var qp_exports = {};
 __export(qp_exports, {
   Encoder: () => Encoder2,
@@ -11669,7 +11694,7 @@ function checkRanges(nr, ranges) {
 }
 var MIN_LINE_LENGTH, QP_RANGES, Encoder2;
 var init_qp = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/qp/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/qp/index.js"() {
     MIN_LINE_LENGTH = 4;
     QP_RANGES = [
       [9],
@@ -11734,7 +11759,7 @@ var init_qp = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-funcs/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-funcs/index.js
 function isPlainText(value, isParam) {
   const re = isParam ? /[\x00-\x1f\x7f"\u0080-\uFFFF]/ : /[\x00-\x08\x0b\x0c\x0e-\x1f\u0080-\uFFFF]/;
   return typeof value === "string" && !re.test(value);
@@ -12133,7 +12158,7 @@ function safeEncodeURIComponent(str2) {
   return str2.replace(/[\x00-\x1F *'()<>@,;:\\"[\]?=\u007F-\uFFFF]/g, (chr) => encodeURICharComponent(chr));
 }
 var init_mime_funcs = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-funcs/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-funcs/index.js"() {
     init_base64();
     init_qp();
     init_mime_types();
@@ -12141,7 +12166,7 @@ var init_mime_funcs = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/addressparser/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/addressparser/index.js
 function _quoteLocalPart(address) {
   const lastAt = address.lastIndexOf("@");
   if (lastAt < 0) {
@@ -12528,7 +12553,7 @@ function addressparser(str2, options) {
 }
 var HAS_WHITESPACE, QUOTED_LOCAL_ADDR, ADDR_SPEC, LOOSE_ADDR_SPEC, LOOSE_TEXT_ADDR, Tokenizer, MAX_NESTED_GROUP_DEPTH, addressparser_default;
 var init_addressparser = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/addressparser/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/addressparser/index.js"() {
     HAS_WHITESPACE = /\s/;
     QUOTED_LOCAL_ADDR = /^("(?:[^"\\]|\\[\s\S])*"@\S+)(?:\s+([\s\S]+))?$/;
     ADDR_SPEC = /^[^@\s]+@[^@\s]+$/;
@@ -12640,11 +12665,11 @@ var init_addressparser = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/last-newline.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/last-newline.js
 import { Transform as Transform3 } from "node:stream";
 var LastNewline;
 var init_last_newline = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/last-newline.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/last-newline.js"() {
     LastNewline = class extends Transform3 {
       constructor() {
         super();
@@ -12674,11 +12699,11 @@ var init_last_newline = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/le-windows.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/le-windows.js
 import { Transform as Transform4 } from "node:stream";
 var LeWindows;
 var init_le_windows = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/le-windows.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/le-windows.js"() {
     LeWindows = class extends Transform4 {
       constructor(options) {
         super(options);
@@ -12716,11 +12741,11 @@ var init_le_windows = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/le-unix.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/le-unix.js
 import { Transform as Transform5 } from "node:stream";
 var LeUnix;
 var init_le_unix = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/le-unix.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/le-unix.js"() {
     LeUnix = class extends Transform5 {
       constructor(options) {
         super(options);
@@ -12751,7 +12776,7 @@ var init_le_unix = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/index.js
 import crypto from "node:crypto";
 import fs2 from "node:fs";
 import { PassThrough as PassThrough2 } from "node:stream";
@@ -12771,7 +12796,7 @@ function _stripBoundaryControls(value) {
 }
 var FORMATTED_HEADERS, ATEXT, DOT_ATOM, QUOTED_STRING, PLAIN_ADDRESS, URL_PARSER_UNSAFE, MimeNode, mime_node_default;
 var init_mime_node = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mime-node/index.js"() {
     init_punycode();
     init_shared();
     init_mime_funcs();
@@ -13898,14 +13923,14 @@ var init_mime_node = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mail-composer/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mail-composer/index.js
 function isContentObject(value) {
   const content = value;
   return typeof value === "object" && !!(content.content || content.path || content.href || content.raw);
 }
 var MailComposer, mail_composer_default;
 var init_mail_composer = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mail-composer/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mail-composer/index.js"() {
     init_mime_node();
     init_mime_funcs();
     init_shared();
@@ -14392,11 +14417,11 @@ var init_mail_composer = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/message-parser.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/message-parser.js
 import { Transform as Transform6 } from "node:stream";
 var MessageParser, message_parser_default;
 var init_message_parser = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/message-parser.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/message-parser.js"() {
     MessageParser = class extends Transform6 {
       constructor(options) {
         super(options);
@@ -14524,12 +14549,12 @@ var init_message_parser = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/relaxed-body.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/relaxed-body.js
 import { Transform as Transform7 } from "node:stream";
 import crypto2 from "node:crypto";
 var CHAR_CR, CHAR_LF, CHAR_SPACE, CHAR_TAB, CRLF, EMPTY_LINES, RelaxedBody, relaxed_body_default;
 var init_relaxed_body = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/relaxed-body.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/relaxed-body.js"() {
     CHAR_CR = 13;
     CHAR_LF = 10;
     CHAR_SPACE = 32;
@@ -14651,7 +14676,7 @@ var init_relaxed_body = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/sign.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/sign.js
 import crypto3 from "node:crypto";
 function unsupportedHashAlgoError(hashAlgo) {
   const err = new Error('Unsupported DKIM hash algorithm "' + hashAlgo + '"');
@@ -14728,7 +14753,7 @@ function relaxedHeaderLine(line) {
 }
 var sign_default;
 var init_sign = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/sign.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/sign.js"() {
     init_punycode();
     init_mime_funcs();
     init_errors();
@@ -14738,14 +14763,14 @@ var init_sign = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/index.js
 import { PassThrough as PassThrough3 } from "node:stream";
 import fs3 from "node:fs";
 import path2 from "node:path";
 import crypto4 from "node:crypto";
 var DKIM_ALGO, MAX_MESSAGE_SIZE, DKIMSigner, DKIM, dkim_default;
 var init_dkim = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/dkim/index.js"() {
     init_message_parser();
     init_relaxed_body();
     init_sign();
@@ -14949,7 +14974,7 @@ var init_dkim = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-connection/http-proxy-client.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-connection/http-proxy-client.js
 import net5 from "node:net";
 import tls from "node:tls";
 function httpProxyClient(proxyUrl, destinationPort, destinationHost, tlsOptions, callback) {
@@ -15059,7 +15084,7 @@ function httpProxyClient(proxyUrl, destinationPort, destinationHost, tlsOptions,
 }
 var MAX_RESPONSE_HEADER_BYTES, http_proxy_client_default;
 var init_http_proxy_client = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-connection/http-proxy-client.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-connection/http-proxy-client.js"() {
     init_url();
     init_errors();
     MAX_RESPONSE_HEADER_BYTES = 64 * 1024;
@@ -15067,10 +15092,10 @@ var init_http_proxy_client = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mailer/mail-message.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mailer/mail-message.js
 var hasOwn, MailMessage;
 var init_mail_message = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mailer/mail-message.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mailer/mail-message.js"() {
     init_shared();
     init_mime_node();
     init_mime_funcs();
@@ -15327,7 +15352,7 @@ var init_mail_message = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mailer/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mailer/index.js
 import { EventEmitter } from "node:events";
 import util3 from "node:util";
 import net6 from "node:net";
@@ -15335,7 +15360,7 @@ import dns2 from "node:dns";
 import crypto5 from "node:crypto";
 var DEFAULT_MAX_RECIPIENTS, Mail, mailer_default;
 var init_mailer = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mailer/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/mailer/index.js"() {
     init_shared();
     init_mime_types();
     init_mail_composer();
@@ -15680,11 +15705,11 @@ var init_mailer = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-connection/data-stream.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-connection/data-stream.js
 import { Transform as Transform8 } from "node:stream";
 var INSERT_LF, INSERT_LF_DOT, INSERT_CR, INSERT_DOT, DataStream;
 var init_data_stream = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-connection/data-stream.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-connection/data-stream.js"() {
     INSERT_LF = Buffer.from("\n");
     INSERT_LF_DOT = Buffer.from("\n.");
     INSERT_CR = Buffer.from("\r");
@@ -15771,7 +15796,7 @@ var init_data_stream = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-connection/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-connection/index.js
 import { EventEmitter as EventEmitter2 } from "node:events";
 import net7 from "node:net";
 import tls2 from "node:tls";
@@ -15793,7 +15818,7 @@ function isPartialLine(line) {
 }
 var CONNECTION_TIMEOUT, SOCKET_TIMEOUT, GREETING_TIMEOUT, DNS_TIMEOUT, TEARDOWN_NOOP, MAX_RESPONSE_SIZE, SMTPConnection, smtp_connection_default;
 var init_smtp_connection = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-connection/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-connection/index.js"() {
     init_package_info();
     init_data_stream();
     init_shared();
@@ -17312,12 +17337,12 @@ var init_smtp_connection = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/xoauth2/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/xoauth2/index.js
 import { Stream } from "node:stream";
 import crypto7 from "node:crypto";
 var XOAuth2, xoauth2_default;
 var init_xoauth2 = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/xoauth2/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/xoauth2/index.js"() {
     init_fetch();
     init_shared();
     init_errors();
@@ -17647,11 +17672,11 @@ var init_xoauth2 = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-pool/pool-resource.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-pool/pool-resource.js
 import { EventEmitter as EventEmitter3 } from "node:events";
 var PoolResource;
 var init_pool_resource = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-pool/pool-resource.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-pool/pool-resource.js"() {
     init_smtp_connection();
     init_shared();
     init_xoauth2();
@@ -17855,10 +17880,10 @@ var init_pool_resource = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/well-known/services.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/well-known/services.js
 var services;
 var init_services = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/well-known/services.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/well-known/services.js"() {
     services = {
       "126": {
         "description": "126 Mail (NetEase)",
@@ -18526,7 +18551,7 @@ var init_services = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/well-known/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/well-known/index.js
 function normalizeKey(key) {
   return key.replace(/[^a-zA-Z0-9.-]/g, "").toLowerCase();
 }
@@ -18545,7 +18570,7 @@ function wellKnown(key) {
 }
 var normalized;
 var init_well_known = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/well-known/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/well-known/index.js"() {
     init_services();
     normalized = {};
     Object.keys(services).forEach((key) => {
@@ -18562,11 +18587,11 @@ var init_well_known = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-pool/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-pool/index.js
 import { EventEmitter as EventEmitter4 } from "node:events";
 var REQUEUE_BASE_DELAY, REQUEUE_MAX_DELAY, SMTPPool, smtp_pool_default;
 var init_smtp_pool = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-pool/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-pool/index.js"() {
     init_pool_resource();
     init_smtp_connection();
     init_well_known();
@@ -19055,11 +19080,11 @@ var init_smtp_pool = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-transport/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-transport/index.js
 import { EventEmitter as EventEmitter5 } from "node:events";
 var SMTPTransport, smtp_transport_default;
 var init_smtp_transport = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-transport/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/smtp-transport/index.js"() {
     init_smtp_connection();
     init_well_known();
     init_shared();
@@ -19379,11 +19404,11 @@ var init_smtp_transport = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/sendmail-transport/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/sendmail-transport/index.js
 import { spawn } from "node:child_process";
 var SendmailTransport, sendmail_transport_default;
 var init_sendmail_transport = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/sendmail-transport/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/sendmail-transport/index.js"() {
     init_package_info();
     init_shared();
     init_errors();
@@ -19524,10 +19549,10 @@ var init_sendmail_transport = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/stream-transport/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/stream-transport/index.js
 var StreamTransport, stream_transport_default;
 var init_stream_transport = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/stream-transport/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/stream-transport/index.js"() {
     init_package_info();
     init_shared();
     init_le_windows();
@@ -19621,10 +19646,10 @@ var init_stream_transport = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/json-transport/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/json-transport/index.js
 var JSONTransport, json_transport_default;
 var init_json_transport = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/json-transport/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/json-transport/index.js"() {
     init_package_info();
     init_shared();
     JSONTransport = class {
@@ -19680,7 +19705,7 @@ var init_json_transport = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/ses-transport/index.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/ses-transport/index.js
 import EventEmitter6 from "node:events";
 function tagSesError(err) {
   if (err && typeof err === "object" && !err.code) {
@@ -19690,7 +19715,7 @@ function tagSesError(err) {
 }
 var SESTransport, ses_transport_default;
 var init_ses_transport = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/ses-transport/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/ses-transport/index.js"() {
     init_package_info();
     init_shared();
     init_errors();
@@ -19872,7 +19897,7 @@ var init_ses_transport = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/nodemailer.js
+// node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/nodemailer.js
 function createTransport(transporter, defaults) {
   let options;
   if (
@@ -19994,7 +20019,7 @@ function getTestMessageUrl(info) {
 }
 var ETHEREAL_API, ETHEREAL_WEB, ETHEREAL_API_KEY, ETHEREAL_CACHE, testAccount, nodemailer, nodemailer_default;
 var init_nodemailer = __esm({
-  "../apple-mail-mcp/node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/nodemailer.js"() {
+  "node_modules/.pnpm/nodemailer@10.0.13/node_modules/nodemailer/dist/esm/nodemailer.js"() {
     init_mailer();
     init_shared();
     init_smtp_pool();
@@ -20098,9 +20123,9 @@ var init_callStop = __esm({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err-helpers.js
+// node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err-helpers.js
 var require_err_helpers = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err-helpers.js"(exports, module) {
+  "node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err-helpers.js"(exports, module) {
     "use strict";
     var isErrorLike = (err) => {
       return err && typeof err.message === "string";
@@ -20155,9 +20180,9 @@ var require_err_helpers = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err-proto.js
+// node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err-proto.js
 var require_err_proto = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err-proto.js"(exports, module) {
+  "node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err-proto.js"(exports, module) {
     "use strict";
     var seen = /* @__PURE__ */ Symbol("circular-ref-tag");
     var rawSymbol = /* @__PURE__ */ Symbol("pino-raw-err-ref");
@@ -20206,9 +20231,9 @@ var require_err_proto = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err.js
+// node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err.js
 var require_err = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err.js"(exports, module) {
+  "node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err.js"(exports, module) {
     "use strict";
     module.exports = errSerializer;
     var { messageWithCauses, stackWithCauses, isErrorLike } = require_err_helpers();
@@ -20246,9 +20271,9 @@ var require_err = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err-with-cause.js
+// node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err-with-cause.js
 var require_err_with_cause = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err-with-cause.js"(exports, module) {
+  "node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/err-with-cause.js"(exports, module) {
     "use strict";
     module.exports = errWithCauseSerializer;
     var { isErrorLike } = require_err_helpers();
@@ -20289,9 +20314,9 @@ var require_err_with_cause = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/req.js
+// node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/req.js
 var require_req = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/req.js"(exports, module) {
+  "node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/req.js"(exports, module) {
     "use strict";
     module.exports = {
       mapHttpRequest,
@@ -20384,9 +20409,9 @@ var require_req = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/res.js
+// node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/res.js
 var require_res = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/res.js"(exports, module) {
+  "node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/lib/res.js"(exports, module) {
     "use strict";
     module.exports = {
       mapHttpResponse,
@@ -20433,9 +20458,9 @@ var require_res = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/index.js
+// node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/index.js
 var require_pino_std_serializers = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/index.js"(exports, module) {
+  "node_modules/.pnpm/pino-std-serializers@7.1.0/node_modules/pino-std-serializers/index.js"(exports, module) {
     "use strict";
     var errSerializer = require_err();
     var errWithCauseSerializer = require_err_with_cause();
@@ -20470,9 +20495,9 @@ var require_pino_std_serializers = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/caller.js
+// node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/caller.js
 var require_caller = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/caller.js"(exports, module) {
+  "node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/caller.js"(exports, module) {
     "use strict";
     function noOpPrepareStackTrace(_, stack) {
       return stack;
@@ -20498,9 +20523,9 @@ var require_caller = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/@pinojs+redact@0.4.0/node_modules/@pinojs/redact/index.js
+// node_modules/.pnpm/@pinojs+redact@0.4.0/node_modules/@pinojs/redact/index.js
 var require_redact = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/@pinojs+redact@0.4.0/node_modules/@pinojs/redact/index.js"(exports, module) {
+  "node_modules/.pnpm/@pinojs+redact@0.4.0/node_modules/@pinojs/redact/index.js"(exports, module) {
     "use strict";
     function deepClone(obj) {
       if (obj === null || typeof obj !== "object") {
@@ -20931,9 +20956,9 @@ var require_redact = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/symbols.js
+// node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/symbols.js
 var require_symbols = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/symbols.js"(exports, module) {
+  "node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/symbols.js"(exports, module) {
     "use strict";
     var setLevelSym = /* @__PURE__ */ Symbol("pino.setLevel");
     var getLevelSym = /* @__PURE__ */ Symbol("pino.getLevel");
@@ -21002,9 +21027,9 @@ var require_symbols = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/redaction.js
+// node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/redaction.js
 var require_redaction = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/redaction.js"(exports, module) {
+  "node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/redaction.js"(exports, module) {
     "use strict";
     var Redact = require_redact();
     var { redactFmtSym, wildcardFirstSym } = require_symbols();
@@ -21084,9 +21109,9 @@ var require_redaction = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/time.js
+// node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/time.js
 var require_time = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/time.js"(exports, module) {
+  "node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/time.js"(exports, module) {
     "use strict";
     var nullTime = () => "";
     var epochTime = () => `,"time":${Date.now()}`;
@@ -21115,9 +21140,9 @@ var require_time = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/quick-format-unescaped@4.0.4/node_modules/quick-format-unescaped/index.js
+// node_modules/.pnpm/quick-format-unescaped@4.0.4/node_modules/quick-format-unescaped/index.js
 var require_quick_format_unescaped = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/quick-format-unescaped@4.0.4/node_modules/quick-format-unescaped/index.js"(exports, module) {
+  "node_modules/.pnpm/quick-format-unescaped@4.0.4/node_modules/quick-format-unescaped/index.js"(exports, module) {
     "use strict";
     function tryStringify(o) {
       try {
@@ -21234,9 +21259,9 @@ var require_quick_format_unescaped = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/atomic-sleep@1.0.0/node_modules/atomic-sleep/index.js
+// node_modules/.pnpm/atomic-sleep@1.0.0/node_modules/atomic-sleep/index.js
 var require_atomic_sleep = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/atomic-sleep@1.0.0/node_modules/atomic-sleep/index.js"(exports, module) {
+  "node_modules/.pnpm/atomic-sleep@1.0.0/node_modules/atomic-sleep/index.js"(exports, module) {
     "use strict";
     if (typeof SharedArrayBuffer !== "undefined" && typeof Atomics !== "undefined") {
       let sleep2 = function(ms) {
@@ -21269,9 +21294,9 @@ var require_atomic_sleep = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/sonic-boom@4.2.1/node_modules/sonic-boom/index.js
+// node_modules/.pnpm/sonic-boom@4.2.1/node_modules/sonic-boom/index.js
 var require_sonic_boom = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/sonic-boom@4.2.1/node_modules/sonic-boom/index.js"(exports, module) {
+  "node_modules/.pnpm/sonic-boom@4.2.1/node_modules/sonic-boom/index.js"(exports, module) {
     "use strict";
     var fs4 = __require("fs");
     var EventEmitter7 = __require("events");
@@ -21856,9 +21881,9 @@ var require_sonic_boom = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/on-exit-leak-free@2.1.2/node_modules/on-exit-leak-free/index.js
+// node_modules/.pnpm/on-exit-leak-free@2.1.2/node_modules/on-exit-leak-free/index.js
 var require_on_exit_leak_free = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/on-exit-leak-free@2.1.2/node_modules/on-exit-leak-free/index.js"(exports, module) {
+  "node_modules/.pnpm/on-exit-leak-free@2.1.2/node_modules/on-exit-leak-free/index.js"(exports, module) {
     "use strict";
     var refs = {
       exit: [],
@@ -21950,9 +21975,9 @@ var require_on_exit_leak_free = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/package.json
+// node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/package.json
 var require_package = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/package.json"(exports, module) {
+  "node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/package.json"(exports, module) {
     module.exports = {
       name: "thread-stream",
       version: "4.2.0",
@@ -22006,9 +22031,9 @@ var require_package = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/lib/wait.js
+// node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/lib/wait.js
 var require_wait = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/lib/wait.js"(exports, module) {
+  "node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/lib/wait.js"(exports, module) {
     "use strict";
     var WAIT_MS = 1e4;
     function wait(state, index, expected, timeout, done) {
@@ -22065,9 +22090,9 @@ var require_wait = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/lib/indexes.js
+// node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/lib/indexes.js
 var require_indexes = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/lib/indexes.js"(exports, module) {
+  "node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/lib/indexes.js"(exports, module) {
     "use strict";
     var SEQ_INDEX = 2;
     var WRITE_INDEX = 4;
@@ -22080,9 +22105,9 @@ var require_indexes = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/index.js
+// node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/index.js
 var require_thread_stream = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/index.js"(exports, module) {
+  "node_modules/.pnpm/thread-stream@4.2.0/node_modules/thread-stream/index.js"(exports, module) {
     "use strict";
     var { version: version4 } = require_package();
     var { EventEmitter: EventEmitter7 } = __require("events");
@@ -22599,9 +22624,9 @@ var require_thread_stream = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/transport.js
+// node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/transport.js
 var require_transport = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/transport.js"(exports, module) {
+  "node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/transport.js"(exports, module) {
     "use strict";
     var { createRequire: createRequire2 } = __require("module");
     var { existsSync: existsSync5 } = __require("node:fs");
@@ -22822,9 +22847,9 @@ var require_transport = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/tools.js
+// node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/tools.js
 var require_tools = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/tools.js"(exports, module) {
+  "node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/tools.js"(exports, module) {
     "use strict";
     var diagChan = __require("node:diagnostics_channel");
     var format = require_quick_format_unescaped();
@@ -23151,9 +23176,9 @@ var require_tools = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/constants.js
+// node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/constants.js
 var require_constants = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/constants.js"(exports, module) {
+  "node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/constants.js"(exports, module) {
     var DEFAULT_LEVELS = {
       trace: 10,
       debug: 20,
@@ -23173,9 +23198,9 @@ var require_constants = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/levels.js
+// node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/levels.js
 var require_levels = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/levels.js"(exports, module) {
+  "node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/levels.js"(exports, module) {
     "use strict";
     var {
       lsCacheSym,
@@ -23366,17 +23391,17 @@ var require_levels = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/meta.js
+// node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/meta.js
 var require_meta = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/meta.js"(exports, module) {
+  "node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/meta.js"(exports, module) {
     "use strict";
     module.exports = { version: "10.3.1" };
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/proto.js
+// node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/proto.js
 var require_proto = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/proto.js"(exports, module) {
+  "node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/proto.js"(exports, module) {
     "use strict";
     var { EventEmitter: EventEmitter7 } = __require("node:events");
     var {
@@ -23604,9 +23629,9 @@ var require_proto = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/safe-stable-stringify@2.5.0/node_modules/safe-stable-stringify/index.js
+// node_modules/.pnpm/safe-stable-stringify@2.5.0/node_modules/safe-stable-stringify/index.js
 var require_safe_stable_stringify = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/safe-stable-stringify@2.5.0/node_modules/safe-stable-stringify/index.js"(exports, module) {
+  "node_modules/.pnpm/safe-stable-stringify@2.5.0/node_modules/safe-stable-stringify/index.js"(exports, module) {
     "use strict";
     var { hasOwnProperty } = Object.prototype;
     var stringify = configure();
@@ -24200,9 +24225,9 @@ ${originalIndentation}`;
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/multistream.js
+// node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/multistream.js
 var require_multistream = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/multistream.js"(exports, module) {
+  "node_modules/.pnpm/pino@10.3.1/node_modules/pino/lib/multistream.js"(exports, module) {
     "use strict";
     var metadata = /* @__PURE__ */ Symbol.for("pino.metadata");
     var { DEFAULT_LEVELS } = require_constants();
@@ -24368,9 +24393,9 @@ var require_multistream = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/pino.js
+// node_modules/.pnpm/pino@10.3.1/node_modules/pino/pino.js
 var require_pino = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/pino@10.3.1/node_modules/pino/pino.js"(exports, module) {
+  "node_modules/.pnpm/pino@10.3.1/node_modules/pino/pino.js"(exports, module) {
     "use strict";
     var os3 = __require("node:os");
     var stdSerializers = require_pino_std_serializers();
@@ -24578,9 +24603,9 @@ var require_pino = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/logger.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/logger.js
 var require_logger = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/logger.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/logger.js"(exports, module) {
     "use strict";
     var logger = require_pino()();
     logger.level = "trace";
@@ -24588,9 +24613,9 @@ var require_logger = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/safer-buffer@2.1.2/node_modules/safer-buffer/safer.js
+// node_modules/.pnpm/safer-buffer@2.1.2/node_modules/safer-buffer/safer.js
 var require_safer = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/safer-buffer@2.1.2/node_modules/safer-buffer/safer.js"(exports, module) {
+  "node_modules/.pnpm/safer-buffer@2.1.2/node_modules/safer-buffer/safer.js"(exports, module) {
     "use strict";
     var buffer = __require("buffer");
     var Buffer2 = buffer.Buffer;
@@ -24656,9 +24681,9 @@ var require_safer = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/bom-handling.js
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/bom-handling.js
 var require_bom_handling = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/bom-handling.js"(exports) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/bom-handling.js"(exports) {
     "use strict";
     var BOMChar = "\uFEFF";
     exports.PrependBOM = PrependBOMWrapper;
@@ -24702,9 +24727,9 @@ var require_bom_handling = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/helpers/merge-exports.js
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/helpers/merge-exports.js
 var require_merge_exports = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/helpers/merge-exports.js"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/helpers/merge-exports.js"(exports, module) {
     "use strict";
     var hasOwn2 = typeof Object.hasOwn === "undefined" ? Function.call.bind(Object.prototype.hasOwnProperty) : Object.hasOwn;
     function mergeModules(target, module2) {
@@ -24718,9 +24743,9 @@ var require_merge_exports = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/internal.js
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/internal.js
 var require_internal = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/internal.js"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/internal.js"(exports, module) {
     "use strict";
     var Buffer2 = require_safer().Buffer;
     module.exports = {
@@ -24899,9 +24924,9 @@ var require_internal = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/utf32.js
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/utf32.js
 var require_utf32 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/utf32.js"(exports) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/utf32.js"(exports) {
     "use strict";
     var Buffer2 = require_safer().Buffer;
     exports._utf32 = Utf32Codec;
@@ -25134,9 +25159,9 @@ var require_utf32 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/utf16.js
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/utf16.js
 var require_utf16 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/utf16.js"(exports) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/utf16.js"(exports) {
     "use strict";
     var Buffer2 = require_safer().Buffer;
     exports.utf16be = Utf16BECodec;
@@ -25277,9 +25302,9 @@ var require_utf16 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/utf7.js
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/utf7.js
 var require_utf7 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/utf7.js"(exports) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/utf7.js"(exports) {
     "use strict";
     var Buffer2 = require_safer().Buffer;
     exports.utf7 = Utf7Codec;
@@ -25495,9 +25520,9 @@ var require_utf7 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/sbcs-codec.js
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/sbcs-codec.js
 var require_sbcs_codec = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/sbcs-codec.js"(exports) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/sbcs-codec.js"(exports) {
     "use strict";
     var Buffer2 = require_safer().Buffer;
     exports._sbcs = SBCSCodec;
@@ -25557,9 +25582,9 @@ var require_sbcs_codec = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/sbcs-data.js
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/sbcs-data.js
 var require_sbcs_data = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/sbcs-data.js"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/sbcs-data.js"(exports, module) {
     "use strict";
     module.exports = {
       // Not supported by iconv, not sure why.
@@ -25712,9 +25737,9 @@ var require_sbcs_data = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/sbcs-data-generated.js
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/sbcs-data-generated.js
 var require_sbcs_data_generated = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/sbcs-data-generated.js"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/sbcs-data-generated.js"(exports, module) {
     "use strict";
     module.exports = {
       "437": "cp437",
@@ -26167,9 +26192,9 @@ var require_sbcs_data_generated = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/dbcs-codec.js
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/dbcs-codec.js
 var require_dbcs_codec = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/dbcs-codec.js"(exports) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/dbcs-codec.js"(exports) {
     "use strict";
     var Buffer2 = require_safer().Buffer;
     exports._dbcs = DBCSCodec;
@@ -26627,9 +26652,9 @@ var require_dbcs_codec = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/shiftjis.json
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/shiftjis.json
 var require_shiftjis = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/shiftjis.json"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/shiftjis.json"(exports, module) {
     module.exports = [
       ["0", "\0", 128],
       ["a1", "\uFF61", 62],
@@ -26758,9 +26783,9 @@ var require_shiftjis = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/eucjp.json
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/eucjp.json
 var require_eucjp = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/eucjp.json"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/eucjp.json"(exports, module) {
     module.exports = [
       ["0", "\0", 127],
       ["8ea1", "\uFF61", 62],
@@ -26946,9 +26971,9 @@ var require_eucjp = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/cp936.json
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/cp936.json
 var require_cp936 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/cp936.json"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/cp936.json"(exports, module) {
     module.exports = [
       ["0", "\0", 127, "\u20AC"],
       ["8140", "\u4E02\u4E04\u4E05\u4E06\u4E0F\u4E12\u4E17\u4E1F\u4E20\u4E21\u4E23\u4E26\u4E29\u4E2E\u4E2F\u4E31\u4E33\u4E35\u4E37\u4E3C\u4E40\u4E41\u4E42\u4E44\u4E46\u4E4A\u4E51\u4E55\u4E57\u4E5A\u4E5B\u4E62\u4E63\u4E64\u4E65\u4E67\u4E68\u4E6A", 5, "\u4E72\u4E74", 9, "\u4E7F", 6, "\u4E87\u4E8A"],
@@ -27216,9 +27241,9 @@ var require_cp936 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/gbk-added.json
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/gbk-added.json
 var require_gbk_added = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/gbk-added.json"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/gbk-added.json"(exports, module) {
     module.exports = [
       ["a140", "\uE4C6", 62],
       ["a180", "\uE505", 32],
@@ -27278,16 +27303,16 @@ var require_gbk_added = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/gb18030-ranges.json
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/gb18030-ranges.json
 var require_gb18030_ranges = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/gb18030-ranges.json"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/gb18030-ranges.json"(exports, module) {
     module.exports = { uChars: [128, 165, 169, 178, 184, 216, 226, 235, 238, 244, 248, 251, 253, 258, 276, 284, 300, 325, 329, 334, 364, 463, 465, 467, 469, 471, 473, 475, 477, 506, 594, 610, 712, 716, 730, 930, 938, 962, 970, 1026, 1104, 1106, 8209, 8215, 8218, 8222, 8231, 8241, 8244, 8246, 8252, 8365, 8452, 8454, 8458, 8471, 8482, 8556, 8570, 8596, 8602, 8713, 8720, 8722, 8726, 8731, 8737, 8740, 8742, 8748, 8751, 8760, 8766, 8777, 8781, 8787, 8802, 8808, 8816, 8854, 8858, 8870, 8896, 8979, 9322, 9372, 9548, 9588, 9616, 9622, 9634, 9652, 9662, 9672, 9676, 9680, 9702, 9735, 9738, 9793, 9795, 11906, 11909, 11913, 11917, 11928, 11944, 11947, 11951, 11956, 11960, 11964, 11979, 12284, 12292, 12312, 12319, 12330, 12351, 12436, 12447, 12535, 12543, 12586, 12842, 12850, 12964, 13200, 13215, 13218, 13253, 13263, 13267, 13270, 13384, 13428, 13727, 13839, 13851, 14617, 14703, 14801, 14816, 14964, 15183, 15471, 15585, 16471, 16736, 17208, 17325, 17330, 17374, 17623, 17997, 18018, 18212, 18218, 18301, 18318, 18760, 18811, 18814, 18820, 18823, 18844, 18848, 18872, 19576, 19620, 19738, 19887, 40870, 59244, 59336, 59367, 59413, 59417, 59423, 59431, 59437, 59443, 59452, 59460, 59478, 59493, 63789, 63866, 63894, 63976, 63986, 64016, 64018, 64021, 64025, 64034, 64037, 64042, 65074, 65093, 65107, 65112, 65127, 65132, 65375, 65510, 65536], gbChars: [0, 36, 38, 45, 50, 81, 89, 95, 96, 100, 103, 104, 105, 109, 126, 133, 148, 172, 175, 179, 208, 306, 307, 308, 309, 310, 311, 312, 313, 341, 428, 443, 544, 545, 558, 741, 742, 749, 750, 805, 819, 820, 7922, 7924, 7925, 7927, 7934, 7943, 7944, 7945, 7950, 8062, 8148, 8149, 8152, 8164, 8174, 8236, 8240, 8262, 8264, 8374, 8380, 8381, 8384, 8388, 8390, 8392, 8393, 8394, 8396, 8401, 8406, 8416, 8419, 8424, 8437, 8439, 8445, 8482, 8485, 8496, 8521, 8603, 8936, 8946, 9046, 9050, 9063, 9066, 9076, 9092, 9100, 9108, 9111, 9113, 9131, 9162, 9164, 9218, 9219, 11329, 11331, 11334, 11336, 11346, 11361, 11363, 11366, 11370, 11372, 11375, 11389, 11682, 11686, 11687, 11692, 11694, 11714, 11716, 11723, 11725, 11730, 11736, 11982, 11989, 12102, 12336, 12348, 12350, 12384, 12393, 12395, 12397, 12510, 12553, 12851, 12962, 12973, 13738, 13823, 13919, 13933, 14080, 14298, 14585, 14698, 15583, 15847, 16318, 16434, 16438, 16481, 16729, 17102, 17122, 17315, 17320, 17402, 17418, 17859, 17909, 17911, 17915, 17916, 17936, 17939, 17961, 18664, 18703, 18814, 18962, 19043, 33469, 33470, 33471, 33484, 33485, 33490, 33497, 33501, 33505, 33513, 33520, 33536, 33550, 37845, 37921, 37948, 38029, 38038, 38064, 38065, 38066, 38069, 38075, 38076, 38078, 39108, 39109, 39113, 39114, 39115, 39116, 39265, 39394, 189e3] };
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/cp949.json
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/cp949.json
 var require_cp949 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/cp949.json"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/cp949.json"(exports, module) {
     module.exports = [
       ["0", "\0", 127],
       ["8141", "\uAC02\uAC03\uAC05\uAC06\uAC0B", 4, "\uAC18\uAC1E\uAC1F\uAC21\uAC22\uAC23\uAC25", 6, "\uAC2E\uAC32\uAC33\uAC34"],
@@ -27564,9 +27589,9 @@ var require_cp949 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/cp950.json
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/cp950.json
 var require_cp950 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/cp950.json"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/cp950.json"(exports, module) {
     module.exports = [
       ["0", "\0", 127],
       ["a140", "\u3000\uFF0C\u3001\u3002\uFF0E\u2027\uFF1B\uFF1A\uFF1F\uFF01\uFE30\u2026\u2025\uFE50\uFE51\uFE52\xB7\uFE54\uFE55\uFE56\uFE57\uFF5C\u2013\uFE31\u2014\uFE33\u2574\uFE34\uFE4F\uFF08\uFF09\uFE35\uFE36\uFF5B\uFF5D\uFE37\uFE38\u3014\u3015\uFE39\uFE3A\u3010\u3011\uFE3B\uFE3C\u300A\u300B\uFE3D\uFE3E\u3008\u3009\uFE3F\uFE40\u300C\u300D\uFE41\uFE42\u300E\u300F\uFE43\uFE44\uFE59\uFE5A"],
@@ -27747,9 +27772,9 @@ var require_cp950 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/big5-added.json
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/big5-added.json
 var require_big5_added = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/big5-added.json"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/tables/big5-added.json"(exports, module) {
     module.exports = [
       ["8740", "\u43F0\u4C32\u4603\u45A6\u4578\u{27267}\u4D77\u45B3\u{27CB1}\u4CE2\u{27CC5}\u3B95\u4736\u4744\u4C47\u4C40\u{242BF}\u{23617}\u{27352}\u{26E8B}\u{270D2}\u4C57\u{2A351}\u474F\u45DA\u4C85\u{27C6C}\u4D07\u4AA4\u46A1\u{26B23}\u7225\u{25A54}\u{21A63}\u{23E06}\u{23F61}\u664D\u56FB"],
       ["8767", "\u7D95\u591D\u{28BB9}\u3DF4\u9734\u{27BEF}\u5BDB\u{21D5E}\u5AA4\u3625\u{29EB0}\u5AD1\u5BB7\u5CFC\u676E\u8593\u{29945}\u7461\u749D\u3875\u{21D53}\u{2369E}\u{26021}\u3EEC"],
@@ -27875,9 +27900,9 @@ var require_big5_added = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/dbcs-data.js
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/dbcs-data.js
 var require_dbcs_data = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/dbcs-data.js"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/dbcs-data.js"(exports, module) {
     "use strict";
     module.exports = {
       // == Japanese/ShiftJIS ====================================================
@@ -28122,9 +28147,9 @@ var require_dbcs_data = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/index.js
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/index.js
 var require_encodings = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/index.js"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/encodings/index.js"(exports, module) {
     "use strict";
     var mergeModules = require_merge_exports();
     var modules = [
@@ -28147,9 +28172,9 @@ var require_encodings = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/streams.js
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/streams.js
 var require_streams = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/streams.js"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/streams.js"(exports, module) {
     "use strict";
     var Buffer2 = require_safer().Buffer;
     module.exports = function(streamModule) {
@@ -28244,9 +28269,9 @@ var require_streams = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/index.js
+// node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/index.js
 var require_lib = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/index.js"(exports, module) {
+  "node_modules/.pnpm/iconv-lite@0.7.3/node_modules/iconv-lite/lib/index.js"(exports, module) {
     "use strict";
     var Buffer2 = require_safer().Buffer;
     var bomHandling = require_bom_handling();
@@ -28376,9 +28401,9 @@ var require_lib = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/util.js
+// node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/util.js
 var require_util2 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/util.js"(exports) {
+  "node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/util.js"(exports) {
     var config2 = require_config();
     var fromCharCode = String.fromCharCode;
     var slice = Array.prototype.slice;
@@ -28831,9 +28856,9 @@ var require_util2 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/utf8-to-jis-table.js
+// node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/utf8-to-jis-table.js
 var require_utf8_to_jis_table = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/utf8-to-jis-table.js"(exports, module) {
+  "node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/utf8-to-jis-table.js"(exports, module) {
     module.exports = {
       15711649: 33,
       15711650: 34,
@@ -36232,9 +36257,9 @@ var require_utf8_to_jis_table = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/utf8-to-jisx0212-table.js
+// node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/utf8-to-jisx0212-table.js
 var require_utf8_to_jisx0212_table = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/utf8-to-jisx0212-table.js"(exports, module) {
+  "node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/utf8-to-jisx0212-table.js"(exports, module) {
     module.exports = {
       52120: 8751,
       52103: 8752,
@@ -42309,25 +42334,25 @@ var require_utf8_to_jisx0212_table = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/jis-to-utf8-table.js
+// node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/jis-to-utf8-table.js
 var require_jis_to_utf8_table = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/jis-to-utf8-table.js"(exports, module) {
+  "node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/jis-to-utf8-table.js"(exports, module) {
     var JIS_TO_UTF8_TABLE = null;
     module.exports = JIS_TO_UTF8_TABLE;
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/jisx0212-to-utf8-table.js
+// node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/jisx0212-to-utf8-table.js
 var require_jisx0212_to_utf8_table = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/jisx0212-to-utf8-table.js"(exports, module) {
+  "node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/jisx0212-to-utf8-table.js"(exports, module) {
     var JISX0212_TO_UTF8_TABLE = null;
     module.exports = JISX0212_TO_UTF8_TABLE;
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/encoding-table.js
+// node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/encoding-table.js
 var require_encoding_table = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/encoding-table.js"(exports) {
+  "node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/encoding-table.js"(exports) {
     exports.UTF8_TO_JIS_TABLE = require_utf8_to_jis_table();
     exports.UTF8_TO_JISX0212_TABLE = require_utf8_to_jisx0212_table();
     exports.JIS_TO_UTF8_TABLE = require_jis_to_utf8_table();
@@ -42335,9 +42360,9 @@ var require_encoding_table = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/config.js
+// node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/config.js
 var require_config = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/config.js"(exports) {
+  "node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/config.js"(exports) {
     var util4 = require_util2();
     var EncodingTable = require_encoding_table();
     exports.FALLBACK_CHARACTER = 63;
@@ -42457,9 +42482,9 @@ var require_config = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/encoding-detect.js
+// node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/encoding-detect.js
 var require_encoding_detect = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/encoding-detect.js"(exports) {
+  "node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/encoding-detect.js"(exports) {
     function isBINARY(data) {
       var i = 0;
       var len = data && data.length;
@@ -42826,9 +42851,9 @@ var require_encoding_detect = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/sjis-ext.js
+// node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/sjis-ext.js
 var require_sjis_ext = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/sjis-ext.js"(exports) {
+  "node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/sjis-ext.js"(exports) {
     var CP932_IBM_EXT_SYMBOL_MAP = [
       // 0xFA40 - 0xFA49 [ⅰ-ⅹ]
       61167,
@@ -42928,9 +42953,9 @@ var require_sjis_ext = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/encoding-convert.js
+// node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/encoding-convert.js
 var require_encoding_convert = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/encoding-convert.js"(exports) {
+  "node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/encoding-convert.js"(exports) {
     var config2 = require_config();
     var util4 = require_util2();
     var EncodingDetect = require_encoding_detect();
@@ -44211,9 +44236,9 @@ var require_encoding_convert = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/kana-case-table.js
+// node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/kana-case-table.js
 var require_kana_case_table = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/kana-case-table.js"(exports) {
+  "node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/kana-case-table.js"(exports) {
     exports.HANKANA_TABLE = {
       12289: 65380,
       12290: 65377,
@@ -44353,9 +44378,9 @@ var require_kana_case_table = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/package.json
+// node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/package.json
 var require_package2 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/package.json"(exports, module) {
+  "node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/package.json"(exports, module) {
     module.exports = {
       name: "encoding-japanese",
       version: "2.3.0",
@@ -44426,9 +44451,9 @@ var require_package2 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/index.js
+// node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/index.js
 var require_src = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/index.js"(exports, module) {
+  "node_modules/.pnpm/encoding-japanese@2.3.0/node_modules/encoding-japanese/src/index.js"(exports, module) {
     var config2 = require_config();
     var util4 = require_util2();
     var EncodingDetect = require_encoding_detect();
@@ -44942,9 +44967,9 @@ var require_src = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/charsets.js
+// node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/charsets.js
 var require_charsets = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/charsets.js"(exports, module) {
+  "node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/charsets.js"(exports, module) {
     "use strict";
     module.exports = {
       "866": "IBM866",
@@ -45157,9 +45182,9 @@ var require_charsets = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/charset.js
+// node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/charset.js
 var require_charset = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/charset.js"(exports, module) {
+  "node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/charset.js"(exports, module) {
     "use strict";
     var { Buffer: Buffer2 } = __require("node:buffer");
     var iconv = require_lib();
@@ -45254,9 +45279,9 @@ var require_charset = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/libbase64@1.3.0/node_modules/libbase64/lib/libbase64.js
+// node_modules/.pnpm/libbase64@1.3.0/node_modules/libbase64/lib/libbase64.js
 var require_libbase64 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/libbase64@1.3.0/node_modules/libbase64/lib/libbase64.js"(exports, module) {
+  "node_modules/.pnpm/libbase64@1.3.0/node_modules/libbase64/lib/libbase64.js"(exports, module) {
     "use strict";
     var { Buffer: Buffer2 } = __require("node:buffer");
     var stream = __require("node:stream");
@@ -45429,9 +45454,9 @@ var require_libbase64 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/libqp@2.1.1/node_modules/libqp/lib/libqp.js
+// node_modules/.pnpm/libqp@2.1.1/node_modules/libqp/lib/libqp.js
 var require_libqp = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/libqp@2.1.1/node_modules/libqp/lib/libqp.js"(exports, module) {
+  "node_modules/.pnpm/libqp@2.1.1/node_modules/libqp/lib/libqp.js"(exports, module) {
     "use strict";
     var { Buffer: Buffer2 } = __require("node:buffer");
     var stream = __require("node:stream");
@@ -45636,9 +45661,9 @@ var require_libqp = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/mimetypes.js
+// node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/mimetypes.js
 var require_mimetypes = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/mimetypes.js"(exports, module) {
+  "node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/mimetypes.js"(exports, module) {
     "use strict";
     module.exports = {
       list: {
@@ -47687,9 +47712,9 @@ var require_mimetypes = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/libmime.js
+// node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/libmime.js
 var require_libmime = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/libmime.js"(exports, module) {
+  "node_modules/.pnpm/libmime@5.4.3/node_modules/libmime/lib/libmime.js"(exports, module) {
     "use strict";
     var { Buffer: Buffer2 } = __require("node:buffer");
     var libcharset = require_charset();
@@ -48434,9 +48459,9 @@ var require_libmime = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/headers.js
+// node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/headers.js
 var require_headers = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/headers.js"(exports, module) {
+  "node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/headers.js"(exports, module) {
     "use strict";
     var libmime = require_libmime();
     var Libmime = (
@@ -48793,9 +48818,9 @@ var require_headers = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/mime-node.js
+// node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/mime-node.js
 var require_mime_node = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/mime-node.js"(exports, module) {
+  "node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/mime-node.js"(exports, module) {
     "use strict";
     var Headers = require_headers();
     var libmime = require_libmime();
@@ -49092,9 +49117,9 @@ var require_mime_node = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/message-splitter.js
+// node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/message-splitter.js
 var require_message_splitter = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/message-splitter.js"(exports, module) {
+  "node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/message-splitter.js"(exports, module) {
     "use strict";
     var Transform9 = __require("stream").Transform;
     var MimeNode2 = require_mime_node();
@@ -49569,9 +49594,9 @@ var require_message_splitter = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/message-joiner.js
+// node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/message-joiner.js
 var require_message_joiner = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/message-joiner.js"(exports, module) {
+  "node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/message-joiner.js"(exports, module) {
     "use strict";
     var Transform9 = __require("stream").Transform;
     var MessageJoiner = class extends Transform9 {
@@ -49613,9 +49638,9 @@ var require_message_joiner = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/flowed-decoder.js
+// node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/flowed-decoder.js
 var require_flowed_decoder = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/flowed-decoder.js"(exports, module) {
+  "node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/flowed-decoder.js"(exports, module) {
     "use strict";
     var Transform9 = __require("stream").Transform;
     var libmime = require_libmime();
@@ -49671,9 +49696,9 @@ var require_flowed_decoder = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/node-rewriter.js
+// node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/node-rewriter.js
 var require_node_rewriter = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/node-rewriter.js"(exports, module) {
+  "node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/node-rewriter.js"(exports, module) {
     "use strict";
     var Transform9 = __require("stream").Transform;
     var FlowedDecoder = require_flowed_decoder();
@@ -49859,9 +49884,9 @@ var require_node_rewriter = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/node-streamer.js
+// node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/node-streamer.js
 var require_node_streamer = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/node-streamer.js"(exports, module) {
+  "node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/node-streamer.js"(exports, module) {
     "use strict";
     var Transform9 = __require("stream").Transform;
     var FlowedDecoder = require_flowed_decoder();
@@ -49995,9 +50020,9 @@ var require_node_streamer = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/chunked-passthrough.js
+// node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/chunked-passthrough.js
 var require_chunked_passthrough = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/chunked-passthrough.js"(exports, module) {
+  "node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/lib/chunked-passthrough.js"(exports, module) {
     "use strict";
     var { Transform: Transform9 } = __require("stream");
     var ChunkedPassthrough = class extends Transform9 {
@@ -50043,9 +50068,9 @@ var require_chunked_passthrough = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/index.js
+// node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/index.js
 var require_mailsplit = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/index.js"(exports, module) {
+  "node_modules/.pnpm/@zone-eu+mailsplit@5.4.16/node_modules/@zone-eu/mailsplit/index.js"(exports, module) {
     "use strict";
     var MessageSplitter = require_message_splitter();
     var MessageJoiner = require_message_joiner();
@@ -50066,9 +50091,9 @@ var require_mailsplit = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/limited-passthrough.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/limited-passthrough.js
 var require_limited_passthrough = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/limited-passthrough.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/limited-passthrough.js"(exports, module) {
     "use strict";
     var { Transform: Transform9 } = __require("stream");
     var normalizeByteLimit = (value) => {
@@ -50107,9 +50132,9 @@ var require_limited_passthrough = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/limits.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/limits.js
 var require_limits = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/limits.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/limits.js"(exports, module) {
     "use strict";
     var MAX_LITERAL_SIZE = 1024 * 1024 * 1024;
     var MAX_LINE_SIZE = MAX_LITERAL_SIZE;
@@ -50126,9 +50151,9 @@ var require_limits = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-stream.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-stream.js
 var require_imap_stream = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-stream.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-stream.js"(exports, module) {
     "use strict";
     var Transform9 = __require("stream").Transform;
     var logger = require_logger();
@@ -50529,9 +50554,9 @@ var require_imap_stream = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-formal-syntax.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-formal-syntax.js
 var require_imap_formal_syntax = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-formal-syntax.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-formal-syntax.js"(exports, module) {
     "use strict";
     function expandRange(start, end) {
       let chars = [];
@@ -50675,9 +50700,9 @@ var require_imap_formal_syntax = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/token-parser.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/token-parser.js
 var require_token_parser = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/token-parser.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/token-parser.js"(exports, module) {
     "use strict";
     var imapFormalSyntax = require_imap_formal_syntax();
     var { MAX_LITERAL_SIZE, normalizeLimit, createLiteralTooLargeError } = require_limits();
@@ -51244,9 +51269,9 @@ var require_token_parser = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/parser-instance.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/parser-instance.js
 var require_parser_instance = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/parser-instance.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/parser-instance.js"(exports, module) {
     "use strict";
     var imapFormalSyntax = require_imap_formal_syntax();
     var { TokenParser } = require_token_parser();
@@ -51440,9 +51465,9 @@ var require_parser_instance = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-parser.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-parser.js
 var require_imap_parser = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-parser.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-parser.js"(exports, module) {
     "use strict";
     var imapFormalSyntax = require_imap_formal_syntax();
     var { ParserInstance } = require_parser_instance();
@@ -51500,9 +51525,9 @@ var require_imap_parser = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-compiler.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-compiler.js
 var require_imap_compiler = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-compiler.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-compiler.js"(exports, module) {
     "use strict";
     var imapFormalSyntax = require_imap_formal_syntax();
     var SEQ_RANGE = /^(\d+|\*)(:(\d+|\*))?$/;
@@ -51690,9 +51715,9 @@ var require_imap_compiler = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-handler.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-handler.js
 var require_imap_handler = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-handler.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/handler/imap-handler.js"(exports, module) {
     "use strict";
     var parser = require_imap_parser();
     var compiler = require_imap_compiler();
@@ -51703,9 +51728,9 @@ var require_imap_handler = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/package.json
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/package.json
 var require_package3 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/package.json"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/package.json"(exports, module) {
     module.exports = {
       name: "imapflow",
       version: "1.7.8",
@@ -51765,9 +51790,9 @@ var require_package3 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/smart-buffer@4.2.0/node_modules/smart-buffer/build/utils.js
+// node_modules/.pnpm/smart-buffer@4.2.0/node_modules/smart-buffer/build/utils.js
 var require_utils2 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/smart-buffer@4.2.0/node_modules/smart-buffer/build/utils.js"(exports) {
+  "node_modules/.pnpm/smart-buffer@4.2.0/node_modules/smart-buffer/build/utils.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var buffer_1 = __require("buffer");
@@ -51834,9 +51859,9 @@ var require_utils2 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/smart-buffer@4.2.0/node_modules/smart-buffer/build/smartbuffer.js
+// node_modules/.pnpm/smart-buffer@4.2.0/node_modules/smart-buffer/build/smartbuffer.js
 var require_smartbuffer = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/smart-buffer@4.2.0/node_modules/smart-buffer/build/smartbuffer.js"(exports) {
+  "node_modules/.pnpm/smart-buffer@4.2.0/node_modules/smart-buffer/build/smartbuffer.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var utils_1 = require_utils2();
@@ -52992,9 +53017,9 @@ var require_smartbuffer = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/constants.js
+// node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/constants.js
 var require_constants2 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/constants.js"(exports) {
+  "node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/constants.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SOCKS5_NO_ACCEPTABLE_AUTH = exports.SOCKS5_CUSTOM_AUTH_END = exports.SOCKS5_CUSTOM_AUTH_START = exports.SOCKS_INCOMING_PACKET_SIZES = exports.SocksClientState = exports.Socks5Response = exports.Socks5HostType = exports.Socks5Auth = exports.Socks4Response = exports.SocksCommand = exports.ERRORS = exports.DEFAULT_TIMEOUT = void 0;
@@ -53109,9 +53134,9 @@ var require_constants2 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/util.js
+// node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/util.js
 var require_util3 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/util.js"(exports) {
+  "node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shuffleArray = exports.SocksClientError = void 0;
@@ -53132,9 +53157,9 @@ var require_util3 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/address-error.js
+// node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/address-error.js
 var require_address_error = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/address-error.js"(exports) {
+  "node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/address-error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AddressError = void 0;
@@ -53149,9 +53174,9 @@ var require_address_error = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/common.js
+// node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/common.js
 var require_common = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/common.js"(exports) {
+  "node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/common.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.isInSubnet = isInSubnet;
@@ -53252,9 +53277,9 @@ var require_common = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v4/constants.js
+// node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v4/constants.js
 var require_constants3 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v4/constants.js"(exports) {
+  "node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v4/constants.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SPECIAL_PURPOSE = exports.RE_SUBNET_STRING = exports.RE_ADDRESS = exports.GROUPS = exports.BITS = void 0;
@@ -53293,9 +53318,9 @@ var require_constants3 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/ipv4.js
+// node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/ipv4.js
 var require_ipv4 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/ipv4.js"(exports) {
+  "node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/ipv4.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -53858,9 +53883,9 @@ var require_ipv4 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v6/constants.js
+// node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v6/constants.js
 var require_constants4 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v6/constants.js"(exports) {
+  "node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v6/constants.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SPECIAL_PURPOSE = exports.RE_URL_WITH_PORT = exports.RE_URL = exports.RE_ZONE_STRING = exports.RE_SUBNET_STRING = exports.RE_BAD_ADDRESS = exports.RE_BAD_CHARACTERS = exports.TYPES = exports.SCOPES = exports.GROUPS = exports.BITS = void 0;
@@ -53948,9 +53973,9 @@ var require_constants4 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v6/helpers.js
+// node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v6/helpers.js
 var require_helpers = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v6/helpers.js"(exports) {
+  "node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v6/helpers.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.escapeHtml = escapeHtml;
@@ -53987,9 +54012,9 @@ var require_helpers = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v6/regular-expressions.js
+// node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v6/regular-expressions.js
 var require_regular_expressions = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v6/regular-expressions.js"(exports) {
+  "node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/v6/regular-expressions.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -54079,9 +54104,9 @@ var require_regular_expressions = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/ipv6.js
+// node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/ipv6.js
 var require_ipv6 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/ipv6.js"(exports) {
+  "node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/ipv6.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -55412,9 +55437,9 @@ var require_ipv6 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/ip-address.js
+// node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/ip-address.js
 var require_ip_address = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/ip-address.js"(exports) {
+  "node_modules/.pnpm/ip-address@10.7.2/node_modules/ip-address/dist/ip-address.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -55462,9 +55487,9 @@ var require_ip_address = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/helpers.js
+// node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/helpers.js
 var require_helpers2 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/helpers.js"(exports) {
+  "node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/helpers.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ipToBuffer = exports.int32ToIpv4 = exports.ipv4ToInt32 = exports.validateSocksClientChainOptions = exports.validateSocksClientOptions = void 0;
@@ -55569,9 +55594,9 @@ var require_helpers2 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/receivebuffer.js
+// node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/receivebuffer.js
 var require_receivebuffer = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/receivebuffer.js"(exports) {
+  "node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/common/receivebuffer.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ReceiveBuffer = void 0;
@@ -55617,9 +55642,9 @@ var require_receivebuffer = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/client/socksclient.js
+// node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/client/socksclient.js
 var require_socksclient = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/client/socksclient.js"(exports) {
+  "node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/client/socksclient.js"(exports) {
     "use strict";
     var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
       function adopt(value) {
@@ -56296,9 +56321,9 @@ var require_socksclient = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/index.js
+// node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/index.js
 var require_build = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/index.js"(exports) {
+  "node_modules/.pnpm/socks@2.8.9/node_modules/socks/build/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -56321,9 +56346,9 @@ var require_build = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/connection-deadline.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/connection-deadline.js
 var require_connection_deadline = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/connection-deadline.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/connection-deadline.js"(exports, module) {
     "use strict";
     var CONNECT_TIMEOUT = 90 * 1e3;
     var ConnectionDeadline = class {
@@ -56404,9 +56429,9 @@ var require_connection_deadline = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/proxy-connection.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/proxy-connection.js
 var require_proxy_connection = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/proxy-connection.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/proxy-connection.js"(exports, module) {
     "use strict";
     var { SocksClient } = require_build();
     var dns3 = __require("dns").promises;
@@ -56689,9 +56714,9 @@ var require_proxy_connection = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/charsets.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/charsets.js
 var require_charsets2 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/charsets.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/charsets.js"(exports, module) {
     "use strict";
     var CHARACTER_SETS = [
       "US-ASCII",
@@ -56968,9 +56993,9 @@ var require_charsets2 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/jp-decoder.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/jp-decoder.js
 var require_jp_decoder = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/jp-decoder.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/jp-decoder.js"(exports, module) {
     "use strict";
     var { Transform: Transform9 } = __require("stream");
     var encodingJapanese = require_src();
@@ -57034,9 +57059,9 @@ var require_jp_decoder = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/tools.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/tools.js
 var require_tools2 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/tools.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/tools.js"(exports, module) {
     "use strict";
     var libmime = require_libmime();
     var { resolveCharset } = require_charsets2();
@@ -58241,9 +58266,9 @@ var require_tools2 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/id.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/id.js
 var require_id2 = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/id.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/id.js"(exports, module) {
     "use strict";
     var { formatDateTime } = require_tools2();
     module.exports = async (connection, clientInfo) => {
@@ -58293,9 +58318,9 @@ var require_id2 = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/capability.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/capability.js
 var require_capability = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/capability.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/capability.js"(exports, module) {
     "use strict";
     module.exports = async (connection) => {
       if (connection.capabilities.size && !connection.expectCapabilityUpdate) {
@@ -58314,9 +58339,9 @@ var require_capability = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/namespace.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/namespace.js
 var require_namespace = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/namespace.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/namespace.js"(exports, module) {
     "use strict";
     var { hasCapability, getStringList } = require_tools2();
     module.exports = async (connection) => {
@@ -58422,9 +58447,9 @@ var require_namespace = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/login.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/login.js
 var require_login = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/login.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/login.js"(exports, module) {
     "use strict";
     var { getStatusCode, getErrorText } = require_tools2();
     module.exports = async (connection, username, password) => {
@@ -58453,9 +58478,9 @@ var require_login = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/logout.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/logout.js
 var require_logout = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/logout.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/logout.js"(exports, module) {
     "use strict";
     module.exports = async (connection) => {
       if (connection.state === connection.states.LOGOUT) {
@@ -58487,9 +58512,9 @@ var require_logout = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/starttls.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/starttls.js
 var require_starttls = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/starttls.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/starttls.js"(exports, module) {
     "use strict";
     module.exports = async (connection) => {
       if (!connection.capabilities.has("STARTTLS") || connection.secureConnection) {
@@ -58509,9 +58534,9 @@ var require_starttls = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/status-fields.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/status-fields.js
 var require_status_fields = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/status-fields.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/status-fields.js"(exports, module) {
     "use strict";
     var { parseBigIntValue, parseUintValue, MAX_UINT32_DIGITS } = require_tools2();
     var uint32 = (value) => parseUintValue(value, MAX_UINT32_DIGITS);
@@ -58554,9 +58579,9 @@ var require_status_fields = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/special-use.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/special-use.js
 var require_special_use = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/special-use.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/special-use.js"(exports, module) {
     "use strict";
     var GENERIC_TOKENS = new Set(
       [
@@ -59433,9 +59458,9 @@ var require_special_use = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/list.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/list.js
 var require_list = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/list.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/list.js"(exports, module) {
     "use strict";
     var {
       decodePath,
@@ -59780,9 +59805,9 @@ var require_list = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/enable.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/enable.js
 var require_enable = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/enable.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/enable.js"(exports, module) {
     "use strict";
     var { hasCapability } = require_tools2();
     module.exports = async (connection, extensionList) => {
@@ -59829,9 +59854,9 @@ var require_enable = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/select.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/select.js
 var require_select = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/select.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/select.js"(exports, module) {
     "use strict";
     var { encodePath, normalizePath, enhanceCommandError, parseBigIntValue, parseUintValue, getStringList, MAX_UINT32_DIGITS } = require_tools2();
     var VALUED_RESPONSE_CODES = Object.assign(/* @__PURE__ */ Object.create(null), {
@@ -60014,9 +60039,9 @@ var require_select = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/fetch.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/fetch.js
 var require_fetch = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/fetch.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/fetch.js"(exports, module) {
     "use strict";
     var { formatMessageResponse, isRev2Active } = require_tools2();
     module.exports = async (connection, range, query, options) => {
@@ -60201,9 +60226,9 @@ var require_fetch = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/create.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/create.js
 var require_create = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/create.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/create.js"(exports, module) {
     "use strict";
     var { encodePath, normalizePath, getStatusCode, enhanceCommandError } = require_tools2();
     module.exports = async (connection, path3) => {
@@ -60260,9 +60285,9 @@ var require_create = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/delete.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/delete.js
 var require_delete = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/delete.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/delete.js"(exports, module) {
     "use strict";
     var { encodePath, normalizePath, enhanceCommandError } = require_tools2();
     module.exports = async (connection, path3) => {
@@ -60290,9 +60315,9 @@ var require_delete = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/rename.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/rename.js
 var require_rename = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/rename.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/rename.js"(exports, module) {
     "use strict";
     var { encodePath, normalizePath, enhanceCommandError } = require_tools2();
     module.exports = async (connection, path3, newPath) => {
@@ -60325,9 +60350,9 @@ var require_rename = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/close.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/close.js
 var require_close = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/close.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/close.js"(exports, module) {
     "use strict";
     module.exports = async (connection) => {
       if (connection.state !== connection.states.SELECTED) {
@@ -60353,9 +60378,9 @@ var require_close = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/subscribe.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/subscribe.js
 var require_subscribe = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/subscribe.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/subscribe.js"(exports, module) {
     "use strict";
     var { encodePath, normalizePath, enhanceCommandError } = require_tools2();
     module.exports = async (connection, path3) => {
@@ -60377,9 +60402,9 @@ var require_subscribe = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/unsubscribe.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/unsubscribe.js
 var require_unsubscribe = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/unsubscribe.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/unsubscribe.js"(exports, module) {
     "use strict";
     var { encodePath, normalizePath, enhanceCommandError } = require_tools2();
     module.exports = async (connection, path3) => {
@@ -60401,9 +60426,9 @@ var require_unsubscribe = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/store.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/store.js
 var require_store = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/store.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/store.js"(exports, module) {
     "use strict";
     var { formatFlag, canUseFlag, enhanceCommandError } = require_tools2();
     module.exports = async (connection, range, flags, options) => {
@@ -60465,9 +60490,9 @@ var require_store = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/search-compiler.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/search-compiler.js
 var require_search_compiler = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/search-compiler.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/search-compiler.js"(exports, module) {
     "use strict";
     var { formatDate, formatFlag, canUseFlag, toValidDate, isRev2Active } = require_tools2();
     var setBoolOpt = (attributes, term, value) => {
@@ -60799,9 +60824,9 @@ var require_search_compiler = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/search.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/search.js
 var require_search = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/search.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/search.js"(exports, module) {
     "use strict";
     var {
       enhanceCommandError,
@@ -61026,9 +61051,9 @@ var require_search = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/noop.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/noop.js
 var require_noop = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/noop.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/noop.js"(exports, module) {
     "use strict";
     module.exports = async (connection) => {
       try {
@@ -61043,9 +61068,9 @@ var require_noop = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/expunge.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/expunge.js
 var require_expunge = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/expunge.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/expunge.js"(exports, module) {
     "use strict";
     var { enhanceCommandError, hasCapability, parseBigIntValue } = require_tools2();
     module.exports = async (connection, range, options) => {
@@ -61079,9 +61104,9 @@ var require_expunge = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/append.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/append.js
 var require_append = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/append.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/append.js"(exports, module) {
     "use strict";
     var {
       formatFlag,
@@ -61196,9 +61221,9 @@ var require_append = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/status.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/status.js
 var require_status = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/status.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/status.js"(exports, module) {
     "use strict";
     var { encodePath, normalizePath, buildStatusQueryAttributes, isRev2Active } = require_tools2();
     var { parseStatusList } = require_status_fields();
@@ -61274,9 +61299,9 @@ var require_status = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/copyuid-parser.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/copyuid-parser.js
 var require_copyuid_parser = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/copyuid-parser.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/copyuid-parser.js"(exports, module) {
     "use strict";
     var { expandRange, parseBigIntValue } = require_tools2();
     function parseCopyUid(response, map2) {
@@ -61299,9 +61324,9 @@ var require_copyuid_parser = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/copy.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/copy.js
 var require_copy = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/copy.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/copy.js"(exports, module) {
     "use strict";
     var { normalizePath, encodePath, enhanceCommandError } = require_tools2();
     var { parseCopyUid } = require_copyuid_parser();
@@ -61331,9 +61356,9 @@ var require_copy = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/move.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/move.js
 var require_move = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/move.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/move.js"(exports, module) {
     "use strict";
     var { normalizePath, encodePath, enhanceCommandError, hasCapability } = require_tools2();
     var { parseCopyUid } = require_copyuid_parser();
@@ -61374,9 +61399,9 @@ var require_move = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/compress.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/compress.js
 var require_compress = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/compress.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/compress.js"(exports, module) {
     "use strict";
     module.exports = async (connection) => {
       if (!connection.capabilities.has("COMPRESS=DEFLATE") || connection._inflate) {
@@ -61403,9 +61428,9 @@ var require_compress = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/quota.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/quota.js
 var require_quota = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/quota.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/quota.js"(exports, module) {
     "use strict";
     var { encodePath, normalizePath, enhanceCommandError, parseUintValue, isUnsafeKey } = require_tools2();
     module.exports = async (connection, path3) => {
@@ -61494,9 +61519,9 @@ var require_quota = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/idle.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/idle.js
 var require_idle = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/idle.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/idle.js"(exports, module) {
     "use strict";
     var { guardedPromise, hasCapability, logConnectionError, restampConnectionError, unrefTimer } = require_tools2();
     var NOOP_INTERVAL = 2 * 60 * 1e3;
@@ -61740,9 +61765,9 @@ var require_idle = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/authenticate.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/authenticate.js
 var require_authenticate = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/authenticate.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/commands/authenticate.js"(exports, module) {
     "use strict";
     var { getStatusCode, getErrorText } = require_tools2();
     async function handleAuthError(err, errorResponse2) {
@@ -61886,9 +61911,9 @@ var require_authenticate = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/imap-commands.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/imap-commands.js
 var require_imap_commands = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/imap-commands.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/imap-commands.js"(exports, module) {
     "use strict";
     module.exports = /* @__PURE__ */ new Map([
       ["ID", require_id2()],
@@ -61923,9 +61948,9 @@ var require_imap_commands = __commonJS({
   }
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/imap-flow.js
+// node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/imap-flow.js
 var require_imap_flow = __commonJS({
-  "../apple-mail-mcp/node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/imap-flow.js"(exports, module) {
+  "node_modules/.pnpm/imapflow@1.7.8/node_modules/imapflow/lib/imap-flow.js"(exports, module) {
     "use strict";
     var tls3 = __require("tls");
     var net8 = __require("net");
@@ -67742,7 +67767,7 @@ var init_smtpMailer = __esm({
 // src/index.ts
 import { createRequire } from "module";
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
   BRAND: () => BRAND,
@@ -67854,7 +67879,7 @@ __export(external_exports, {
   void: () => voidType
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/helpers/util.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/helpers/util.js
 var util;
 (function(util4) {
   util4.assertEqual = (_) => {
@@ -67988,7 +68013,7 @@ var getParsedType = (data) => {
   }
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/ZodError.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/ZodError.js
 var ZodIssueCode = util.arrayToEnum([
   "invalid_type",
   "invalid_literal",
@@ -68106,7 +68131,7 @@ ZodError.create = (issues) => {
   return error3;
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/locales/en.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/locales/en.js
 var errorMap = (issue2, _ctx) => {
   let message;
   switch (issue2.code) {
@@ -68209,7 +68234,7 @@ var errorMap = (issue2, _ctx) => {
 };
 var en_default = errorMap;
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/errors.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
 function setErrorMap(map2) {
   overrideErrorMap = map2;
@@ -68218,7 +68243,7 @@ function getErrorMap() {
   return overrideErrorMap;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/helpers/parseUtil.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
   const { data, path: path3, errorMaps, issueData } = params;
   const fullPath = [...path3, ...issueData.path || []];
@@ -68328,14 +68353,14 @@ var isDirty = (x) => x.status === "dirty";
 var isValid = (x) => x.status === "valid";
 var isAsync = (x) => typeof Promise !== "undefined" && x instanceof Promise;
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/helpers/errorUtil.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/helpers/errorUtil.js
 var errorUtil;
 (function(errorUtil2) {
   errorUtil2.errToObj = (message) => typeof message === "string" ? { message } : message || {};
   errorUtil2.toString = (message) => typeof message === "string" ? message : message?.message;
 })(errorUtil || (errorUtil = {}));
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/types.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
   constructor(parent, value, path3, key) {
     this._cachedPath = [];
@@ -71783,7 +71808,7 @@ var coerce = {
 };
 var NEVER = INVALID;
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/core.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/core.js
 var NEVER2 = Object.freeze({
   status: "aborted"
 });
@@ -71842,7 +71867,7 @@ function config(newConfig) {
   return globalConfig;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/util.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/util.js
 var util_exports = {};
 __export(util_exports, {
   BIGINT_FORMAT_RANGES: () => BIGINT_FORMAT_RANGES,
@@ -72363,7 +72388,7 @@ var Class = class {
   }
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/errors.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/errors.js
 var initializer = (inst, def) => {
   inst.name = "$ZodError";
   Object.defineProperty(inst, "_zod", {
@@ -72438,7 +72463,7 @@ function formatError(error3, _mapper) {
   return fieldErrors;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/parse.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/parse.js
 var _parse = (_Err) => (schema, value, _ctx, _params) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: false }) : { async: false };
   const result = schema._zod.run({ value, issues: [] }, ctx);
@@ -72490,7 +72515,7 @@ var _safeParseAsync = (_Err) => async (schema, value, _ctx) => {
 };
 var safeParseAsync = /* @__PURE__ */ _safeParseAsync($ZodRealError);
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/regexes.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/regexes.js
 var cuid = /^[cC][^\s-]{8,}$/;
 var cuid2 = /^[0-9a-z]+$/;
 var ulid = /^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$/;
@@ -72548,7 +72573,7 @@ var _null = /null/i;
 var lowercase = /^[^A-Z]*$/;
 var uppercase = /^[^a-z]*$/;
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/checks.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
   var _a;
   inst._zod ?? (inst._zod = {});
@@ -72933,7 +72958,7 @@ var $ZodCheckOverwrite = /* @__PURE__ */ $constructor("$ZodCheckOverwrite", (ins
   };
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/doc.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/doc.js
 var Doc = class {
   constructor(args = []) {
     this.content = [];
@@ -72969,14 +72994,14 @@ var Doc = class {
   }
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/versions.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/versions.js
 var version = {
   major: 4,
   minor: 0,
   patch: 0
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/schemas.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   var _a;
   inst ?? (inst = {});
@@ -74214,7 +74239,7 @@ function handleRefineResult(result, payload, input, inst) {
   }
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/locales/en.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/locales/en.js
 var parsedType = (data) => {
   const t = typeof data;
   switch (t) {
@@ -74332,7 +74357,7 @@ function en_default2() {
   };
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/registries.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/registries.js
 var $ZodRegistry = class {
   constructor() {
     this._map = /* @__PURE__ */ new Map();
@@ -74380,7 +74405,7 @@ function registry() {
 }
 var globalRegistry = /* @__PURE__ */ registry();
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/api.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/api.js
 function _string(Class2, params) {
   return new Class2({
     type: "string",
@@ -74819,7 +74844,7 @@ function _refine(Class2, fn, _params) {
   return schema;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/to-json-schema.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/to-json-schema.js
 var JSONSchemaGenerator = class {
   constructor(params) {
     this.counter = 0;
@@ -75586,7 +75611,7 @@ function isTransforming(_schema, _ctx) {
   throw new Error(`Unknown schema type: ${def.type}`);
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/mini/schemas.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/mini/schemas.js
 var ZodMiniType = /* @__PURE__ */ $constructor("ZodMiniType", (inst, def) => {
   if (!inst._zod)
     throw new Error("Uninitialized schema in ZodMiniType.");
@@ -75632,7 +75657,7 @@ function object(shape, params) {
   return new ZodMiniObject(def);
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
 function isZ4Schema(s) {
   const schema = s;
   return !!schema._zod;
@@ -75792,7 +75817,7 @@ function getLiteralValue(schema) {
   return void 0;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/classic/iso.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/classic/iso.js
 var iso_exports2 = {};
 __export(iso_exports2, {
   ZodISODate: () => ZodISODate,
@@ -75833,7 +75858,7 @@ function duration2(params) {
   return _isoDuration(ZodISODuration, params);
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/classic/errors.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/classic/errors.js
 var initializer2 = (inst, issues) => {
   $ZodError.init(inst, issues);
   inst.name = "ZodError";
@@ -75867,13 +75892,13 @@ var ZodRealError = $constructor("ZodError", initializer2, {
   Parent: Error
 });
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/classic/parse.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/classic/parse.js
 var parse2 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse3 = /* @__PURE__ */ _safeParse(ZodRealError);
 var safeParseAsync3 = /* @__PURE__ */ _safeParseAsync(ZodRealError);
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/classic/schemas.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/classic/schemas.js
 var ZodType2 = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
   $ZodType.init(inst, def);
   inst.def = def;
@@ -76484,10 +76509,10 @@ function preprocess(fn, schema) {
   return pipe(transform(fn), schema);
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/classic/external.js
+// node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/classic/external.js
 config(en_default2());
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
 var LATEST_PROTOCOL_VERSION = "2025-11-25";
 var SUPPORTED_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION, "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"];
 var RELATED_TASK_META_KEY = "io.modelcontextprotocol/related-task";
@@ -78018,12 +78043,12 @@ var UrlElicitationRequiredError = class extends McpError {
   }
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
 function isTerminal(status) {
   return status === "completed" || status === "failed" || status === "cancelled";
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/Options.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/Options.js
 var ignoreOverride = /* @__PURE__ */ Symbol("Let zodToJsonSchema decide on which parser to use");
 var defaultOptions = {
   name: void 0,
@@ -78057,7 +78082,7 @@ var getDefaultOptions = (options) => typeof options === "string" ? {
   ...options
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/Refs.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/Refs.js
 var getRefs = (options) => {
   const _options = getDefaultOptions(options);
   const currentPath = _options.name !== void 0 ? [..._options.basePath, _options.definitionPath, _options.name] : _options.basePath;
@@ -78078,7 +78103,7 @@ var getRefs = (options) => {
   };
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/errorMessages.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/errorMessages.js
 function addErrorMessage(res, key, errorMessage, refs) {
   if (!refs?.errorMessages)
     return;
@@ -78094,7 +78119,7 @@ function setResponseValueAndErrors(res, key, value, errorMessage, refs) {
   addErrorMessage(res, key, errorMessage, refs);
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
 var getRelativePath = (pathA, pathB) => {
   let i = 0;
   for (; i < pathA.length && i < pathB.length; i++) {
@@ -78104,7 +78129,7 @@ var getRelativePath = (pathA, pathB) => {
   return [(pathA.length - i).toString(), ...pathB.slice(i)].join("/");
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/any.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/any.js
 function parseAnyDef(refs) {
   if (refs.target !== "openAi") {
     return {};
@@ -78120,7 +78145,7 @@ function parseAnyDef(refs) {
   };
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/array.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/array.js
 function parseArrayDef(def, refs) {
   const res = {
     type: "array"
@@ -78144,7 +78169,7 @@ function parseArrayDef(def, refs) {
   return res;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/bigint.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/bigint.js
 function parseBigintDef(def, refs) {
   const res = {
     type: "integer",
@@ -78190,24 +78215,24 @@ function parseBigintDef(def, refs) {
   return res;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/boolean.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/boolean.js
 function parseBooleanDef() {
   return {
     type: "boolean"
   };
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/branded.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/branded.js
 function parseBrandedDef(_def, refs) {
   return parseDef(_def.type._def, refs);
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/catch.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/catch.js
 var parseCatchDef = (def, refs) => {
   return parseDef(def.innerType._def, refs);
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/date.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/date.js
 function parseDateDef(def, refs, overrideDateStrategy) {
   const strategy = overrideDateStrategy ?? refs.dateStrategy;
   if (Array.isArray(strategy)) {
@@ -78266,7 +78291,7 @@ var integerDateParser = (def, refs) => {
   return res;
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/default.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/default.js
 function parseDefaultDef(_def, refs) {
   return {
     ...parseDef(_def.innerType._def, refs),
@@ -78274,12 +78299,12 @@ function parseDefaultDef(_def, refs) {
   };
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/effects.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/effects.js
 function parseEffectsDef(_def, refs) {
   return refs.effectStrategy === "input" ? parseDef(_def.schema._def, refs) : parseAnyDef(refs);
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/enum.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/enum.js
 function parseEnumDef(def) {
   return {
     type: "string",
@@ -78287,7 +78312,7 @@ function parseEnumDef(def) {
   };
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/intersection.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/intersection.js
 var isJsonSchema7AllOfType = (type) => {
   if ("type" in type && type.type === "string")
     return false;
@@ -78329,7 +78354,7 @@ function parseIntersectionDef(def, refs) {
   } : void 0;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/literal.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/literal.js
 function parseLiteralDef(def, refs) {
   const parsedType2 = typeof def.value;
   if (parsedType2 !== "bigint" && parsedType2 !== "number" && parsedType2 !== "boolean" && parsedType2 !== "string") {
@@ -78349,7 +78374,7 @@ function parseLiteralDef(def, refs) {
   };
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/string.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/string.js
 var emojiRegex2 = void 0;
 var zodPatterns = {
   /**
@@ -78674,7 +78699,7 @@ function stringifyRegExpWithFlags(regex, refs) {
   return pattern;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/record.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/record.js
 function parseRecordDef(def, refs) {
   if (refs.target === "openAi") {
     console.warn("Warning: OpenAI may not support records in schemas! Try an array of key-value pairs instead.");
@@ -78726,7 +78751,7 @@ function parseRecordDef(def, refs) {
   return schema;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/map.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/map.js
 function parseMapDef(def, refs) {
   if (refs.mapStrategy === "record") {
     return parseRecordDef(def, refs);
@@ -78751,7 +78776,7 @@ function parseMapDef(def, refs) {
   };
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
 function parseNativeEnumDef(def) {
   const object3 = def.values;
   const actualKeys = Object.keys(def.values).filter((key) => {
@@ -78765,7 +78790,7 @@ function parseNativeEnumDef(def) {
   };
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/never.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/never.js
 function parseNeverDef(refs) {
   return refs.target === "openAi" ? void 0 : {
     not: parseAnyDef({
@@ -78775,7 +78800,7 @@ function parseNeverDef(refs) {
   };
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/null.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/null.js
 function parseNullDef(refs) {
   return refs.target === "openApi3" ? {
     enum: ["null"],
@@ -78785,7 +78810,7 @@ function parseNullDef(refs) {
   };
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/union.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/union.js
 var primitiveMappings = {
   ZodString: "string",
   ZodNumber: "number",
@@ -78853,7 +78878,7 @@ var asAnyOf = (def, refs) => {
   return anyOf.length ? { anyOf } : void 0;
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/nullable.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/nullable.js
 function parseNullableDef(def, refs) {
   if (["ZodString", "ZodNumber", "ZodBigInt", "ZodBoolean", "ZodNull"].includes(def.innerType._def.typeName) && (!def.innerType._def.checks || !def.innerType._def.checks.length)) {
     if (refs.target === "openApi3") {
@@ -78885,7 +78910,7 @@ function parseNullableDef(def, refs) {
   return base2 && { anyOf: [base2, { type: "null" }] };
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/number.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/number.js
 function parseNumberDef(def, refs) {
   const res = {
     type: "number"
@@ -78934,7 +78959,7 @@ function parseNumberDef(def, refs) {
   return res;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/object.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/object.js
 function parseObjectDef(def, refs) {
   const forceOptionalIntoNullable = refs.target === "openAi";
   const result = {
@@ -79004,7 +79029,7 @@ function safeIsOptional(schema) {
   }
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/optional.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/optional.js
 var parseOptionalDef = (def, refs) => {
   if (refs.currentPath.toString() === refs.propertyPath?.toString()) {
     return parseDef(def.innerType._def, refs);
@@ -79023,7 +79048,7 @@ var parseOptionalDef = (def, refs) => {
   } : parseAnyDef(refs);
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/pipeline.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/pipeline.js
 var parsePipelineDef = (def, refs) => {
   if (refs.pipeStrategy === "input") {
     return parseDef(def.in._def, refs);
@@ -79043,12 +79068,12 @@ var parsePipelineDef = (def, refs) => {
   };
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/promise.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/promise.js
 function parsePromiseDef(def, refs) {
   return parseDef(def.type._def, refs);
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/set.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/set.js
 function parseSetDef(def, refs) {
   const items = parseDef(def.valueType._def, {
     ...refs,
@@ -79068,7 +79093,7 @@ function parseSetDef(def, refs) {
   return schema;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
 function parseTupleDef(def, refs) {
   if (def.rest) {
     return {
@@ -79096,24 +79121,24 @@ function parseTupleDef(def, refs) {
   }
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/undefined.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/undefined.js
 function parseUndefinedDef(refs) {
   return {
     not: parseAnyDef(refs)
   };
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/unknown.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/unknown.js
 function parseUnknownDef(refs) {
   return parseAnyDef(refs);
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/readonly.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parsers/readonly.js
 var parseReadonlyDef = (def, refs) => {
   return parseDef(def.innerType._def, refs);
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/selectParser.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/selectParser.js
 var selectParser = (def, typeName, refs) => {
   switch (typeName) {
     case ZodFirstPartyTypeKind.ZodString:
@@ -79189,7 +79214,7 @@ var selectParser = (def, typeName, refs) => {
   }
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parseDef.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/parseDef.js
 function parseDef(def, refs, forceResolution = false) {
   const seenItem = refs.seen.get(def);
   if (refs.override) {
@@ -79245,7 +79270,7 @@ var addMeta = (def, refs, jsonSchema) => {
   return jsonSchema;
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
+// node_modules/.pnpm/zod-to-json-schema@3.25.2_zod@3.25.76/node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
 var zodToJsonSchema = (schema, options) => {
   const refs = getRefs(options);
   let definitions = typeof options === "object" && options.definitions ? Object.entries(options.definitions).reduce((acc, [name3, schema2]) => ({
@@ -79307,7 +79332,7 @@ var zodToJsonSchema = (schema, options) => {
   return combined;
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
 function mapMiniTarget(t) {
   if (!t)
     return "draft-7";
@@ -79349,7 +79374,7 @@ function parseWithCompat(schema, data) {
   return result.data;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
 var DEFAULT_REQUEST_TIMEOUT_MSEC = 6e4;
 var Protocol = class {
   constructor(_options) {
@@ -80303,7 +80328,7 @@ function mergeCapabilities(base2, additional) {
   return result;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
 var import_ajv = __toESM(require_ajv(), 1);
 var import_ajv_formats = __toESM(require_dist(), 1);
 function createDefaultAjvInstance() {
@@ -80371,7 +80396,7 @@ var AjvJsonSchemaValidator = class {
   }
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
 var ExperimentalServerTasks = class {
   constructor(_server) {
     this._server = _server;
@@ -80584,7 +80609,7 @@ var ExperimentalServerTasks = class {
   }
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
 function assertToolsCallTaskCapability(requests, method, entityName) {
   if (!requests) {
     throw new Error(`${entityName} does not support task creation (required for ${method})`);
@@ -80619,7 +80644,7 @@ function assertClientRequestTaskCapability(requests, method, entityName) {
   }
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
 var Server = class extends Protocol {
   /**
    * Initializes this server with the given name and version information.
@@ -80990,7 +81015,7 @@ var Server = class extends Protocol {
   }
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/completable.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/completable.js
 var COMPLETABLE_SYMBOL = /* @__PURE__ */ Symbol.for("mcp.completable");
 function isCompletable(schema) {
   return !!schema && typeof schema === "object" && COMPLETABLE_SYMBOL in schema;
@@ -81004,7 +81029,7 @@ var McpZodTypeKind;
   McpZodTypeKind2["Completable"] = "McpCompletable";
 })(McpZodTypeKind || (McpZodTypeKind = {}));
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/uriTemplate.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/uriTemplate.js
 var MAX_TEMPLATE_LENGTH = 1e6;
 var MAX_VARIABLE_LENGTH = 1e6;
 var MAX_TEMPLATE_EXPRESSIONS = 1e4;
@@ -81226,7 +81251,7 @@ var UriTemplate = class _UriTemplate {
   }
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/toolNameValidation.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/toolNameValidation.js
 var TOOL_NAME_REGEX = /^[A-Za-z0-9._-]{1,128}$/;
 function validateToolName(name2) {
   const warnings = [];
@@ -81284,7 +81309,7 @@ function validateAndWarnToolName(name2) {
   return result.isValid;
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/mcp-server.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/mcp-server.js
 var ExperimentalMcpServerTasks = class {
   constructor(_mcpServer) {
     this._mcpServer = _mcpServer;
@@ -81299,7 +81324,7 @@ var ExperimentalMcpServerTasks = class {
   }
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js
 var McpServer = class {
   constructor(serverInfo, options) {
     this._registeredResources = {};
@@ -82115,10 +82140,10 @@ var EMPTY_COMPLETION_RESULT = {
   }
 };
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 import process2 from "node:process";
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
 var STDIO_DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024;
 var ReadBuffer = class {
   constructor(options) {
@@ -82155,7 +82180,7 @@ function serializeMessage(message) {
   return JSON.stringify(message) + "\n";
 }
 
-// ../apple-mail-mcp/node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// node_modules/.pnpm/@modelcontextprotocol+sdk@1.31.0_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 var StdioServerTransport = class {
   constructor(_stdin = process2.stdin, _stdout = process2.stdout, options) {
     this._stdin = _stdin;
@@ -84986,7 +85011,11 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     const deepScan = deepAttachmentCheck ? `if hasAtt is "false" then
                   try
                     set rawSrc to source of msg
+                    -- Apple Mail writes the files it attaches as "inline" with a filename.
                     if rawSrc contains "Content-Disposition: attachment" then set hasAtt to "true"
+                    if hasAtt is "false" then
+                      if rawSrc contains "Content-Disposition: inline" and rawSrc contains "filename" then set hasAtt to "true"
+                    end if
                   end try
                 end if` : "";
     const innerFetch = `
@@ -86805,12 +86834,23 @@ ${this.errorEmit("              ")}
                 set outputText to ""
                 set attCount to 0
                 repeat with att in mail attachments of msg
-                  set attName to name of att
-                  set attType to MIME type of att
-                  set attSize to file size of att as string
-                  if attCount > 0 then set outputText to outputText & "${RECORD_SEP2}"
-                  set outputText to outputText & attName & "${FIELD_SEP2}" & attType & "${FIELD_SEP2}" & attSize
-                  set attCount to attCount + 1
+                  set attName to ""
+                  set attType to "application/octet-stream"
+                  set attSize to "0"
+                  try
+                    set attName to name of att
+                  end try
+                  try
+                    set attType to MIME type of att
+                  end try
+                  try
+                    set attSize to file size of att as string
+                  end try
+                  if attName is not "" then
+                    if attCount > 0 then set outputText to outputText & "${RECORD_SEP2}"
+                    set outputText to outputText & attName & "${FIELD_SEP2}" & attType & "${FIELD_SEP2}" & attSize
+                    set attCount to attCount + 1
+                  end if
                 end repeat`;
     const loc = this.locationFor(id);
     const lookup = loc ? `
