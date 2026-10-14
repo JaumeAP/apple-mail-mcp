@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const h = vi.hoisted(() => ({ scripts: [] as string[], output: "" }));
+const h = vi.hoisted(() => ({ scripts: [] as string[], output: "", source: "" }));
 
 vi.mock("@/utils/applescript.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/utils/applescript.js")>();
@@ -13,7 +13,9 @@ vi.mock("@/utils/applescript.js", async (importOriginal) => {
     ...actual,
     executeAppleScript: (script: string) => {
       h.scripts.push(script);
-      return { success: true, output: h.output };
+      // The raw-source fallback asks for `source of msg`; everything else gets `output`.
+      const isSource = script.includes("return source of msg");
+      return { success: true, output: isSource ? h.source : h.output };
     },
   };
 });
@@ -29,6 +31,7 @@ type Internals = {
 afterEach(() => {
   h.scripts.length = 0;
   h.output = "";
+  h.source = "";
 });
 
 function manager(location?: { account: string; mailbox: string }): AppleMailManager {
@@ -58,6 +61,41 @@ describe("listAttachments mailbox binding", () => {
     manager(undefined).listAttachments("538208");
     expect(h.scripts[0]).toContain("repeat with acct in accounts");
     expect(h.scripts[0]).toContain('if outputText is not "" then return outputText');
+  });
+});
+
+describe("listAttachments survives an unreadable property (2026-10-14)", () => {
+  it("reads name, MIME type and size each inside its own try", () => {
+    manager({ account: "Nopuedomas", mailbox: "Sent" }).listAttachments("538547");
+    const script = h.scripts[0];
+    // `MIME type of att` throws "AppleEvent handler failed" for a PDF Apple Mail
+    // attached; unguarded, that threw away the whole list.
+    expect(script).toMatch(/try\s+set attType to MIME type of att\s+end try/);
+    expect(script).toMatch(/try\s+set attSize to file size of att as string\s+end try/);
+    expect(script).toMatch(/try\s+set attName to name of att\s+end try/);
+  });
+
+  it("falls back to the raw source and lists an inline PDF Apple Mail attached", () => {
+    h.output = "";
+    h.source = [
+      'Content-Type: multipart/mixed; boundary="B"',
+      "",
+      "--B",
+      "Content-Type: text/plain",
+      "",
+      "Hola",
+      "--B",
+      "Content-Disposition: inline;",
+      '\tfilename="JAP 2026_40_transperfect.pdf"',
+      "Content-Type: application/pdf;",
+      '\tname="JAP 2026_40_transperfect.pdf"',
+      "Content-Transfer-Encoding: base64",
+      "",
+      "JVBERi0xLjMK",
+      "--B--",
+    ].join("\n");
+    const found = manager({ account: "Nopuedomas", mailbox: "Sent" }).listAttachments("538547");
+    expect(found.map((a) => a.name)).toEqual(["JAP 2026_40_transperfect.pdf"]);
   });
 });
 

@@ -1,5 +1,35 @@
 ## [Unreleased]
 
+## [2.20.9-jap.12] - 2026-10-14 (JaumeAP fork)
+
+### Fixed
+
+- **`list-attachments` found nothing in a message Apple Mail had composed.**
+  Two defects stacked, and both are reproduced with the real source of a sent
+  PDF:
+  1. The AppleScript attempt read `name`, `MIME type` and `file size` with no
+     guard. `MIME type of att` throws "AppleEvent handler failed" for those
+     attachments, and that one throw discarded the whole list. Each property is
+     now read in its own `try`; an unreadable type or size degrades to
+     `application/octet-stream` / `0`, and only a missing name drops an entry.
+  2. The MIME fallback skipped every `Content-Disposition: inline` part, but
+     Apple Mail writes the files it attaches as `inline` (with a `filename`, and
+     in a draft also a `Content-Id`). A part is now left out only when the HTML
+     body embeds it with `cid:<its Content-Id>`; a logo the HTML points at is
+     still skipped, a PDF or a photo the user attached is listed.
+- `get-message` with the deep attachment check also counts an `inline` part that
+  has a `filename`.
+
+### Notes
+
+- `attachmentCount` in the `send-email` and `create-draft` answers is the number
+  of files requested, not a check that Mail attached them. Verified 2026-10-14
+  with the real source of 12 sent and drafted messages: every PDF was attached,
+  byte for byte. A save right after creating a draft can still fail with
+  "Failed to save attachment", because Mail re-files a new draft on the server
+  and renumbers it a few seconds later; search the Drafts mailbox again for the
+  current id.
+
 ## [2.20.9-jap.11] - 2026-10-14 (JaumeAP fork)
 
 ### Added
