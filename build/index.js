@@ -89052,6 +89052,15 @@ async function routeMessage(id, opts) {
 
 // src/tools/draftCleanup.ts
 var SEND_CLOCK_SLACK_MS = 6e4;
+var SENT_COPY_WAIT_MS = 3e4;
+var SENT_COPY_POLL_MS = 2e3;
+async function pollUntil(check2, timeoutMs = SENT_COPY_WAIT_MS, intervalMs = SENT_COPY_POLL_MS, sleep2 = (ms) => new Promise((r) => setTimeout(r, ms))) {
+  for (let waited = 0; ; waited += intervalMs) {
+    if (check2()) return true;
+    if (waited + intervalMs > timeoutMs) return false;
+    await sleep2(intervalMs);
+  }
+}
 function isDraftMailbox(mailbox) {
   return /draft/i.test(mailbox);
 }
@@ -90607,19 +90616,21 @@ registerTool(
       }
       const draft = draftId ? await cleanUpDraft(
         draftId,
-        hasSentCopy(
-          mailManager.searchMessages(
-            void 0,
-            void 0,
-            account,
-            50,
-            void 0,
-            void 0,
-            void 0,
-            subject
-          ),
-          subject,
-          sentAfter
+        await pollUntil(
+          () => hasSentCopy(
+            mailManager.searchMessages(
+              void 0,
+              void 0,
+              account,
+              50,
+              void 0,
+              void 0,
+              void 0,
+              subject
+            ),
+            subject,
+            sentAfter
+          )
         )
       ) : {};
       return successResponse(`Email sent to ${to.join(", ")}${attachInfo}`, {
