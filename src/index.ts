@@ -118,7 +118,7 @@ import {
 } from "@/services/imapMultiAccount.js";
 import type { Account, SearchDiagnostics, SearchResult } from "@/types.js";
 import { routeMessage } from "@/services/messageRouter.js";
-import { hasSentCopy, isDraftForSend } from "@/tools/draftCleanup.js";
+import { hasSentCopy, isDraftForSend, pollUntil } from "@/tools/draftCleanup.js";
 import { runDoctor, formatDoctorReport } from "@/tools/doctor.js";
 import { registerResourcesAndPrompts } from "@/tools/resourcesAndPrompts.js";
 import {
@@ -1638,19 +1638,21 @@ registerTool(
       const draft = draftId
         ? await cleanUpDraft(
             draftId,
-            hasSentCopy(
-              mailManager.searchMessages(
-                undefined,
-                undefined,
-                account,
-                50,
-                undefined,
-                undefined,
-                undefined,
-                subject
-              ),
-              subject,
-              sentAfter
+            await pollUntil(() =>
+              hasSentCopy(
+                mailManager.searchMessages(
+                  undefined,
+                  undefined,
+                  account,
+                  50,
+                  undefined,
+                  undefined,
+                  undefined,
+                  subject
+                ),
+                subject,
+                sentAfter
+              )
             )
           )
         : {};

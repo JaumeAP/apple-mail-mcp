@@ -5,7 +5,7 @@
  * deleted draft with nothing sent is a lost email.
  */
 import { describe, it, expect } from "vitest";
-import { hasSentCopy, isDraftForSend } from "@/tools/draftCleanup.js";
+import { hasSentCopy, isDraftForSend, pollUntil } from "@/tools/draftCleanup.js";
 
 const SENT_AT = new Date("2026-10-12T18:00:00Z");
 
@@ -28,6 +28,31 @@ describe("isDraftForSend", () => {
 
   it("refuses a message that is not in a Drafts mailbox", () => {
     expect(isDraftForSend({ subject: "Hola", mailbox: "INBOX" }, "Hola")).toBe(false);
+  });
+});
+
+describe("pollUntil", () => {
+  const noSleep = () => Promise.resolve();
+
+  it("returns true at once when the first check passes", async () => {
+    let calls = 0;
+    const ok = await pollUntil(() => (calls++, true), 6_000, 2_000, noSleep);
+    expect(ok).toBe(true);
+    expect(calls).toBe(1);
+  });
+
+  it("keeps looking until the copy turns up", async () => {
+    let calls = 0;
+    const ok = await pollUntil(() => ++calls === 3, 6_000, 2_000, noSleep);
+    expect(ok).toBe(true);
+    expect(calls).toBe(3);
+  });
+
+  it("gives up after the timeout, keeping the draft", async () => {
+    let calls = 0;
+    const ok = await pollUntil(() => (calls++, false), 6_000, 2_000, noSleep);
+    expect(ok).toBe(false);
+    expect(calls).toBe(4);
   });
 });
 

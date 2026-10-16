@@ -15,6 +15,28 @@ import type { Message } from "@/types.js";
 /** Clock skew allowed between the send start and the sent copy's timestamp. */
 export const SEND_CLOCK_SLACK_MS = 60_000;
 
+/** How long to wait for Mail.app to file the Sent copy, and how often to look. */
+export const SENT_COPY_WAIT_MS = 30_000;
+export const SENT_COPY_POLL_MS = 2_000;
+
+/**
+ * Polls `check` until it returns true or `timeoutMs` has passed. Mail.app files
+ * the Sent copy a moment after `send`, so a single look right after the send
+ * misses it. Always checks at least once.
+ */
+export async function pollUntil(
+  check: () => boolean,
+  timeoutMs: number = SENT_COPY_WAIT_MS,
+  intervalMs: number = SENT_COPY_POLL_MS,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))
+): Promise<boolean> {
+  for (let waited = 0; ; waited += intervalMs) {
+    if (check()) return true;
+    if (waited + intervalMs > timeoutMs) return false;
+    await sleep(intervalMs);
+  }
+}
+
 /** True for a Drafts mailbox, including Gmail's `[Gmail]/Drafts`. */
 export function isDraftMailbox(mailbox: string): boolean {
   return /draft/i.test(mailbox);
