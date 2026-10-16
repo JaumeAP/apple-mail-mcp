@@ -89,6 +89,10 @@ export interface ImapSearchArgs {
   dateTo?: string;
   isRead?: boolean;
   isFlagged?: boolean;
+  /** Apple's 0-6 flag-color palette index (see FLAG_COLOR_INDEX in index.ts) —
+   *  already resolved from the caller's color name before reaching here, same
+   *  convention as flag-message/batch-flag-messages (#286). */
+  flagColorIndex?: number;
   unreadOnly?: boolean;
   offset?: number;
 }
@@ -747,6 +751,21 @@ function buildCriteria(a: ImapSearchArgs, listMode: boolean): Record<string, unk
   if (a.isFlagged === false) c.unflagged = true;
   if (a.dateFrom) c.since = new Date(a.dateFrom);
   if (a.dateTo) c.before = new Date(a.dateTo);
+  if (a.flagColorIndex !== undefined) {
+    // #286 follow-up (@j5pu): this used to also AND in a $MailFlagBit0/1/2
+    // NOT/OR compound (De Morgan's law over 2-3 keyword/unKeyword terms) so
+    // the server would return only the target color. Scoped to one mailbox
+    // that's fine, but on an unscoped search of a real iCloud account the
+    // compound keyword tree cost a near-linear scan per mailbox even ANDed
+    // with FLAGGED — enough to burn the whole shared 45s deadline on one or
+    // two huge mailboxes and leave ~30 smaller ones (including the one
+    // holding the actual match) never reached. `FLAGGED` alone is cheap on
+    // iCloud (confirmed directly by the reporter), and every row's flags are
+    // already fetched — see {@link filterUidsByColor} — so the server-side
+    // query now only narrows to "flagged at all" and the exact color is
+    // decided client-side on the (typically much smaller) candidate set.
+    c.flagged = true;
+  }
   // No `all: true` fallback: UNDELETED alone already means "every live message".
   return c;
 }
@@ -835,6 +854,7 @@ function isoOrEmpty(d: Date | string | undefined | null): string {
 
 function structuredRow(m: ImapMessage, account: string, path: string): Record<string, unknown> {
   const env = m.envelope ?? {};
+  const flagColorIndex = mailFlagColorIndex(m.flags);
   return {
     id: encodeImapId(account, path, m.uid),
     subject: env.subject || "(no subject)",
@@ -851,7 +871,19 @@ function structuredRow(m: ImapMessage, account: string, path: string): Record<st
     dateReceived: isoOrEmpty(validDate(m.internalDate) ?? headerDate(m)),
     isRead: m.flags?.has("\\Seen") ?? false,
     isFlagged: m.flags?.has("\\Flagged") ?? false,
-    flagColorIndex: mailFlagColorIndex(m.flags),
+    // flagColorIndex has been computed here since 2.19.x but never reached a
+    // caller in friendly form (#286, @j5pu) — flagColor is the palette name
+    // (e.g. "orange"), omitted whenever the index is (unflagged, or flagged
+    // with Mail's plain default and no explicit color). flagColorIndex stays
+    // for back-compat.
+    // ⚠️ "red" (index 0) sets no $MailFlagBit keyword — it is wire-identical to
+    // a plain colorless flag over IMAP, so a red-flagged message reads back
+    // here with no flagColor (and flagColor: "red" in search-messages also
+    // matches a plain flag). Inherent to Apple's bitfield encoding, not
+    // fixable from the client side; the AppleScript route is unaffected (Mail's
+    // own `flag index` is 0 for red, -1 for none).
+    flagColorIndex,
+    flagColor: flagColorName(flagColorIndex),
     mailbox: path,
     account,
     // Derived from BODYSTRUCTURE, which the list/search fetch now requests.
@@ -1076,6 +1108,35 @@ async function searchUids(
         ? errText(cause)
         : "the server rejected it or the connection dropped before it answered (on a mailbox this size, usually a server-side timeout)")
   );
+}
+
+/**
+ * Narrows a FLAGGED-search candidate list to one exact color (#286 follow-up,
+ * @j5pu), with a flags-only FETCH rather than the full {@link ROW_QUERY} —
+ * cheap, and the only thing this decision needs.
+ *
+ * `colorIndex === 0` (red) is special: {@link mailFlagColorIndex} returns
+ * `undefined`, not `0`, for a flagged message with none of the three
+ * $MailFlagBit keywords set, because "no bits" is indistinguishable from "no
+ * color chosen" over IMAP (documented at {@link structuredRow}). Matching
+ * `undefined` for a red search preserves exactly the set the old server-side
+ * NOT/OR query matched — red was never actually distinguishable from plain,
+ * and this does not change that, just moves the same decision client-side.
+ */
+async function filterUidsByColor(
+  client: ImapClientLike,
+  uids: number[],
+  colorIndex: number
+): Promise<number[]> {
+  if (uids.length === 0) return uids;
+  const keep = new Set<number>();
+  for await (const msg of client.fetch(uids.join(","), { uid: true, flags: true }, { uid: true })) {
+    if (typeof msg?.uid !== "number") continue;
+    const idx = mailFlagColorIndex(msg.flags);
+    if (colorIndex === 0 ? idx === undefined : idx === colorIndex) keep.add(msg.uid);
+  }
+  // Preserve the caller's (search-result) ordering, not FETCH response order.
+  return uids.filter((uid) => keep.has(uid));
 }
 
 /**
@@ -1412,18 +1473,22 @@ async function searchLargeMailbox(
   path: string,
   criteria: Record<string, unknown>,
   exists: number,
-  page: MailboxPage
+  page: MailboxPage,
+  colorIndex?: number
 ): Promise<MailboxMatches> {
   const walk = await walkWindows(exists, page, FIRST_SEARCH_WINDOW, async (lo, hi, width) => {
-    const found = await searchUids(client, path, { ...criteria, seq: `${lo}:${hi}` }, exists);
+    let found = await searchUids(client, path, { ...criteria, seq: `${lo}:${hi}` }, exists);
     // The #246 guard, per window: no criteria can match more messages than
-    // the window holds.
+    // the window holds. Checked against the raw (pre-color-filter) FLAGGED
+    // count — the thing it's actually guarding is a corrupted/over-wide
+    // server response, not the color narrowing below.
     if (found.length > width) {
       throw new Error(
         `IMAP SEARCH on "${path}" reported ${found.length} matches in a ${width}-message window — ` +
           `discarding as corrupted rather than trusting it (see #246).`
       );
     }
+    if (colorIndex !== undefined) found = await filterUidsByColor(client, found, colorIndex);
     return found;
   });
   return {
@@ -1437,7 +1502,8 @@ async function fetchMailboxMatches(
   client: ImapClientLike,
   path: string,
   criteria: Record<string, unknown>,
-  page: MailboxPage
+  page: MailboxPage,
+  colorIndex?: number
 ): Promise<MailboxMatches> {
   const lock = await client.getMailboxLock(path);
   try {
@@ -1451,7 +1517,7 @@ async function fetchMailboxMatches(
       try {
         return isUnfiltered(criteria)
           ? await listLargeMailbox(client, exists, page)
-          : await searchLargeMailbox(client, path, criteria, exists, page);
+          : await searchLargeMailbox(client, path, criteria, exists, page, colorIndex);
       } catch (error) {
         const detail = errText(error);
         throw new Error(
@@ -1462,9 +1528,9 @@ async function fetchMailboxMatches(
       }
     }
 
-    const uids = await searchUids(client, path, criteria, exists);
-    if (uids.length === 0 || page.take === 0) {
-      return { messages: [], omitted: [], total: uids.length, totalExact: true };
+    const rawUids = await searchUids(client, path, criteria, exists);
+    if (rawUids.length === 0) {
+      return { messages: [], omitted: [], total: 0, totalExact: true };
     }
 
     // A SEARCH match count can never exceed the mailbox's own total message
@@ -1501,11 +1567,21 @@ async function fetchMailboxMatches(
     // is asked again here, and a failure now fails the mailbox as it always has.
     const messages =
       exists ?? (await client.status(path, { messages: true })).messages ?? undefined;
-    if (typeof messages === "number" && uids.length > messages) {
+    if (typeof messages === "number" && rawUids.length > messages) {
       throw new Error(
-        `IMAP SEARCH on "${path}" reported ${uids.length} matches, more than the mailbox's own ` +
+        `IMAP SEARCH on "${path}" reported ${rawUids.length} matches, more than the mailbox's own ` +
           `${messages} messages — discarding as corrupted rather than trusting it (see #246).`
       );
+    }
+
+    // Color narrowing happens AFTER the #246 corruption guard above (which
+    // must see the raw FLAGGED count) and BEFORE paging (so skip/take and
+    // `total` operate on the exact color-matched set, not the broader
+    // FLAGGED one).
+    const uids =
+      colorIndex !== undefined ? await filterUidsByColor(client, rawUids, colorIndex) : rawUids;
+    if (uids.length === 0 || page.take === 0) {
+      return { messages: [], omitted: [], total: uids.length, totalExact: true };
     }
 
     const newest = uids
@@ -1577,7 +1653,7 @@ async function run(
         }
         try {
           const outcome = await raceStop(
-            fetchMailboxMatches(client, path, criteria, page),
+            fetchMailboxMatches(client, path, criteria, page, args.flagColorIndex),
             deps.signal
           );
           if (outcome === STOPPED) {
@@ -2892,6 +2968,29 @@ export function mailFlagColorIndex(flags: Iterable<string> | undefined): number 
     }
   }
   return any ? idx : undefined;
+}
+
+/**
+ * Canonical Apple Mail flag-color palette, index 0-6 (see the bit-encoding
+ * comment above `MAIL_FLAG_BITS`). This is the single source of truth for the
+ * index<->name mapping; index.ts's FLAG_COLOR_INDEX (name -> index, the input
+ * side, which also accepts the 'grey' alias) is derived from it (#286).
+ */
+export const FLAG_COLOR_NAMES = [
+  "red",
+  "orange",
+  "yellow",
+  "green",
+  "blue",
+  "purple",
+  "gray",
+] as const;
+export type FlagColorName = (typeof FLAG_COLOR_NAMES)[number];
+
+/** Palette name for a 0-6 index, or undefined for an absent/out-of-range index
+ *  — the read-back half of {@link mailFlagColorIndex} (#286). */
+export function flagColorName(index: number | undefined): FlagColorName | undefined {
+  return index === undefined ? undefined : FLAG_COLOR_NAMES[index];
 }
 
 function flagOp(id: string, flag: string, add: boolean, deps: ImapDeps): Promise<ImapOpResult> {
