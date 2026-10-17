@@ -67435,11 +67435,12 @@ function decodedSizeWithoutBody(a) {
   if (a.encoding === "quoted-printable") return { size: a.encodedSize, exact: false };
   return { size: a.encodedSize, exact: true };
 }
-function collectAttachments(node, out = []) {
+function collectAttachments(node, out = [], embedded = /* @__PURE__ */ new Set()) {
   if (!node) return out;
   const filename = node.dispositionParameters?.filename || node.parameters?.name;
   const disposition = node.disposition?.toLowerCase();
-  const isEmbeddedByReference = disposition === "inline" && !!node.id;
+  const cid = contentIdOf(node);
+  const isEmbeddedByReference = disposition === "inline" && !!cid && embedded.has(cid);
   const isAttachment = !!node.part && (disposition === "attachment" || !!filename && !isEmbeddedByReference);
   if (isAttachment) {
     out.push({
@@ -67451,8 +67452,35 @@ function collectAttachments(node, out = []) {
       declaredSize: dispositionSize(node.dispositionParameters)
     });
   }
-  for (const child of node.childNodes ?? []) collectAttachments(child, out);
+  for (const child of node.childNodes ?? []) collectAttachments(child, out, embedded);
   return out;
+}
+function contentIdOf(node) {
+  return node.id?.replace(/^<+/, "").replace(/>+$/, "").trim().toLowerCase() || void 0;
+}
+async function embeddedContentIds(client, uid, root) {
+  const candidates = [];
+  const htmlParts = [];
+  const walk = (node) => {
+    const cid = contentIdOf(node);
+    const named = node.dispositionParameters?.filename || node.parameters?.name;
+    if (node.disposition?.toLowerCase() === "inline" && cid && named) candidates.push(cid);
+    if (node.part && node.type?.toLowerCase() === "text/html") htmlParts.push(node.part);
+    for (const child of node.childNodes ?? []) walk(child);
+  };
+  walk(root);
+  const found = /* @__PURE__ */ new Set();
+  if (candidates.length === 0 || htmlParts.length === 0) return found;
+  try {
+    for (const part of htmlParts) {
+      const dl = await client.download(String(uid), part, { uid: true });
+      const html = (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES)).toString("latin1").toLowerCase();
+      for (const cid of candidates) if (html.includes(`cid:${cid}`)) found.add(cid);
+    }
+  } catch {
+    return /* @__PURE__ */ new Set();
+  }
+  return found;
 }
 function bodyStructureHasAttachments(node) {
   return !!node && collectAttachments(node).length > 0;
@@ -67523,7 +67551,11 @@ async function imapListAttachments(id, deps = {}) {
     if (!msg || !msg.bodyStructure) {
       return { success: false, error: `IMAP message UID ${ref.uid} not found in "${ref.path}".` };
     }
-    const atts = collectAttachments(msg.bodyStructure);
+    const atts = collectAttachments(
+      msg.bodyStructure,
+      [],
+      await embeddedContentIds(client, ref.uid, msg.bodyStructure)
+    );
     const sizes = await resolveDecodedSizes(client, ref.uid, atts);
     const attachments = atts.map((a, i) => {
       const info = {
@@ -67546,7 +67578,11 @@ async function imapFetchAttachment(id, attachmentName, deps = {}) {
     if (!msg || !msg.bodyStructure) {
       return { success: false, error: `IMAP message UID ${ref.uid} not found in "${ref.path}".` };
     }
-    const atts = collectAttachments(msg.bodyStructure);
+    const atts = collectAttachments(
+      msg.bodyStructure,
+      [],
+      await embeddedContentIds(client, ref.uid, msg.bodyStructure)
+    );
     const match = atts.find((a) => a.filename === attachmentName);
     if (!match) {
       const names = atts.map((a) => a.filename).join(", ") || "none";
@@ -67747,7 +67783,7 @@ async function imapThread(id, deps = {}, limit = 50) {
     true
   );
 }
-var import_imapflow, IMAP_ENV, defaultConnect, SPECIAL_USE_ALIASES, NOT_DELETED, LARGE_MAILBOX_MESSAGES, FIRST_SEARCH_WINDOW, MAX_WINDOW, MAX_UNSCOPED_SEARCH_DEPTH, ROW_QUERY, ROW_QUERY_NO_STRUCTURE, ROW_QUERY_HEADERS_ONLY, DELETED_MARGIN, poolConnect, pools, connecting, MAX_COMPOSE_SOURCE_BYTES, MAX_RFC822_INLINE_BYTES, MAX_RFC822_FILE_BYTES, HEADER_WINDOW_BYTES, MAIL_FLAG_BITS, FLAG_COLOR_NAMES, imapMarkRead, imapMarkUnread, FALLBACK_TRASH_PATH, BASE64_TAIL_WINDOW, QP_EXACT_MAX_BYTES, imapBatchMarkRead, imapBatchMarkUnread, imapBatchFlag, imapBatchUnflag, imapBatchDelete;
+var import_imapflow, IMAP_ENV, defaultConnect, SPECIAL_USE_ALIASES, NOT_DELETED, LARGE_MAILBOX_MESSAGES, FIRST_SEARCH_WINDOW, MAX_WINDOW, MAX_UNSCOPED_SEARCH_DEPTH, ROW_QUERY, ROW_QUERY_NO_STRUCTURE, ROW_QUERY_HEADERS_ONLY, DELETED_MARGIN, poolConnect, pools, connecting, MAX_COMPOSE_SOURCE_BYTES, MAX_RFC822_INLINE_BYTES, MAX_RFC822_FILE_BYTES, HEADER_WINDOW_BYTES, MAIL_FLAG_BITS, FLAG_COLOR_NAMES, imapMarkRead, imapMarkUnread, FALLBACK_TRASH_PATH, BASE64_TAIL_WINDOW, QP_EXACT_MAX_BYTES, MAX_HTML_SCAN_BYTES, imapBatchMarkRead, imapBatchMarkUnread, imapBatchFlag, imapBatchUnflag, imapBatchDelete;
 var init_imapClient = __esm({
   "src/services/imapClient.ts"() {
     "use strict";
@@ -67864,6 +67900,7 @@ var init_imapClient = __esm({
     FALLBACK_TRASH_PATH = "Trash";
     BASE64_TAIL_WINDOW = 1024;
     QP_EXACT_MAX_BYTES = 64 * 1024;
+    MAX_HTML_SCAN_BYTES = 2 * 1024 * 1024;
     imapBatchMarkRead = (ids, deps = {}) => imapBatch(ids, deps, async (c, uids) => {
       assertMutated(
         await c.messageFlagsAdd(uids, ["\\Seen"], { uid: true }),
