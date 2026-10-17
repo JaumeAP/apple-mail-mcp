@@ -67,8 +67,9 @@ Fixes from a review of the fork's own changes (`a98e669..origin/main`).
      in a draft also a `Content-Id`). A part is now left out only when the HTML
      body embeds it with `cid:<its Content-Id>`; a logo the HTML points at is
      still skipped, a PDF or a photo the user attached is listed.
-- `get-message` with the deep attachment check also counts an `inline` part that
-  has a `filename`.
+- The deep attachment check of `getMessageById(id, true)` also counts an `inline`
+  part that has a `filename`. No tool turns that check on: `get-message` does not
+  reach it.
 
 ### Notes
 
