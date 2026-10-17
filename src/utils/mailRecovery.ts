@@ -45,6 +45,8 @@ const CONFIRM_WAIT_MS = 5_000;
 const PERMISSION_DENIED = /\(-1743\)|not author(?:i[sz])ed|not permitted/i;
 
 let healthyUntil = 0;
+/** After a verdict that recovery cannot act on, calls go straight through until then. */
+let skipUntil = 0;
 let lastRestartAt = 0;
 let busy = false;
 
@@ -128,6 +130,7 @@ export function restartMail(): RecoveryReport {
   const steps: string[] = [];
   lastRestartAt = Date.now();
   healthyUntil = 0;
+  skipUntil = 0;
 
   const running = mailPids();
   if (running.length === 0) {
@@ -176,16 +179,25 @@ export function restartMail(): RecoveryReport {
  * call more likely to find Mail answering, and logs what it did to stderr.
  */
 export function ensureMailReady(): void {
-  if (busy || !autoRecoverEnabled() || Date.now() < healthyUntil) return;
+  if (busy || !autoRecoverEnabled() || Date.now() < Math.max(healthyUntil, skipUntil)) return;
   busy = true;
   try {
     if (mailPids().length === 0) {
+      // A Mail that cannot be launched costs READY_WAIT_MS per call: one try per cooldown.
+      if (Date.now() - lastRestartAt < RESTART_COOLDOWN_MS) {
+        console.error(
+          "mail-recovery: Mail.app is not running; last open failed under 10 minutes ago, not retrying"
+        );
+        skipUntil = Date.now() + HEALTHY_TTL_MS;
+        return;
+      }
       console.error("mail-recovery: Mail.app is not running; opening it");
       const ready = openMail() && waitUntilAnswering(READY_WAIT_MS);
       console.error(
         `mail-recovery: ${ready ? "Mail is answering" : "Mail did not answer in time"}`
       );
       if (ready) healthyUntil = Date.now() + HEALTHY_TTL_MS;
+      else lastRestartAt = Date.now();
       return;
     }
     let state = probe();
@@ -204,11 +216,14 @@ export function ensureMailReady(): void {
       console.error(
         "mail-recovery: Mail.app is not answering; last restart was under 10 minutes ago, not restarting"
       );
+      // Not cached as healthy, but do not pay the probes again on every call.
+      skipUntil = Date.now() + HEALTHY_TTL_MS;
       return;
     }
     console.error("mail-recovery: Mail.app is not answering; restarting it");
     const report = restartMail();
     console.error(`mail-recovery: ${report.steps.join("; ")}`);
+    if (!report.ok) skipUntil = Date.now() + HEALTHY_TTL_MS;
   } finally {
     busy = false;
   }

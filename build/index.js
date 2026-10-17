@@ -82527,6 +82527,7 @@ var POLL_MS = 1500;
 var CONFIRM_WAIT_MS = 5e3;
 var PERMISSION_DENIED = /\(-1743\)|not author(?:i[sz])ed|not permitted/i;
 var healthyUntil = 0;
+var skipUntil = 0;
 var lastRestartAt = 0;
 var busy = false;
 function autoRecoverEnabled() {
@@ -82584,6 +82585,7 @@ function restartMail() {
   const steps = [];
   lastRestartAt = Date.now();
   healthyUntil = 0;
+  skipUntil = 0;
   const running = mailPids();
   if (running.length === 0) {
     steps.push("Mail was not running");
@@ -82622,16 +82624,24 @@ function restartMail() {
   return { ok: ready, steps };
 }
 function ensureMailReady() {
-  if (busy || !autoRecoverEnabled() || Date.now() < healthyUntil) return;
+  if (busy || !autoRecoverEnabled() || Date.now() < Math.max(healthyUntil, skipUntil)) return;
   busy = true;
   try {
     if (mailPids().length === 0) {
+      if (Date.now() - lastRestartAt < RESTART_COOLDOWN_MS) {
+        console.error(
+          "mail-recovery: Mail.app is not running; last open failed under 10 minutes ago, not retrying"
+        );
+        skipUntil = Date.now() + HEALTHY_TTL_MS;
+        return;
+      }
       console.error("mail-recovery: Mail.app is not running; opening it");
       const ready = openMail() && waitUntilAnswering(READY_WAIT_MS);
       console.error(
         `mail-recovery: ${ready ? "Mail is answering" : "Mail did not answer in time"}`
       );
       if (ready) healthyUntil = Date.now() + HEALTHY_TTL_MS;
+      else lastRestartAt = Date.now();
       return;
     }
     let state = probe();
@@ -82648,11 +82658,13 @@ function ensureMailReady() {
       console.error(
         "mail-recovery: Mail.app is not answering; last restart was under 10 minutes ago, not restarting"
       );
+      skipUntil = Date.now() + HEALTHY_TTL_MS;
       return;
     }
     console.error("mail-recovery: Mail.app is not answering; restarting it");
     const report = restartMail();
     console.error(`mail-recovery: ${report.steps.join("; ")}`);
+    if (!report.ok) skipUntil = Date.now() + HEALTHY_TTL_MS;
   } finally {
     busy = false;
   }
