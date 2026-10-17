@@ -42,14 +42,34 @@ export async function pollUntil(
   }
 }
 
-/** True for a Drafts mailbox, including Gmail's `[Gmail]/Drafts`. */
+/**
+ * A whole word in any script (`\b` only knows ASCII letters), so "Presentations"
+ * or "Consent" never read as Sent. Names are matched with accents removed.
+ */
+const word = (alternatives: string): RegExp =>
+  new RegExp(`(?<!\\p{L})(?:${alternatives})(?!\\p{L})`, "u");
+
+// Mail names its special mailboxes in the language of macOS, and a server may
+// name them in its own: the common names below, accents folded away.
+const DRAFTS = word(
+  "drafts?|borradore?s?|esborranys?|entwurfe?|brouillons?|bozze|bozza|rascunhos?|concepten|concept" +
+    "|utkast|kladder|kladde|luonnokset|luonnos|szkice|szkic"
+);
+const SENT = word(
+  "sent|enviados?|enviadas?|enviats?|gesendet\\p{L}*|envoyes?|inviat[ie]|verzonden|skickat\\p{L}*" +
+    "|sendte?|lahetetyt|wyslane"
+);
+
+const fold = (name: string): string => name.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+/** True for a Drafts mailbox, including Gmail's `[Gmail]/Drafts` and localized names. */
 export function isDraftMailbox(mailbox: string): boolean {
-  return /draft/i.test(mailbox);
+  return DRAFTS.test(fold(mailbox));
 }
 
-/** True for a Sent mailbox ("Sent Messages", "Sent", "[Gmail]/Sent Mail"). */
+/** True for a Sent mailbox ("Sent Messages", "Sent", "[Gmail]/Sent Mail", "Enviados"). */
 export function isSentMailbox(mailbox: string): boolean {
-  return /sent/i.test(mailbox);
+  return SENT.test(fold(mailbox));
 }
 
 /** The draft exists, is still in a Drafts mailbox and carries the subject being sent. */

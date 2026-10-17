@@ -89460,11 +89460,19 @@ async function pollUntil(check2, timeoutMs = SENT_COPY_WAIT_MS, intervalMs = SEN
     await sleep2(intervalMs);
   }
 }
+var word = (alternatives) => new RegExp(`(?<!\\p{L})(?:${alternatives})(?!\\p{L})`, "u");
+var DRAFTS = word(
+  "drafts?|borradore?s?|esborranys?|entwurfe?|brouillons?|bozze|bozza|rascunhos?|concepten|concept|utkast|kladder|kladde|luonnokset|luonnos|szkice|szkic"
+);
+var SENT = word(
+  "sent|enviados?|enviadas?|enviats?|gesendet\\p{L}*|envoyes?|inviat[ie]|verzonden|skickat\\p{L}*|sendte?|lahetetyt|wyslane"
+);
+var fold = (name2) => name2.normalize("NFD").replace(new RegExp("\\p{M}", "gu"), "").toLowerCase();
 function isDraftMailbox(mailbox) {
-  return /draft/i.test(mailbox);
+  return DRAFTS.test(fold(mailbox));
 }
 function isSentMailbox(mailbox) {
-  return /sent/i.test(mailbox);
+  return SENT.test(fold(mailbox));
 }
 function isDraftForSend(draft, subject) {
   return draft !== null && draft.subject === subject && isDraftMailbox(draft.mailbox);

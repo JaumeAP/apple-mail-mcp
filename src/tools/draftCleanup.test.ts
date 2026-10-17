@@ -5,7 +5,13 @@
  * deleted draft with nothing sent is a lost email.
  */
 import { describe, it, expect } from "vitest";
-import { hasSentCopy, isDraftForSend, pollUntil } from "@/tools/draftCleanup.js";
+import {
+  hasSentCopy,
+  isDraftForSend,
+  isDraftMailbox,
+  isSentMailbox,
+  pollUntil,
+} from "@/tools/draftCleanup.js";
 
 const SENT_AT = new Date("2026-10-12T18:00:00Z");
 
@@ -28,6 +34,27 @@ describe("isDraftForSend", () => {
 
   it("refuses a message that is not in a Drafts mailbox", () => {
     expect(isDraftForSend({ subject: "Hola", mailbox: "INBOX" }, "Hola")).toBe(false);
+  });
+
+  it("accepts a localized Drafts mailbox", () => {
+    for (const mailbox of ["Borradores", "Esborranys", "Entwürfe", "Brouillons", "Bozze"]) {
+      expect(isDraftForSend({ subject: "Hola", mailbox }, "Hola")).toBe(true);
+    }
+  });
+});
+
+describe("mailbox names", () => {
+  it("does not read a word that merely contains sent or draft as a special mailbox", () => {
+    for (const mailbox of ["Presentations", "Consent forms", "Sentinel", "Redrafted"]) {
+      expect(isSentMailbox(mailbox)).toBe(false);
+      expect(isDraftMailbox(mailbox)).toBe(false);
+    }
+  });
+
+  it("recognizes localized Sent mailboxes", () => {
+    for (const mailbox of ["Enviados", "Elementos enviados", "Enviats", "Gesendet", "Envoyés"]) {
+      expect(isSentMailbox(mailbox)).toBe(true);
+    }
   });
 });
 
