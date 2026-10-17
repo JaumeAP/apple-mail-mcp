@@ -82614,6 +82614,7 @@ import { execFileSync, spawnSync as spawnSync2 } from "child_process";
 // src/utils/mailRecovery.ts
 import { spawnSync } from "child_process";
 var AUTO_RECOVER_ENV = "APPLE_MAIL_MCP_AUTO_RECOVER";
+var MAIL_RUNNING_GUARD = 'if application "Mail" is running then';
 var PROBE_TIMEOUT_MS = 12e3;
 var HEALTHY_TTL_MS = 3e4;
 var RESTART_COOLDOWN_MS = 10 * 6e4;
@@ -82768,7 +82769,6 @@ function ensureMailReady(options = {}) {
 }
 
 // src/utils/applescript.ts
-var MAIL_RUNNING_GUARD = 'if application "Mail" is running then';
 var DEFAULT_TIMEOUT_MS = 3e4;
 var DEFAULT_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 function getMaxBuffer() {

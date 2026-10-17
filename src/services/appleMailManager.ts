@@ -32,7 +32,8 @@ import {
 import { dirname, resolve, sep, join } from "path";
 import { homedir } from "os";
 import { randomUUID } from "crypto";
-import { executeAppleScript, isPermissionDenied, MAIL_RUNNING_GUARD } from "@/utils/applescript.js";
+import { executeAppleScript, isPermissionDenied } from "@/utils/applescript.js";
+import { MAIL_RUNNING_GUARD } from "@/utils/mailRecovery.js";
 import { flagColorName } from "@/services/imapClient.js";
 import { SETUP_HINT } from "@/utils/docsUrls.js";
 import { parseMimeAttachments, extractMimeAttachment, extractHtmlBody } from "@/utils/mimeParse.js";

@@ -26,6 +26,13 @@ import { spawnSync } from "child_process";
 
 export const AUTO_RECOVER_ENV = "APPLE_MAIL_MCP_AUTO_RECOVER";
 
+/**
+ * The test a script runs first when it must not launch Mail (`application "Mail"
+ * is running` does not start the app). Such a script is not given a Mail that
+ * the recovery opens for it (see `ensureMailReady`).
+ */
+export const MAIL_RUNNING_GUARD = 'if application "Mail" is running then';
+
 /** Outer limit for the probe; the in-script `with timeout` fires 4 s earlier. */
 const PROBE_TIMEOUT_MS = 12_000;
 /** A probe that succeeded is trusted for this long. */

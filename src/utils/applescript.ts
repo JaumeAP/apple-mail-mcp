@@ -9,14 +9,7 @@
 
 import { execFileSync, spawnSync } from "child_process";
 import type { AppleScriptResult, AppleScriptOptions } from "@/types.js";
-import { ensureMailReady, markMailUnhealthy } from "@/utils/mailRecovery.js";
-
-/**
- * The test a script runs first when it must not launch Mail (`application "Mail"
- * is running` does not start the app). Such a script is not given a Mail that
- * the recovery opens for it.
- */
-export const MAIL_RUNNING_GUARD = 'if application "Mail" is running then';
+import { ensureMailReady, markMailUnhealthy, MAIL_RUNNING_GUARD } from "@/utils/mailRecovery.js";
 
 /**
  * Default execution timeout for AppleScript commands in milliseconds.

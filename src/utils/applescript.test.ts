@@ -10,13 +10,13 @@ import { execFileSync } from "child_process";
 import {
   executeAppleScript,
   isPermissionDenied,
-  MAIL_RUNNING_GUARD,
   PERMISSION_DENIED_MESSAGE,
   PERMISSION_DENIED_PATTERN,
 } from "./applescript.js";
-import { ensureMailReady } from "./mailRecovery.js";
+import { ensureMailReady, MAIL_RUNNING_GUARD } from "./mailRecovery.js";
 
-vi.mock("./mailRecovery.js", () => ({
+vi.mock("./mailRecovery.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./mailRecovery.js")>()),
   ensureMailReady: vi.fn(),
   markMailUnhealthy: vi.fn(),
 }));
