@@ -5,6 +5,49 @@
 - **By-id lookup with `account` and no `mailbox`** walks only that account (and no
   local mailboxes) instead of every account; an unknown account is reported as such.
 
+## Net behaviour of the fork (2.20.9-jap.1 to 2.20.12-jap.3 and Unreleased)
+
+The entries below describe where the fork ended up. Where a later release replaced an
+earlier one, only the final behaviour is listed; the per-release entries keep the
+history.
+
+- **Tool gate:** `APPLE_MAIL_MCP_MODE` is `full`, `no_send` or `read_only` (an
+  allow-list). `no_send` also drops `enable-rule`; `get-message-rfc822` is not in
+  `read_only`. `set-account-settings` is destructive. `apple-mail-send` exits with 78
+  when the mode removes sending. A `config.json` that names the mode but cannot be
+  applied, or exists but cannot be read, stops the server.
+- **Attachment paths:** hidden paths and `~/Library` are refused (iCloud Drive and
+  `CloudStorage` are kept); the path is judged as given and after symlink resolution;
+  a read root that holds the home directory does not lift the Library rule.
+- **osascript** runs through `execFileSync`, with no shell.
+- **Sending account:** without `account`, `send-email`, `send-serial-email`,
+  `create-draft` and `use-template` send from the default sender set in Mail's
+  settings. A named account that matches no enabled account fails. `account` is a
+  name, an address or an alias. (Replaces "refuse a send with no account" of
+  2.20.9-jap.4 and "`account` required" of 2.20.9-jap.9.)
+- **Reply and forward** leave from the account the message arrived in; over SMTP, a
+  numeric id held by another account than the SMTP identity is refused.
+- **Attachments:** listed from the mailbox the id came from; the inline files Apple
+  Mail attaches are listed, an embedded image is one the HTML refers to with `cid:`
+  (whole or percent-decoded); RFC 2231 and 2047 names are decoded; an unreadable MIME
+  type does not drop the list; a lookup failure is reported, not "no attachments".
+  `save-attachment` refuses an id that several mailboxes hold.
+- **`send-email` with `draftId`:** polls Sent for up to 30 s (bounded by the clock); a
+  failing draft clean-up after the send is not an error; the subject check reads the
+  header block only; a numeric draft deleted after the send is audited.
+- **Mail recovery:** a closed Mail is opened; a restart needs two stalled probes five
+  seconds apart, at most one automatic restart per 10 minutes, never for `-1743`; a
+  refused attempt is remembered for 30 s; `APPLE_MAIL_MCP_AUTO_RECOVER=0|false|off|no`
+  turns it off; `restart-mail` runs it on demand. (Replaces the single-probe restart
+  of 2.20.9-jap.11.)
+- **Account settings:** `get-account-settings` and `set-account-settings`; a name two
+  accounts share is refused; a partly refused change says what was applied; control
+  characters are stripped.
+- **`sync-mail`** checks for new mail, for one account or all.
+- **By-id lookup:** bounded, and scoped to the named account when `account` comes
+  without `mailbox`.
+- **Versions** are `X.Y.Z-jap.N`; the CI version guard and Dependabot bump handle them.
+
 ## [2.20.12-jap.3] - 2026-10-17 (JaumeAP fork)
 
 The 19 minor findings of the same review.
