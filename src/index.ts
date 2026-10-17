@@ -1531,9 +1531,9 @@ registerTool(
         .string()
         .optional()
         .describe(
-          "Account to send from: its name or its email address (see list-accounts). Required on " +
-            "the AppleScript transport; the send is refused when it is missing or matches no " +
-            "enabled account, rather than leaving from Mail's default account."
+          "Account to send from: its name or its email address (see list-accounts). On the " +
+            "AppleScript transport the send is refused when it matches no enabled account; when " +
+            "omitted, it leaves from the default sender set in Mail's settings."
         ),
       attachments: ATTACHMENTS_SCHEMA,
       inReplyTo: IN_REPLY_TO_SCHEMA,
@@ -1726,9 +1726,9 @@ registerTool(
         .optional()
         .describe(
           "Account to send from: its name or its email address (see list-accounts). Through " +
-            "Mail.app the whole batch is refused when it is missing or matches no enabled " +
-            "account. Through SMTP an email address sets the From; without one the configured " +
-            "SMTP identity is used."
+            "Mail.app the whole batch is refused when it matches no enabled account, and it " +
+            "leaves from the default sender set in Mail's settings when omitted. Through SMTP " +
+            "an email address sets the From; without one the configured SMTP identity is used."
         ),
       delayMs: z
         .number()
@@ -1810,8 +1810,8 @@ registerTool(
         .optional()
         .describe(
           "Account to create the draft from (name or email address of an enabled account). " +
-            "Required for a plain draft: without it nothing is created, so Mail's default " +
-            "sending account is never used silently. With inReplyTo/references this must name a " +
+            "A plain draft with no account is made from the default sender set in Mail's " +
+            "settings. With inReplyTo/references this must name a " +
             "configured IMAP account (label or login); when omitted, the IMAP account matching " +
             "the SMTP identity, else the only IMAP account, is used."
         ),
@@ -3644,9 +3644,10 @@ registerTool(
       body: z.string().optional().describe("Override body"),
       account: z
         .string()
+        .optional()
         .describe(
           "Account to create the draft from (name or email address of an enabled account). " +
-            "Required: without it Mail would use its default sending account."
+            "When omitted, the draft is made from the default sender set in Mail's settings."
         ),
     },
     outputSchema: {

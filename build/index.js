@@ -85091,21 +85091,20 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * The address Mail must send from, for an `account` that names an enabled
    * account by its name or its email address.
    *
-   * Throws when `account` is missing or matches no enabled account, instead of
-   * letting Mail fall back to its default sending account: `set sender to
+   * Returns undefined when no `account` is given: the message is then composed
+   * without a `set sender`, so Mail uses the sender chosen in its own settings
+   * (Settings ▸ Composing ▸ "Send new messages from"), which is the caller's
+   * intent when they name no account. A named account that matches no enabled
+   * account throws instead of falling back to that default: `set sender to
    * "<account name>"` is not a valid sender, so Mail silently used the default
    * account and a message asked to leave from one account left from another
    * (2026-10-10). Nothing is composed or sent when this throws.
    */
   resolveSendingAddress(account) {
     const wanted = account?.trim().toLowerCase();
+    if (!wanted) return void 0;
     const enabled = this.getCachedAccounts().filter((a) => a.enabled);
     const known = enabled.map((a) => `${a.name} <${a.email}>`).join(", ") || "none found";
-    if (!wanted) {
-      throw new Error(
-        `No sending account given, so nothing was sent. Pass \`account\` with the name or the email address of the account to send from. Enabled accounts: ${known}.`
-      );
-    }
     const match = enabled.find(
       (a) => a.name.toLowerCase() === wanted || a.email.toLowerCase() === wanted
     );
@@ -86226,7 +86225,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
         set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:true}
         tell newMessage
           ${recipientCommands}
-          set sender to "${escapeForAppleScript(sender)}"
+          ${sender ? `set sender to "${escapeForAppleScript(sender)}"` : ""}
           ${attachmentCommands}
         end tell
         send newMessage
@@ -86345,7 +86344,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
         set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:false}
         tell newMessage
           ${recipientCommands}
-          set sender to "${escapeForAppleScript(sender)}"
+          ${sender ? `set sender to "${escapeForAppleScript(sender)}"` : ""}
           ${attachmentCommands}
         end tell
         return "draft created"
@@ -90951,7 +90950,7 @@ registerTool(
       cc: external_exports.array(external_exports.string()).optional().describe("CC recipients"),
       bcc: external_exports.array(external_exports.string()).optional().describe("BCC recipients"),
       account: external_exports.string().optional().describe(
-        "Account to send from: its name or its email address (see list-accounts). Required on the AppleScript transport; the send is refused when it is missing or matches no enabled account, rather than leaving from Mail's default account."
+        "Account to send from: its name or its email address (see list-accounts). On the AppleScript transport the send is refused when it matches no enabled account; when omitted, it leaves from the default sender set in Mail's settings."
       ),
       attachments: ATTACHMENTS_SCHEMA,
       inReplyTo: IN_REPLY_TO_SCHEMA,
@@ -91080,7 +91079,7 @@ registerTool(
       subject: external_exports.string().min(1, "Subject is required").describe("Subject line \u2014 use {{Key}} for placeholders"),
       body: external_exports.string().min(1, "Body is required").describe("Email body \u2014 use {{Key}} for placeholders"),
       account: external_exports.string().optional().describe(
-        "Account to send from: its name or its email address (see list-accounts). Through Mail.app the whole batch is refused when it is missing or matches no enabled account. Through SMTP an email address sets the From; without one the configured SMTP identity is used."
+        "Account to send from: its name or its email address (see list-accounts). Through Mail.app the whole batch is refused when it matches no enabled account, and it leaves from the default sender set in Mail's settings when omitted. Through SMTP an email address sets the From; without one the configured SMTP identity is used."
       ),
       delayMs: external_exports.number().min(0).max(1e4).optional().describe("Delay between sends in ms (default: 500, max: 10000)")
     },
@@ -91138,7 +91137,7 @@ registerTool(
       cc: external_exports.array(external_exports.string()).optional().describe("CC recipients"),
       bcc: external_exports.array(external_exports.string()).optional().describe("BCC recipients"),
       account: external_exports.string().optional().describe(
-        "Account to create the draft from (name or email address of an enabled account). Required for a plain draft: without it nothing is created, so Mail's default sending account is never used silently. With inReplyTo/references this must name a configured IMAP account (label or login); when omitted, the IMAP account matching the SMTP identity, else the only IMAP account, is used."
+        "Account to create the draft from (name or email address of an enabled account). A plain draft with no account is made from the default sender set in Mail's settings. With inReplyTo/references this must name a configured IMAP account (label or login); when omitted, the IMAP account matching the SMTP identity, else the only IMAP account, is used."
       ),
       attachments: ATTACHMENTS_SCHEMA,
       inReplyTo: IN_REPLY_TO_SCHEMA,
@@ -92551,8 +92550,8 @@ registerTool(
       cc: external_exports.array(external_exports.string()).optional().describe("Override CC recipients"),
       subject: external_exports.string().optional().describe("Override subject"),
       body: external_exports.string().optional().describe("Override body"),
-      account: external_exports.string().describe(
-        "Account to create the draft from (name or email address of an enabled account). Required: without it Mail would use its default sending account."
+      account: external_exports.string().optional().describe(
+        "Account to create the draft from (name or email address of an enabled account). When omitted, the draft is made from the default sender set in Mail's settings."
       )
     },
     outputSchema: {

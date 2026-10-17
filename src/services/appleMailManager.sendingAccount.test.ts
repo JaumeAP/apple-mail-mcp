@@ -1,14 +1,15 @@
 /**
- * A send needs a real sending account.
+ * A named sending account must be a real one.
  *
  * `set sender to "<account name>"` is not a valid sender in Mail: it silently
  * fell back to the default account, so a message asked to leave from one account
- * left from another (2026-10-10). The sending account must be given and must be
- * an enabled account, by name or by address; its address is what Mail gets.
+ * left from another (2026-10-10). A named account must be an enabled account, by
+ * name or by address; its address is what Mail gets. With no account named, the
+ * script sets no sender and Mail uses the default sender chosen in its settings.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const h = vi.hoisted(() => ({ scripts: [] as string[] }));
+const h = vi.hoisted(() => ({ scripts: [] as string[], output: "sent" }));
 
 vi.mock("@/utils/applescript.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/utils/applescript.js")>();
@@ -16,7 +17,7 @@ vi.mock("@/utils/applescript.js", async (importOriginal) => {
     ...actual,
     executeAppleScript: (script: string) => {
       h.scripts.push(script);
-      return { success: true, output: "sent" };
+      return { success: true, output: h.output };
     },
   };
 });
@@ -43,12 +44,19 @@ const send = (mgr: AppleMailManager, account?: string) =>
 
 afterEach(() => {
   h.scripts.length = 0;
+  h.output = "sent";
 });
 
 describe("sendEmail sending account", () => {
-  it("refuses a send with no account and composes nothing", () => {
-    expect(() => send(manager())).toThrow(/No sending account given/);
-    expect(h.scripts).toHaveLength(0);
+  it("leaves the sender to Mail's default when no account is given", () => {
+    expect(send(manager())).toBe(true);
+    expect(h.scripts).toHaveLength(1);
+    expect(h.scripts[0]).not.toContain("set sender");
+  });
+
+  it("treats a blank account like none", () => {
+    expect(send(manager(), "  ")).toBe(true);
+    expect(h.scripts[0]).not.toContain("set sender");
   });
 
   it("refuses an account that matches no account, naming the real ones", () => {
@@ -88,11 +96,11 @@ describe("createDraft sending account", () => {
     expect(h.scripts[0]).toContain('set sender to "me@icloud.example"');
   });
 
-  it("refuses a draft with no account and composes nothing", () => {
-    expect(() => manager().createDraft(["to@example.com"], "subject", "body")).toThrow(
-      /No sending account given/
-    );
-    expect(h.scripts).toHaveLength(0);
+  it("leaves the sender to Mail's default when no account is given", () => {
+    h.output = "draft created";
+    expect(manager().createDraft(["to@example.com"], "subject", "body")).toBe(true);
+    expect(h.scripts).toHaveLength(1);
+    expect(h.scripts[0]).not.toContain("set sender");
   });
 });
 
@@ -114,9 +122,11 @@ describe("useTemplate sending account", () => {
     return mgr;
   }
 
-  it("refuses a template draft with no account and composes nothing", () => {
-    expect(() => withTemplate().useTemplate("t1")).toThrow(/No sending account given/);
-    expect(h.scripts).toHaveLength(0);
+  it("makes a template draft from Mail's default sender when no account is given", () => {
+    h.output = "draft created";
+    expect(withTemplate().useTemplate("t1")).toBe(true);
+    expect(h.scripts).toHaveLength(1);
+    expect(h.scripts[0]).not.toContain("set sender");
   });
 
   it("creates the draft from the given account's address", () => {

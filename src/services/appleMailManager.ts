@@ -2771,22 +2771,20 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * The address Mail must send from, for an `account` that names an enabled
    * account by its name or its email address.
    *
-   * Throws when `account` is missing or matches no enabled account, instead of
-   * letting Mail fall back to its default sending account: `set sender to
+   * Returns undefined when no `account` is given: the message is then composed
+   * without a `set sender`, so Mail uses the sender chosen in its own settings
+   * (Settings ▸ Composing ▸ "Send new messages from"), which is the caller's
+   * intent when they name no account. A named account that matches no enabled
+   * account throws instead of falling back to that default: `set sender to
    * "<account name>"` is not a valid sender, so Mail silently used the default
    * account and a message asked to leave from one account left from another
    * (2026-10-10). Nothing is composed or sent when this throws.
    */
-  private resolveSendingAddress(account: string | undefined): string {
+  private resolveSendingAddress(account: string | undefined): string | undefined {
     const wanted = account?.trim().toLowerCase();
+    if (!wanted) return undefined;
     const enabled = this.getCachedAccounts().filter((a) => a.enabled);
     const known = enabled.map((a) => `${a.name} <${a.email}>`).join(", ") || "none found";
-    if (!wanted) {
-      throw new Error(
-        "No sending account given, so nothing was sent. Pass `account` with the name or the " +
-          `email address of the account to send from. Enabled accounts: ${known}.`
-      );
-    }
     const match = enabled.find(
       (a) => a.name.toLowerCase() === wanted || a.email.toLowerCase() === wanted
     );
@@ -4163,8 +4161,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     account?: string,
     attachments?: AttachmentInput[]
   ): boolean {
-    // First, before anything is composed or written: no valid sending account,
-    // no send.
+    // First, before anything is composed or written: a named account that is
+    // not a valid sending account means no send. No account: Mail's default sender.
     const sender = this.resolveSendingAddress(account);
     const safeSubject = escapeForAppleScript(subject);
     const safeBody = escapeForAppleScriptBody(body);
@@ -4206,16 +4204,17 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     recipientCommands: string,
     safeSubject: string,
     safeBody: string,
-    sender: string,
+    sender: string | undefined,
     attachmentCommands: string
   ): boolean {
     // `sender` is the account's email address, validated by
-    // resolveSendingAddress: Mail does not accept an account name here.
+    // resolveSendingAddress: Mail does not accept an account name here. Without
+    // one, no `set sender`: Mail uses its default sender.
     const sendCommand = `
         set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:true}
         tell newMessage
           ${recipientCommands}
-          set sender to "${escapeForAppleScript(sender)}"
+          ${sender ? `set sender to "${escapeForAppleScript(sender)}"` : ""}
           ${attachmentCommands}
         end tell
         send newMessage
@@ -4257,8 +4256,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     account?: string,
     delayMs: number = 500
   ): SerialEmailResult[] {
-    // The whole batch is refused up front when the sending account is missing
-    // or unknown, rather than failing recipient by recipient.
+    // The whole batch is refused up front when the named sending account is
+    // unknown, rather than failing recipient by recipient.
     this.resolveSendingAddress(account);
     const effectiveDelay = Math.min(Math.max(delayMs, 0), 10000);
     const results: SerialEmailResult[] = [];
@@ -4327,8 +4326,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     account?: string,
     attachments?: AttachmentInput[]
   ): boolean {
-    // Same rule as sendEmail: no valid account, no draft. Mail's own default
-    // account is never used silently (2026-10-11).
+    // Same rule as sendEmail: a named account that is not valid means no draft;
+    // with none named, the draft is Mail's default sender's.
     const sender = this.resolveSendingAddress(account);
     const safeSubject = escapeForAppleScript(subject);
     const safeBody = escapeForAppleScriptBody(body);
@@ -4369,14 +4368,14 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     recipientCommands: string,
     safeSubject: string,
     safeBody: string,
-    sender: string,
+    sender: string | undefined,
     attachmentCommands: string
   ): boolean {
     const draftCommand = `
         set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:false}
         tell newMessage
           ${recipientCommands}
-          set sender to "${escapeForAppleScript(sender)}"
+          ${sender ? `set sender to "${escapeForAppleScript(sender)}"` : ""}
           ${attachmentCommands}
         end tell
         return "draft created"
