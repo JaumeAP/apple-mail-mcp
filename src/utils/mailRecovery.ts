@@ -37,6 +37,8 @@ const READY_WAIT_MS = 45_000;
 /** How long Mail gets to quit or die before the next step. */
 const STOP_WAIT_MS = 6_000;
 const POLL_MS = 1_500;
+/** Gap before the second probe that confirms a stalled one. */
+const CONFIRM_WAIT_MS = 5_000;
 
 // Same refusals as PERMISSION_DENIED_PATTERN in applescript.ts, repeated here
 // because applescript.ts imports this module.
@@ -186,7 +188,13 @@ export function ensureMailReady(): void {
       if (ready) healthyUntil = Date.now() + HEALTHY_TTL_MS;
       return;
     }
-    const state = probe();
+    let state = probe();
+    if (state === "wedged") {
+      // A busy Mail drains an abandoned Apple Event for a while; only a probe that
+      // stalls twice means it is wedged and worth quitting (a restart loses drafts).
+      sleepMs(CONFIRM_WAIT_MS);
+      state = probe();
+    }
     if (state === "ok") {
       healthyUntil = Date.now() + HEALTHY_TTL_MS;
       return;

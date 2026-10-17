@@ -1496,13 +1496,22 @@ async function deleteDraftAfterSend(
  */
 async function cleanUpDraft(
   draftId: string,
-  sentCopy: boolean
+  hasSentCopy: () => boolean | Promise<boolean>
 ): Promise<{ draftDeleted: boolean; draftError?: string }> {
-  if (!sentCopy) {
-    return { draftDeleted: false, draftError: "No Sent copy found; the draft was kept." };
+  // The email has already left: nothing here may turn the send into an error, or
+  // the caller retries and the recipient gets it twice.
+  try {
+    if (!(await hasSentCopy())) {
+      return { draftDeleted: false, draftError: "No Sent copy found; the draft was kept." };
+    }
+    const d = await deleteDraftAfterSend(draftId);
+    return d.deleted ? { draftDeleted: true } : { draftDeleted: false, draftError: d.error };
+  } catch (error) {
+    return {
+      draftDeleted: false,
+      draftError: `Draft clean-up failed after the send: ${error instanceof Error ? error.message : String(error)}`,
+    };
   }
-  const d = await deleteDraftAfterSend(draftId);
-  return d.deleted ? { draftDeleted: true } : { draftDeleted: false, draftError: d.error };
 }
 
 // --- send-email ---
@@ -1633,7 +1642,7 @@ registerTool(
             : result.sentCopy === false
               ? ` (Sent-folder copy NOT filed: ${result.sentCopyError ?? "unknown error"})`
               : "";
-        const draft = draftId ? await cleanUpDraft(draftId, result.sentCopy === true) : {};
+        const draft = draftId ? await cleanUpDraft(draftId, () => result.sentCopy === true) : {};
         return successResponse(`Email sent via SMTP to ${to.join(", ")}${attachInfo}${copyNote}`, {
           ok: true,
           recipients: to,
@@ -1653,9 +1662,8 @@ registerTool(
       }
 
       const draft = draftId
-        ? await cleanUpDraft(
-            draftId,
-            await pollUntil(() =>
+        ? await cleanUpDraft(draftId, () =>
+            pollUntil(() =>
               hasSentCopy(
                 mailManager.searchMessages(
                   undefined,

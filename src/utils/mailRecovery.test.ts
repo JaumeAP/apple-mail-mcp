@@ -13,6 +13,8 @@ interface World {
   opened: number;
   killed: number[];
   quits: number;
+  /** Probes that stall before Mail answers again (a busy, not wedged, Mail). */
+  wedgedProbes: number;
 }
 
 let world: World;
@@ -35,6 +37,10 @@ vi.mock("child_process", () => ({
         if (world.quitWorks) world.pids = [];
         return { status: 0 };
       }
+      if (world.wedgedProbes > 0) {
+        world.wedgedProbes -= 1;
+        return { status: null, signal: "SIGKILL", stderr: "" };
+      }
       if (world.probe === "ok") return { status: 0, stdout: "4" };
       if (world.probe === "wedged") return { status: null, signal: "SIGKILL", stderr: "" };
       return { status: 1, stderr: "Not authorized to send Apple events to Mail. (-1743)" };
@@ -53,7 +59,15 @@ async function load() {
 describe("mailRecovery", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    world = { pids: [], probe: "ok", quitWorks: true, opened: 0, killed: [], quits: 0 };
+    world = {
+      pids: [],
+      probe: "ok",
+      quitWorks: true,
+      opened: 0,
+      killed: [],
+      quits: 0,
+      wedgedProbes: 0,
+    };
     vi.spyOn(process, "kill").mockImplementation(((pid: number) => {
       world.killed.push(pid);
       world.pids = world.pids.filter((p) => p !== pid);
@@ -112,6 +126,16 @@ describe("mailRecovery", () => {
     expect(world.quits).toBe(1);
     expect(world.killed).toEqual([123]);
     expect(world.opened).toBe(1);
+  });
+
+  it("does not restart a busy Mail that answers the confirming probe", async () => {
+    world.pids = [123];
+    world.wedgedProbes = 1;
+    const { ensureMailReady } = await load();
+    ensureMailReady();
+    expect(world.quits).toBe(0);
+    expect(world.killed).toEqual([]);
+    expect(world.opened).toBe(0);
   });
 
   it("does not force-kill when Mail quits normally", async () => {

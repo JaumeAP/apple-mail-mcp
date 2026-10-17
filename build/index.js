@@ -82487,6 +82487,7 @@ var RESTART_COOLDOWN_MS = 10 * 6e4;
 var READY_WAIT_MS = 45e3;
 var STOP_WAIT_MS = 6e3;
 var POLL_MS = 1500;
+var CONFIRM_WAIT_MS = 5e3;
 var PERMISSION_DENIED = /\(-1743\)|not author(?:i[sz])ed|not permitted/i;
 var healthyUntil = 0;
 var lastRestartAt = 0;
@@ -82596,7 +82597,11 @@ function ensureMailReady() {
       if (ready) healthyUntil = Date.now() + HEALTHY_TTL_MS;
       return;
     }
-    const state = probe();
+    let state = probe();
+    if (state === "wedged") {
+      sleepMs(CONFIRM_WAIT_MS);
+      state = probe();
+    }
     if (state === "ok") {
       healthyUntil = Date.now() + HEALTHY_TTL_MS;
       return;
@@ -90749,12 +90754,19 @@ async function deleteDraftAfterSend(draftId) {
   const r = decodeImapId(draftId) ? await imapDeleteMessageById(draftId) : mailManager.deleteMessage(draftId);
   return r.success ? { deleted: true } : { deleted: false, error: r.error };
 }
-async function cleanUpDraft(draftId, sentCopy) {
-  if (!sentCopy) {
-    return { draftDeleted: false, draftError: "No Sent copy found; the draft was kept." };
+async function cleanUpDraft(draftId, hasSentCopy2) {
+  try {
+    if (!await hasSentCopy2()) {
+      return { draftDeleted: false, draftError: "No Sent copy found; the draft was kept." };
+    }
+    const d = await deleteDraftAfterSend(draftId);
+    return d.deleted ? { draftDeleted: true } : { draftDeleted: false, draftError: d.error };
+  } catch (error3) {
+    return {
+      draftDeleted: false,
+      draftError: `Draft clean-up failed after the send: ${error3 instanceof Error ? error3.message : String(error3)}`
+    };
   }
-  const d = await deleteDraftAfterSend(draftId);
-  return d.deleted ? { draftDeleted: true } : { draftDeleted: false, draftError: d.error };
 }
 registerTool(
   "send-email",
@@ -90836,7 +90848,7 @@ registerTool(
           return errorResponse(result.error ?? "Failed to send email via SMTP.");
         }
         const copyNote = result.sentCopy === true ? " (Sent-folder copy filed)" : result.sentCopy === false ? ` (Sent-folder copy NOT filed: ${result.sentCopyError ?? "unknown error"})` : "";
-        const draft2 = draftId ? await cleanUpDraft(draftId, result.sentCopy === true) : {};
+        const draft2 = draftId ? await cleanUpDraft(draftId, () => result.sentCopy === true) : {};
         return successResponse(`Email sent via SMTP to ${to.join(", ")}${attachInfo}${copyNote}`, {
           ok: true,
           recipients: to,
@@ -90854,7 +90866,7 @@ registerTool(
       }
       const draft = draftId ? await cleanUpDraft(
         draftId,
-        await pollUntil(
+        () => pollUntil(
           () => hasSentCopy(
             mailManager.searchMessages(
               void 0,
