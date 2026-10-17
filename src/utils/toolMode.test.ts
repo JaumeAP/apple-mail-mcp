@@ -88,5 +88,8 @@ describe("APPLE_MAIL_MCP_MODE tool gate", () => {
     });
     expect(withSafetyAnnotations("search-messages", {})).toEqual({ readOnlyHint: true });
     expect(withSafetyAnnotations("create-draft", undefined)).toBeUndefined();
+    expect(withSafetyAnnotations("set-account-settings", undefined)).toEqual({
+      destructiveHint: true,
+    });
   });
 });
