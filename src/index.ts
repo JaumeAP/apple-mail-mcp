@@ -1478,9 +1478,10 @@ async function checkDraftForSend(draftId: string, subject: string): Promise<stri
   const mismatch = `draftId "${draftId}" is not a draft with subject "${subject}"; nothing was sent.`;
   const ref = decodeImapId(draftId);
   if (ref) {
-    const read = await imapGetMessage(draftId, false);
+    // Only the header block: the subject is all the check needs, not the whole draft.
+    const read = await imapGetMessageHeaders(draftId);
     if (!read.success) return read.error ?? `Draft "${draftId}" could not be read.`;
-    const draftSubject = /^Subject: (.*)$/m.exec(read.info ?? "")?.[1] ?? "";
+    const draftSubject = parseHeaderBlock(read.info ?? "").subject ?? "";
     return isDraftForSend({ subject: draftSubject, mailbox: ref.path }, subject) ? null : mismatch;
   }
   return isDraftForSend(mailManager.getMessageById(draftId), subject) ? null : mismatch;

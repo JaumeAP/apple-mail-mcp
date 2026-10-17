@@ -90060,7 +90060,9 @@ var DESTRUCTIVE_TOOLS = /* @__PURE__ */ new Set([
   "delete-smart-mailbox",
   "create-rule",
   "delete-rule",
-  "delete-template"
+  "delete-template",
+  // It can switch an account off, which stops its mail fetching and sending.
+  "set-account-settings"
 ]);
 function parseToolMode(raw) {
   const value = (raw ?? "").trim().toLowerCase() || "full";
@@ -90945,9 +90947,9 @@ async function checkDraftForSend(draftId, subject) {
   const mismatch = `draftId "${draftId}" is not a draft with subject "${subject}"; nothing was sent.`;
   const ref = decodeImapId(draftId);
   if (ref) {
-    const read = await imapGetMessage(draftId, false);
+    const read = await imapGetMessageHeaders(draftId);
     if (!read.success) return read.error ?? `Draft "${draftId}" could not be read.`;
-    const draftSubject = /^Subject: (.*)$/m.exec(read.info ?? "")?.[1] ?? "";
+    const draftSubject = parseHeaderBlock(read.info ?? "").subject ?? "";
     return isDraftForSend({ subject: draftSubject, mailbox: ref.path }, subject) ? null : mismatch;
   }
   return isDraftForSend(mailManager.getMessageById(draftId), subject) ? null : mismatch;
