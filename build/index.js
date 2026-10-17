@@ -65219,16 +65219,112 @@ function getHeader(headers, name2) {
   if (!match) return null;
   return match[1].replace(/\r?\n[ \t]+/g, " ").trim();
 }
+function decodeBytes(bytes, charset) {
+  try {
+    return new TextDecoder(charset.trim().toLowerCase()).decode(bytes);
+  } catch {
+    return bytes.toString("utf8");
+  }
+}
+function parseParams(value) {
+  const pieces = [];
+  let current = "";
+  let quoted = false;
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
+    if (ch === "\\" && quoted && i + 1 < value.length) {
+      current += ch + value[++i];
+      continue;
+    }
+    if (ch === '"') quoted = !quoted;
+    if (ch === ";" && !quoted) {
+      pieces.push(current);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  pieces.push(current);
+  const params = /* @__PURE__ */ new Map();
+  for (const piece of pieces.slice(1)) {
+    const eq = piece.indexOf("=");
+    if (eq < 0) continue;
+    let val = piece.slice(eq + 1).trim();
+    if (val.length >= 2 && val.startsWith('"') && val.endsWith('"')) {
+      val = val.slice(1, -1).replace(/\\(.)/g, "$1");
+    }
+    params.set(piece.slice(0, eq).trim().toLowerCase(), val);
+  }
+  return params;
+}
+function decodeEncodedWords(text) {
+  return text.replace(/(\?=)\s+(?==\?)/g, "$1").replace(
+    /=\?([^?\s]+)\?([bq])\?([^?]*)\?=/gi,
+    (_all, charset, kind, body) => {
+      const bytes = kind.toLowerCase() === "b" ? Buffer.from(body, "base64") : Buffer.from(
+        body.replace(/_/g, " ").replace(
+          /=([0-9a-f]{2})/gi,
+          (_m, hex) => String.fromCharCode(parseInt(hex, 16))
+        ),
+        "latin1"
+      );
+      return decodeBytes(bytes, charset.split("*")[0]);
+    }
+  );
+}
+function decodeExtendedValue(segments) {
+  let charset = "utf-8";
+  const chunks = [];
+  segments.forEach((segment, index) => {
+    let value = segment.value;
+    if (!segment.encoded) {
+      chunks.push(Buffer.from(value, "utf8"));
+      return;
+    }
+    if (index === 0) {
+      const head = value.match(/^([^']*)'[^']*'([\s\S]*)$/);
+      if (head) {
+        charset = head[1] || charset;
+        value = head[2];
+      }
+    }
+    chunks.push(
+      Buffer.from(
+        value.replace(
+          /%([0-9a-f]{2})/gi,
+          (_m, hex) => String.fromCharCode(parseInt(hex, 16))
+        ),
+        "latin1"
+      )
+    );
+  });
+  return decodeBytes(Buffer.concat(chunks), charset);
+}
+function paramValue(params, name2) {
+  const extended = params.get(`${name2}*`);
+  if (extended !== void 0) return decodeExtendedValue([{ value: extended, encoded: true }]);
+  const segments = [];
+  for (let i = 0; ; i++) {
+    const encoded = params.get(`${name2}*${i}*`);
+    const plain = params.get(`${name2}*${i}`);
+    if (encoded !== void 0) segments.push({ value: encoded, encoded: true });
+    else if (plain !== void 0) segments.push({ value: plain, encoded: false });
+    else break;
+  }
+  if (segments.length > 0) return decodeExtendedValue(segments);
+  const value = params.get(name2);
+  return value === void 0 ? null : decodeEncodedWords(value);
+}
 function extractFilename(headers) {
   const dispHeader = getHeader(headers, "Content-Disposition");
   if (dispHeader) {
-    const fnMatch = dispHeader.match(/filename="?([^";\r\n]+)"?/i);
-    if (fnMatch) return fnMatch[1].trim();
+    const filename = paramValue(parseParams(dispHeader), "filename")?.trim();
+    if (filename) return filename;
   }
   const ctHeader = getHeader(headers, "Content-Type");
   if (ctHeader) {
-    const nameMatch = ctHeader.match(/name="?([^";\r\n]+)"?/i);
-    if (nameMatch) return nameMatch[1].trim();
+    const name2 = paramValue(parseParams(ctHeader), "name")?.trim();
+    if (name2) return name2;
   }
   return null;
 }
@@ -65458,7 +65554,7 @@ var init_mimeParse = __esm({
 });
 
 // src/utils/headers.ts
-function decodeEncodedWords(value) {
+function decodeEncodedWords2(value) {
   if (!value.includes("=?")) return value;
   const joined = value.replace(/(\?=)\s+(=\?)/g, "$1$2");
   return joined.replace(
@@ -65548,7 +65644,7 @@ function parseHeaderBlock(input) {
   const all = (name2) => headers.filter((h) => h.name.toLowerCase() === name2.toLowerCase()).map((h) => h.value);
   const decoded = (name2) => {
     const v = first(name2);
-    return v === void 0 ? void 0 : decodeEncodedWords(v);
+    return v === void 0 ? void 0 : decodeEncodedWords2(v);
   };
   const dateHeader = first("Date") || void 0;
   let date3;

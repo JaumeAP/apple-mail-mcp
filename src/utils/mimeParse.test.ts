@@ -301,6 +301,67 @@ describe("parseMimeAttachments — Apple Mail inline attachments", () => {
   });
 });
 
+describe("parseMimeAttachments — encoded filenames (RFC 2231 and RFC 2047)", () => {
+  const withDisposition = (disposition: string, contentType = "application/pdf") =>
+    [
+      "Content-Type: multipart/mixed; boundary=B",
+      "",
+      "--B",
+      "Content-Type: text/plain",
+      "",
+      "hi",
+      "--B",
+      `Content-Disposition: ${disposition}`,
+      `Content-Type: ${contentType}`,
+      "Content-Transfer-Encoding: base64",
+      "",
+      "JVBERg==",
+      "--B--",
+    ].join("\n");
+  const names = (disposition: string, contentType?: string) =>
+    parseMimeAttachments(withDisposition(disposition, contentType)).map((a) => a.name);
+
+  it("decodes an RFC 2231 extended filename", () => {
+    expect(names("attachment; filename*=UTF-8''caf%C3%A9%20men%C3%BA.pdf")).toEqual([
+      "café menú.pdf",
+    ]);
+  });
+
+  it("joins RFC 2231 continuations, encoded and plain", () => {
+    expect(
+      names("attachment; filename*0*=UTF-8''caf%C3%A9; filename*1*=%20; filename*2=menu.pdf")
+    ).toEqual(["café menu.pdf"]);
+  });
+
+  it("decodes RFC 2047 words in a quoted filename (base64 and quoted-printable)", () => {
+    expect(names('attachment; filename="=?UTF-8?B?Y2Fmw6kucGRm?="')).toEqual(["café.pdf"]);
+    expect(names('attachment; filename="=?ISO-8859-1?Q?caf=E9_men=FA.pdf?="')).toEqual([
+      "café menú.pdf",
+    ]);
+  });
+
+  it("joins adjacent RFC 2047 words", () => {
+    expect(names('attachment; filename="=?UTF-8?Q?caf=C3=A9?= =?UTF-8?Q?.pdf?="')).toEqual([
+      "café.pdf",
+    ]);
+  });
+
+  it("falls back to the Content-Type name, decoded the same way", () => {
+    expect(names("attachment", "application/pdf; name*=UTF-8''caf%C3%A9.pdf")).toEqual([
+      "café.pdf",
+    ]);
+  });
+
+  it("keeps a plain filename with a semicolon inside quotes", () => {
+    expect(names('attachment; filename="a;b.pdf"')).toEqual(["a;b.pdf"]);
+  });
+
+  it("finds the attachment by its decoded name", () => {
+    const src = withDisposition("attachment; filename*=UTF-8''caf%C3%A9.pdf");
+    expect(extractMimeAttachment(src, "café.pdf")?.data.toString()).toBe("%PDF");
+  });
+});
+
 describe("extractMimeAttachment", () => {
   it("decodes base64 content for a named attachment", () => {
     const result = extractMimeAttachment(MIME_WITH_PDF, "report.pdf");
