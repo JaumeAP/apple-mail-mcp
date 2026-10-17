@@ -134,7 +134,6 @@ The `to`, `cc`, and `bcc` parameters must always be arrays:
 - Use `create-draft` when the user should review first
 - Both support optional `attachments` parameter (absolute paths in the read roots and/or inline `{filename, contentBase64}`)
 - Both accept optional `inReplyTo` / `references` (2.20.0, #267) — `<id@host>` tokens, emitted verbatim (never RFC 2047-encoded). Mail.app's AppleScript cannot set these headers, so they are **refused, never dropped**: `send-email` requires the SMTP transport for them, and `create-draft` composes the draft itself and files it over IMAP into the account's Drafts mailbox (needs a configured IMAP account; `account` must name one when several are configured and none matches the SMTP identity). Prefer `reply-to-message` when an original message exists
-- **Sender (AppleScript path):** `send-email`, `send-serial-email`, `create-draft` and `use-template` take an optional `account` (name or address of an enabled account). A named account that matches no enabled account fails, composing nothing (the error lists the enabled accounts); with none named, the message leaves from the default sender chosen in Mail's settings (Composing ▸ "Send new messages from"), which this server never overrides. To be sure of the sender, pass `account`
 - **Recommendation**: For important emails, use `create-draft` and tell the user to review in Mail.app
 
 ### send-serial-email (mail merge)
