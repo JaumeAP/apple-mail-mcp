@@ -82630,8 +82630,8 @@ var lastRestartAt = 0;
 var busy = false;
 function autoRecoverEnabled() {
   const flag = (process.env[AUTO_RECOVER_ENV] ?? "").trim().toLowerCase();
-  if (flag === "0" || flag === "false") return false;
-  if (flag === "1" || flag === "true") return true;
+  if (["0", "false", "off", "no"].includes(flag)) return false;
+  if (["1", "true", "on", "yes"].includes(flag)) return true;
   return !process.env.VITEST;
 }
 function markMailUnhealthy() {
@@ -83308,7 +83308,7 @@ var WRITABLE_ACCOUNT_SETTINGS = {
   storeDeletedOnServer: "store deleted messages on server",
   compactMailboxesWhenClosing: "compact mailboxes when closing"
 };
-var escape2 = (text) => text.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+var escape2 = (text) => text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\x00-\x1f\x7f]/g, "");
 function buildAccountSettingsReadScript(accountName) {
   const reads = ACCOUNT_READS.map(
     ([key, prop]) => `

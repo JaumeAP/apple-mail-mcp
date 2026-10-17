@@ -99,6 +99,14 @@ describe("mailRecovery", () => {
     expect(autoRecoverEnabled()).toBe(true);
     process.env.APPLE_MAIL_MCP_AUTO_RECOVER = "0";
     expect(autoRecoverEnabled()).toBe(false);
+    for (const off of ["off", "No", " FALSE "]) {
+      process.env.APPLE_MAIL_MCP_AUTO_RECOVER = off;
+      expect(autoRecoverEnabled(), off).toBe(false);
+    }
+    for (const on of ["on", "Yes", "true"]) {
+      process.env.APPLE_MAIL_MCP_AUTO_RECOVER = on;
+      expect(autoRecoverEnabled(), on).toBe(true);
+    }
   });
 
   it("does nothing when switched off", async () => {
