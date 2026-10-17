@@ -32,27 +32,47 @@ describe("isDraftForSend", () => {
 });
 
 describe("pollUntil", () => {
-  const noSleep = () => Promise.resolve();
+  // A fake clock that only the sleeps (and a slow check) move.
+  const clock = () => {
+    let t = 0;
+    return {
+      now: () => t,
+      sleep: (ms: number) => ((t += ms), Promise.resolve()),
+      advance: (ms: number) => void (t += ms),
+    };
+  };
 
   it("returns true at once when the first check passes", async () => {
+    const c = clock();
     let calls = 0;
-    const ok = await pollUntil(() => (calls++, true), 6_000, 2_000, noSleep);
+    const ok = await pollUntil(() => (calls++, true), 6_000, 2_000, c.sleep, c.now);
     expect(ok).toBe(true);
     expect(calls).toBe(1);
   });
 
   it("keeps looking until the copy turns up", async () => {
+    const c = clock();
     let calls = 0;
-    const ok = await pollUntil(() => ++calls === 3, 6_000, 2_000, noSleep);
+    const ok = await pollUntil(() => ++calls === 3, 6_000, 2_000, c.sleep, c.now);
     expect(ok).toBe(true);
     expect(calls).toBe(3);
   });
 
   it("gives up after the timeout, keeping the draft", async () => {
+    const c = clock();
     let calls = 0;
-    const ok = await pollUntil(() => (calls++, false), 6_000, 2_000, noSleep);
+    const ok = await pollUntil(() => (calls++, false), 6_000, 2_000, c.sleep, c.now);
     expect(ok).toBe(false);
     expect(calls).toBe(4);
+  });
+
+  it("counts the time a slow check takes against the timeout", async () => {
+    const c = clock();
+    let calls = 0;
+    const slow = () => (calls++, c.advance(5_000), false);
+    const ok = await pollUntil(slow, 6_000, 2_000, c.sleep, c.now);
+    expect(ok).toBe(false);
+    expect(calls).toBe(1);
   });
 });
 
