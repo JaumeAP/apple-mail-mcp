@@ -1541,13 +1541,14 @@ Delete a template.
 
 Create a draft from a template, with optional overrides.
 
-| Parameter | Type     | Required | Description         |
-| --------- | -------- | -------- | ------------------- |
-| `id`      | string   | Yes      | Template ID         |
-| `to`      | string[] | No       | Override recipients |
-| `cc`      | string[] | No       | Override CC         |
-| `subject` | string   | No       | Override subject    |
-| `body`    | string   | No       | Override body       |
+| Parameter | Type     | Required | Description                                                                                                         |
+| --------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| `id`      | string   | Yes      | Template ID                                                                                                         |
+| `to`      | string[] | No       | Override recipients                                                                                                 |
+| `cc`      | string[] | No       | Override CC                                                                                                         |
+| `subject` | string   | No       | Override subject                                                                                                    |
+| `body`    | string   | No       | Override body                                                                                                       |
+| `account` | string   | No       | Account to create the draft from (name or email of an enabled account); without it, Mail's default sender is used |
 
 ---
 
