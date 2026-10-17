@@ -90045,8 +90045,13 @@ function parseToolMode(raw) {
   if (TOOL_MODES.includes(value)) return value;
   throw new Error(`${TOOL_MODE_ENV} must be one of ${TOOL_MODES.join(", ")}; got "${raw}".`);
 }
-function resolveToolMode(env, configText) {
+function resolveToolMode(env, configText, unreadable) {
   const raw = env[TOOL_MODE_ENV];
+  if ((raw === void 0 || raw === "") && unreadable !== void 0) {
+    throw new Error(
+      `The config file could not be read (${unreadable}), so ${TOOL_MODE_ENV} may be set in it and not applied. Fix the file's permissions; the server will not fall back to "full".`
+    );
+  }
   if ((raw === void 0 || raw === "") && configText?.includes(TOOL_MODE_ENV)) {
     throw new Error(
       `The config file mentions ${TOOL_MODE_ENV} but it was not applied (invalid JSON, a nested block, or a non-string value). Fix the file; the server will not fall back to "full".`
@@ -90237,12 +90242,16 @@ function registerTool(name2, config2, cb) {
   if (!isToolAllowed(name2, toolMode)) tool.disable();
   return tool;
 }
-var toolMode = resolveToolMode(process.env, readConfigText());
+var toolMode = (() => {
+  const config2 = readConfigText();
+  return resolveToolMode(process.env, config2.text, config2.unreadable);
+})();
 function readConfigText() {
   try {
-    return readFileSync5(fileConfigPath(), "utf8");
-  } catch {
-    return void 0;
+    return { text: readFileSync5(fileConfigPath(), "utf8") };
+  } catch (error3) {
+    const code = error3.code;
+    return code === "ENOENT" ? {} : { unreadable: code ?? String(error3) };
   }
 }
 var mailManager = new AppleMailManager();

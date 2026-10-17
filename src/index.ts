@@ -505,13 +505,18 @@ function registerTool<
 }
 
 /** Parsed once, after loadFileConfig() has filled the environment. */
-const toolMode = resolveToolMode(process.env, readConfigText());
+const toolMode = (() => {
+  const config = readConfigText();
+  return resolveToolMode(process.env, config.text, config.unreadable);
+})();
 
-function readConfigText(): string | undefined {
+/** The config file's text; a missing file is no config, any other failure is reported. */
+function readConfigText(): { text?: string; unreadable?: string } {
   try {
-    return readFileSync(fileConfigPath(), "utf8");
-  } catch {
-    return undefined;
+    return { text: readFileSync(fileConfigPath(), "utf8") };
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    return code === "ENOENT" ? {} : { unreadable: code ?? String(error) };
   }
 }
 

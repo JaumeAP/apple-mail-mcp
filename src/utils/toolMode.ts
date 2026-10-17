@@ -116,10 +116,22 @@ export function parseToolMode(raw: string | undefined): ToolMode {
  * or undefined when there is none. loadFileConfig tolerates a corrupt file and
  * skips non-string values; if that left the mode unset although the file names
  * it, the user asked for a mode the server could not read — stop rather than
- * run as `full`.
+ * run as `full`. `unreadable` is why the file could not be read at all (a
+ * missing file is not that): the mode it may set is then unknown, so the same
+ * applies.
  */
-export function resolveToolMode(env: NodeJS.ProcessEnv, configText: string | undefined): ToolMode {
+export function resolveToolMode(
+  env: NodeJS.ProcessEnv,
+  configText: string | undefined,
+  unreadable?: string
+): ToolMode {
   const raw = env[TOOL_MODE_ENV];
+  if ((raw === undefined || raw === "") && unreadable !== undefined) {
+    throw new Error(
+      `The config file could not be read (${unreadable}), so ${TOOL_MODE_ENV} may be set in it ` +
+        `and not applied. Fix the file's permissions; the server will not fall back to "full".`
+    );
+  }
   if ((raw === undefined || raw === "") && configText?.includes(TOOL_MODE_ENV)) {
     throw new Error(
       `The config file mentions ${TOOL_MODE_ENV} but it was not applied (invalid JSON, a nested ` +
