@@ -920,10 +920,17 @@ function buildMessageRowLoop(opts: {
         set _sndrs to sender of _msgs
         set _dates to date received of _msgs
         set _reads to read status of _msgs
-        set _flags to flagged status of _msgs
-        set _flagColors to flag index of _msgs${attBulk}
+        set _flags to flagged status of _msgs${attBulk}
       on error
         set _bulkOK to false
+      end try
+      -- Its own try, like the sent dates: a getter that fails on one account type must
+      -- not send every other property down the slow per-message path.
+      set _flagBulkOK to true
+      try
+        set _flagColors to flag index of _msgs
+      on error
+        set _flagBulkOK to false
       end try
       set _sentBulkOK to true
       try
@@ -952,15 +959,21 @@ function buildMessageRowLoop(opts: {
             set msgSender to item _i of _sndrs
             set msgRead to (item _i of _reads) as string
             set msgFlagged to (item _i of _flags) as string
-            set msgFlagColorRaw to (item _i of _flagColors) as string
           else
             set _m to item _i of _msgs
             set msgSubject to subject of _m
             set msgSender to sender of _m
             set msgRead to read status of _m as string
             set msgFlagged to flagged status of _m as string
-            set msgFlagColorRaw to flag index of _m as string
-          end if${attRow}
+          end if
+          set msgFlagColorRaw to "-1"
+          try
+            if _bulkOK and _flagBulkOK then
+              set msgFlagColorRaw to (item _i of _flagColors) as string
+            else
+              set msgFlagColorRaw to (flag index of (item _i of _msgs)) as string
+            end if
+          end try${attRow}
           set msgDateStr to ${AS_DATE_TO_STRING}
           set msgDateSentStr to ""
           try
@@ -2810,9 +2823,19 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     const enabled = this.getCachedAccounts().filter((a) => a.enabled);
     const known = enabled.map((a) => `${a.name} <${a.email}>`).join(", ") || "none found";
     const match = enabled.find(
-      (a) => a.name.toLowerCase() === wanted || a.email.toLowerCase() === wanted
+      (a) =>
+        a.name.toLowerCase() === wanted ||
+        a.email.toLowerCase() === wanted ||
+        (a.aliases ?? []).some((alias) => alias.toLowerCase() === wanted)
     );
     if (!match) {
+      // A cold cache and a failed read leave no accounts to match: say that, not
+      // "no enabled account", which would send the caller off to enable one.
+      if (this.lastAccountsError) {
+        throw new Error(
+          `Could not read the Mail accounts (${this.lastAccountsError}), so nothing was sent.`
+        );
+      }
       throw new Error(
         `Account "${account}" does not match any enabled Mail account, so nothing was sent. ` +
           `Enabled accounts: ${known}.`
@@ -2821,7 +2844,9 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     if (!match.email) {
       throw new Error(`Account "${match.name}" has no email address to send from.`);
     }
-    return match.email;
+    // An alias asked for by address is the sender; any other spelling gets the primary address.
+    const alias = (match.aliases ?? []).find((a) => a.toLowerCase() === wanted);
+    return alias ?? match.email;
   }
 
   /**
@@ -5709,15 +5734,32 @@ ${this.errorEmit("              ")}
     };
     const numericId = Number(id);
 
-    // Attempt 1: AppleScript save
-    const script = buildAppLevelScript(`
-      try
-        repeat with acct in accounts
-          repeat with mb in mailboxes of acct
-            try
-              set matchingMsgs to (messages of mb whose id is ${numericId})
-              if (count of matchingMsgs) > 0 then
-                set msg to item 1 of matchingMsgs
+    // Which message the id names, by the same guarded resolution as the reads: the
+    // mailbox it was listed from, else the bounded scan, refused when several
+    // mailboxes hold the id instead of saving from whichever came first.
+    this.lastMessageLookupError = undefined;
+    const located = this.resolveById(
+      id,
+      `set _where to ""
+                try
+                  ${mailboxPathFragment("_hitMb", "_where")}
+                end try
+                return _hitAcct & "${FIELD_SEP}" & _where`,
+      undefined
+    );
+    if (located === null) {
+      const why = this.consumeLastMessageLookupError();
+      if (why) {
+        cleanupTemporaryDirectory();
+        console.error(`Failed to save attachment: ${why}`);
+        return false;
+      }
+    }
+    const [holderAccount, holderMailbox] = (located ?? "").split(FIELD_SEP);
+    if (holderAccount && holderMailbox)
+      this.rememberLocation(String(id), holderAccount, holderMailbox);
+
+    const saveAction = `
                 repeat with att in mail attachments of msg
                   if name of att is "${safeName}" then
                     set savePath to POSIX file "${safeTemporaryPath}"
@@ -5725,7 +5767,21 @@ ${this.errorEmit("              ")}
                     return "ok"
                   end if
                 end repeat
-                return "error:Attachment not found"
+                return "error:Attachment not found"`;
+
+    // Attempt 1: AppleScript save, in the mailbox just resolved when it is known.
+    const script =
+      holderAccount && holderMailbox
+        ? this.scopedByIdScript(holderAccount, holderMailbox, id, saveAction)
+        : buildAppLevelScript(`
+      try
+        repeat with acct in accounts
+          repeat with mb in mailboxes of acct
+            try
+              set matchingMsgs to (messages of mb whose id is ${numericId})
+              if (count of matchingMsgs) > 0 then
+                set msg to item 1 of matchingMsgs
+                ${saveAction}
               end if
             end try
           end repeat
@@ -6741,10 +6797,14 @@ end tell`;
         set acctEmail to email addresses of acct
         set acctEnabled to enabled of acct
         set emailStr to ""
+        set aliasStr to ""
         if (count of acctEmail) > 0 then
           set emailStr to item 1 of acctEmail
+          repeat with i from 2 to (count of acctEmail)
+            set aliasStr to aliasStr & " " & (item i of acctEmail)
+          end repeat
         end if
-        set end of accountList to acctName & "${FIELD_SEP}" & emailStr & "${FIELD_SEP}" & acctEnabled
+        set end of accountList to acctName & "${FIELD_SEP}" & emailStr & "${FIELD_SEP}" & acctEnabled & "${FIELD_SEP}" & aliasStr
       end repeat
       set AppleScript's text item delimiters to "${RECORD_SEP}"
       return accountList as text
@@ -6774,10 +6834,12 @@ end tell`;
       const parts = item.split(FIELD_SEP);
       if (parts.length < 3) continue;
 
+      const aliases = (parts[3] ?? "").split(" ").filter(Boolean);
       accounts.push({
         name: parts[0],
         email: parts[1],
         enabled: parts[2] === "true",
+        ...(aliases.length > 0 ? { aliases } : {}),
       });
     }
 

@@ -20,8 +20,10 @@ export interface ComposeDeps {
     AppleMailManager,
     "getRawSource" | "getMessageContent" | "replyToMessage" | "forwardMessage"
   > &
-    // Optional so test doubles needn't stub it; the real manager always has it.
-    Partial<Pick<AppleMailManager, "consumeLastMessageLookupError">>;
+    // Optional so test doubles needn't stub them; the real manager always has them.
+    Partial<
+      Pick<AppleMailManager, "consumeLastMessageLookupError" | "getMessageById" | "listAccounts">
+    >;
   imapSource: (id: string) => Promise<ImapMessageSource>;
   numericId: (id: string) => Promise<{ numericId?: string; error?: string }>;
   smtpConfigured: () => boolean;
@@ -53,22 +55,32 @@ type ComposeArgs = (ReplyArgs & { kind: "reply" }) | (ForwardArgs & { kind: "for
 
 /** Read composite IDs over IMAP; never pass them to a numeric AppleScript lookup. */
 async function readOriginal(deps: ComposeDeps, id: string, cfg: SmtpConfig) {
+  // SMTP is a single configured identity. Do not activate the newly working
+  // IMAP route by silently sending another account's mail from that identity.
+  const identities = [cfg.user, cfg.from, ...(cfg.allowedFrom ?? [])].map((s) =>
+    s.trim().toLowerCase()
+  );
+  const mismatch = new Error(
+    "The source IMAP account does not match the configured SMTP identity. Configure SMTP for that account or explicitly select transport=applescript."
+  );
   if (decodeImapId(id)) {
     const source = await deps.imapSource(id);
-    // SMTP is a single configured identity. Do not activate the newly working
-    // IMAP route by silently sending another account's mail from that identity.
-    const identities = [cfg.user, cfg.from, ...(cfg.allowedFrom ?? [])].map((s) =>
-      s.trim().toLowerCase()
-    );
-    if (!identities.includes(source.accountUser.trim().toLowerCase())) {
-      throw new Error(
-        "The source IMAP account does not match the configured SMTP identity. Configure SMTP for that account or explicitly select transport=applescript."
-      );
-    }
+    if (!identities.includes(source.accountUser.trim().toLowerCase())) throw mismatch;
     const original = parseOriginalHeaders(source.raw);
     // The IMAP envelope supplies the decoded subject, unlike the raw MIME header.
     if (source.subject !== undefined) original.subject = source.subject;
     return { original, plainText: extractTextBody(source.raw) };
+  }
+  // A numeric id names Mail's copy, so the same rule applies through the account that
+  // holds it: when that account is known and none of its addresses is an SMTP
+  // identity, the mail would leave from the wrong account. Unknown: go on as before.
+  const holder = deps.mail.getMessageById?.(id)?.account;
+  const account = holder ? deps.mail.listAccounts?.().find((a) => a.name === holder) : undefined;
+  if (account?.email) {
+    const addresses = [account.email, ...(account.aliases ?? [])].map((s) =>
+      s.trim().toLowerCase()
+    );
+    if (!addresses.some((address) => identities.includes(address))) throw mismatch;
   }
   const raw = deps.mail.getRawSource(id);
   if (!raw) {

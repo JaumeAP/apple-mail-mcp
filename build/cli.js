@@ -12265,6 +12265,13 @@ function sensitiveRoots() {
     }
   });
 }
+function homeCanonical() {
+  try {
+    return canonicalize(homedir());
+  } catch {
+    return void 0;
+  }
+}
 function isWithinRoot(candidate, root) {
   return candidate === root || candidate.startsWith(root + sep);
 }
@@ -12274,15 +12281,15 @@ function hasHiddenPathSegment(candidate) {
 function userLibraryTail(candidate) {
   const segments = candidate.split(sep).filter(Boolean);
   const lower = segments.map((segment) => segment.toLowerCase());
-  for (let i = 0; i + 2 < lower.length; i++) {
-    if (lower[i] === "users" && lower[i + 2] === "library") return lower.slice(i + 3);
+  const volumeTops = [
+    0,
+    lower[0] === "volumes" ? 2 : -1,
+    lower.slice(0, 3).join("/") === "system/volumes/data" ? 3 : -1
+  ];
+  for (const i of volumeTops) {
+    if (i >= 0 && lower[i] === "users" && lower[i + 2] === "library") return lower.slice(i + 3);
   }
-  let home;
-  try {
-    home = canonicalize(homedir());
-  } catch {
-    home = resolve3(homedir());
-  }
+  const home = homeCanonical() ?? resolve3(homedir());
   if (home === sep || !isWithinRoot(candidate, home)) return void 0;
   const relative = candidate.slice(home.length).split(sep).filter(Boolean);
   if (relative[0]?.toLowerCase() !== "library") return void 0;
@@ -12296,7 +12303,10 @@ function isProtectedPath(candidate, exemptRoots = []) {
   if (sensitiveRoots().some((root) => isWithinRoot(candidate, root))) return true;
   const tail = userLibraryTail(candidate);
   if (!tail || isLibraryDocument(tail)) return false;
-  return !exemptRoots.some((root) => isWithinRoot(candidate, root));
+  const home = homeCanonical();
+  return !exemptRoots.some(
+    (root) => isWithinRoot(candidate, root) && !(home && isWithinRoot(home, root))
+  );
 }
 function canonicalTmpdir() {
   try {
@@ -57775,6 +57785,18 @@ function getHeader(headers, name2) {
   if (!match) return null;
   return match[1].replace(/\r?\n[ \t]+/g, " ").trim();
 }
+function cidReferences(html) {
+  const refs = /* @__PURE__ */ new Set();
+  for (const match of html.matchAll(/cid:([^\s"'<>()]+)/gi)) {
+    let ref = match[1];
+    try {
+      ref = decodeURIComponent(ref);
+    } catch {
+    }
+    refs.add(ref.trim().toLowerCase());
+  }
+  return refs;
+}
 function extractMimeType(headers) {
   const ctHeader = getHeader(headers, "Content-Type");
   if (!ctHeader) return "application/octet-stream";
@@ -58608,10 +58630,13 @@ async function searchUids(client, path3, criteria, size) {
 async function filterUidsByColor(client, uids, colorIndex) {
   if (uids.length === 0) return uids;
   const keep = /* @__PURE__ */ new Set();
-  for await (const msg of client.fetch(uids.join(","), { uid: true, flags: true }, { uid: true })) {
-    if (typeof msg?.uid !== "number") continue;
-    const idx = mailFlagColorIndex(msg.flags);
-    if (colorIndex === 0 ? idx === void 0 : idx === colorIndex) keep.add(msg.uid);
+  for (let i = 0; i < uids.length; i += COLOR_FETCH_CHUNK) {
+    const slice = uids.slice(i, i + COLOR_FETCH_CHUNK).join(",");
+    for await (const msg of client.fetch(slice, { uid: true, flags: true }, { uid: true })) {
+      if (typeof msg?.uid !== "number") continue;
+      const idx = mailFlagColorIndex(msg.flags);
+      if (colorIndex === 0 ? idx === void 0 : idx === colorIndex) keep.add(msg.uid);
+    }
   }
   return uids.filter((uid) => keep.has(uid));
 }
@@ -59829,8 +59854,10 @@ async function embeddedContentIds(client, uid, root) {
   try {
     for (const part of htmlParts) {
       const dl = await client.download(String(uid), part, { uid: true });
-      const html = (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES)).toString("latin1").toLowerCase();
-      for (const cid of candidates) if (html.includes(`cid:${cid}`)) found.add(cid);
+      const refs = cidReferences(
+        (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES)).toString("latin1")
+      );
+      for (const cid of candidates) if (refs.has(cid)) found.add(cid);
     }
   } catch {
     return /* @__PURE__ */ new Set();
@@ -60138,7 +60165,7 @@ async function imapThread(id, deps = {}, limit = 50) {
     true
   );
 }
-var import_imapflow, IMAP_ENV, defaultConnect, SPECIAL_USE_ALIASES, NOT_DELETED, LARGE_MAILBOX_MESSAGES, FIRST_SEARCH_WINDOW, MAX_WINDOW, MAX_UNSCOPED_SEARCH_DEPTH, ROW_QUERY, ROW_QUERY_NO_STRUCTURE, ROW_QUERY_HEADERS_ONLY, DELETED_MARGIN, poolConnect, pools, connecting, MAX_COMPOSE_SOURCE_BYTES, MAX_RFC822_INLINE_BYTES, MAX_RFC822_FILE_BYTES, HEADER_WINDOW_BYTES, MAIL_FLAG_BITS, FLAG_COLOR_NAMES, imapMarkRead, imapMarkUnread, FALLBACK_TRASH_PATH, BASE64_TAIL_WINDOW, QP_EXACT_MAX_BYTES, MAX_HTML_SCAN_BYTES, imapBatchMarkRead, imapBatchMarkUnread, imapBatchFlag, imapBatchUnflag, imapBatchDelete;
+var import_imapflow, IMAP_ENV, defaultConnect, SPECIAL_USE_ALIASES, NOT_DELETED, LARGE_MAILBOX_MESSAGES, FIRST_SEARCH_WINDOW, MAX_WINDOW, MAX_UNSCOPED_SEARCH_DEPTH, COLOR_FETCH_CHUNK, ROW_QUERY, ROW_QUERY_NO_STRUCTURE, ROW_QUERY_HEADERS_ONLY, DELETED_MARGIN, poolConnect, pools, connecting, MAX_COMPOSE_SOURCE_BYTES, MAX_RFC822_INLINE_BYTES, MAX_RFC822_FILE_BYTES, HEADER_WINDOW_BYTES, MAIL_FLAG_BITS, FLAG_COLOR_NAMES, imapMarkRead, imapMarkUnread, FALLBACK_TRASH_PATH, BASE64_TAIL_WINDOW, QP_EXACT_MAX_BYTES, MAX_HTML_SCAN_BYTES, imapBatchMarkRead, imapBatchMarkUnread, imapBatchFlag, imapBatchUnflag, imapBatchDelete;
 var init_imapClient = __esm({
   "src/services/imapClient.ts"() {
     "use strict";
@@ -60214,6 +60241,7 @@ var init_imapClient = __esm({
     FIRST_SEARCH_WINDOW = 5e3;
     MAX_WINDOW = 5e4;
     MAX_UNSCOPED_SEARCH_DEPTH = 5e3;
+    COLOR_FETCH_CHUNK = 500;
     ROW_QUERY = {
       envelope: true,
       flags: true,
@@ -60496,6 +60524,65 @@ init_docsUrls();
 import { readFileSync, realpathSync as realpathSync2 } from "fs";
 import { fileURLToPath } from "url";
 import { parseArgs } from "util";
+
+// src/utils/toolMode.ts
+var TOOL_MODE_ENV = "APPLE_MAIL_MCP_MODE";
+var TOOL_MODES = ["full", "no_send", "read_only"];
+var SENDING_TOOLS = /* @__PURE__ */ new Set([
+  "send-email",
+  "send-serial-email",
+  "reply-to-message",
+  "forward-message",
+  // A disabled rule can forward, redirect or auto-reply once enabled.
+  "enable-rule"
+]);
+var READ_ONLY_TOOLS = /* @__PURE__ */ new Set([
+  "search-messages",
+  "get-message",
+  "get-message-headers",
+  "get-thread",
+  "list-messages",
+  "resolve-message-id",
+  "list-attachments",
+  "fetch-attachment",
+  "list-mailboxes",
+  "get-unread-count",
+  "list-smart-mailboxes",
+  "list-accounts",
+  "get-account-settings",
+  "list-rules",
+  "search-contacts",
+  "list-templates",
+  "get-template",
+  "health-check",
+  "doctor",
+  "get-mail-stats",
+  "get-sync-status"
+]);
+var DESTRUCTIVE_TOOLS = /* @__PURE__ */ new Set([
+  ...SENDING_TOOLS,
+  "delete-message",
+  "batch-delete-messages",
+  "delete-mailbox",
+  "delete-smart-mailbox",
+  "create-rule",
+  "delete-rule",
+  "delete-template",
+  // It can switch an account off, which stops its mail fetching and sending.
+  "set-account-settings"
+]);
+function parseToolMode(raw) {
+  const value = (raw ?? "").trim().toLowerCase() || "full";
+  if (TOOL_MODES.includes(value)) return value;
+  throw new Error(`${TOOL_MODE_ENV} must be one of ${TOOL_MODES.join(", ")}; got "${raw}".`);
+}
+function isToolAllowed(name2, mode) {
+  if (mode === "full") return true;
+  if (mode === "read_only") return READ_ONLY_TOOLS.has(name2);
+  return !SENDING_TOOLS.has(name2);
+}
+
+// src/cli.ts
 var EX_USAGE = 64;
 var EX_NOINPUT = 66;
 var EX_CONFIG = 78;
@@ -60554,6 +60641,15 @@ async function runCli(argv, deps = {}) {
   if (values.help) {
     out(USAGE);
     return 0;
+  }
+  try {
+    if (!isToolAllowed("send-email", parseToolMode(env[TOOL_MODE_ENV]))) {
+      err(`${TOOL_MODE_ENV} does not allow sending email; nothing was sent.`);
+      return EX_CONFIG;
+    }
+  } catch (e) {
+    err(e instanceof Error ? e.message : String(e));
+    return EX_CONFIG;
   }
   const missing = [];
   if (!values.from) missing.push("--from");

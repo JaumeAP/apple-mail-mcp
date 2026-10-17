@@ -1,5 +1,35 @@
 ## [Unreleased]
 
+## [2.20.12-jap.3] - 2026-10-17 (JaumeAP fork)
+
+The 19 minor findings of the same review.
+
+### Fixed
+
+- **Sending account:** an alias of an account is accepted as the sender, and an
+  account list that could not be read says so instead of "no enabled account".
+- **`send-email` with `draftId`:** the subject check reads only the draft's header
+  block, and a numeric draft deleted after the send is written to the audit record.
+- **`apple-mail-send`** refuses to send when `APPLE_MAIL_MCP_MODE` removes sending.
+- **`reply-to-message` / `forward-message`** over SMTP refuse a numeric id held by an
+  account other than the SMTP identity (they already did for `imap:` ids).
+- **Tool modes:** `set-account-settings` is marked destructive; the `compose-reply`
+  prompt is dropped when `reply-to-message` is not available.
+- **Attachment paths:** a read root that holds the home directory no longer lifts the
+  Library rule (this server's own `config.json` stays denied), and a Library counts
+  only at the top of a volume. `save-attachment` resolves the message by the guarded
+  by-id lookup and saves from that mailbox.
+- **Inline attachments:** a `cid:` reference matches whole and percent-decoded, so
+  `cid:logo2` no longer hides `logo`; the HTML is decoded only when needed.
+- **Search:** `flag index` is read in its own `try`, so a getter that fails on one
+  account type keeps the other bulk reads; the flags of a colour search's candidates
+  are fetched in slices of 500 UIDs.
+- **Settings:** control characters are stripped from a written account setting;
+  `off` and `no` switch `APPLE_MAIL_MCP_AUTO_RECOVER` off, as `0` and `false` do.
+- **CI:** the version guard and the Dependabot bump order and increment an
+  `X.Y.Z-jap.N` version instead of computing `NaN`.
+- The `2.20.9-jap.12` note on the deep attachment check says that no tool reaches it.
+
 ## [2.20.12-jap.2] - 2026-10-17 (JaumeAP fork)
 
 Fixes from a review of the fork's own changes (`a98e669..origin/main`).
@@ -67,8 +97,9 @@ Fixes from a review of the fork's own changes (`a98e669..origin/main`).
      in a draft also a `Content-Id`). A part is now left out only when the HTML
      body embeds it with `cid:<its Content-Id>`; a logo the HTML points at is
      still skipped, a PDF or a photo the user attached is listed.
-- `get-message` with the deep attachment check also counts an `inline` part that
-  has a `filename`.
+- The deep attachment check of `getMessageById(id, true)` also counts an `inline`
+  part that has a `filename`. No tool turns that check on: `get-message` does not
+  reach it.
 
 ### Notes
 

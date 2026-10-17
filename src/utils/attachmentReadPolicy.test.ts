@@ -105,6 +105,21 @@ describe("outbound attachment read policy", () => {
     expect(isProtectedPath(join(mailDownloads, ".hidden"), [mailDownloads])).toBe(true);
   });
 
+  it("does not let a root that holds the home directory lift the Library rule", () => {
+    const home = realpathSync.native(homedir());
+    const config = join(home, "Library", "Application Support", "apple-mail-mcp", "config.json");
+    expect(isProtectedPath(config, [home])).toBe(true);
+    expect(isProtectedPath(config, [join(home, "Library", "Application Support")])).toBe(false);
+  });
+
+  it("protects a Library only at the top of a volume, not a folder that is named like one", () => {
+    expect(isProtectedPath("/System/Volumes/Data/Users/someone/Library/Messages/chat.db")).toBe(
+      true
+    );
+    expect(isProtectedPath("/srv/backup/users/someone/library/books/report.pdf")).toBe(false);
+    expect(isProtectedPath("/Volumes/Disk/archive/Users/someone/Library/report.pdf")).toBe(false);
+  });
+
   it("refuses save targets in hidden folders and Library app state", () => {
     const home = realpathSync.native(homedir());
     expect(isPathWithinAllowedRoots(join(home, "Downloads", "report.pdf"))).toBe(true);

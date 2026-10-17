@@ -102,6 +102,8 @@ const DESTRUCTIVE_TOOLS = new Set([
   "create-rule",
   "delete-rule",
   "delete-template",
+  // It can switch an account off, which stops its mail fetching and sending.
+  "set-account-settings",
 ]);
 
 /** Parse the mode; an unknown value is a configuration error, never a silent `full`. */

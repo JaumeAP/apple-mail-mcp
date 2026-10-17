@@ -64830,6 +64830,13 @@ function sensitiveRoots() {
     }
   });
 }
+function homeCanonical() {
+  try {
+    return canonicalize(homedir());
+  } catch {
+    return void 0;
+  }
+}
 function isWithinRoot(candidate, root) {
   return candidate === root || candidate.startsWith(root + sep);
 }
@@ -64839,15 +64846,15 @@ function hasHiddenPathSegment(candidate) {
 function userLibraryTail(candidate) {
   const segments = candidate.split(sep).filter(Boolean);
   const lower = segments.map((segment) => segment.toLowerCase());
-  for (let i = 0; i + 2 < lower.length; i++) {
-    if (lower[i] === "users" && lower[i + 2] === "library") return lower.slice(i + 3);
+  const volumeTops = [
+    0,
+    lower[0] === "volumes" ? 2 : -1,
+    lower.slice(0, 3).join("/") === "system/volumes/data" ? 3 : -1
+  ];
+  for (const i of volumeTops) {
+    if (i >= 0 && lower[i] === "users" && lower[i + 2] === "library") return lower.slice(i + 3);
   }
-  let home;
-  try {
-    home = canonicalize(homedir());
-  } catch {
-    home = resolve3(homedir());
-  }
+  const home = homeCanonical() ?? resolve3(homedir());
   if (home === sep || !isWithinRoot(candidate, home)) return void 0;
   const relative = candidate.slice(home.length).split(sep).filter(Boolean);
   if (relative[0]?.toLowerCase() !== "library") return void 0;
@@ -64861,7 +64868,10 @@ function isProtectedPath(candidate, exemptRoots = []) {
   if (sensitiveRoots().some((root) => isWithinRoot(candidate, root))) return true;
   const tail = userLibraryTail(candidate);
   if (!tail || isLibraryDocument(tail)) return false;
-  return !exemptRoots.some((root) => isWithinRoot(candidate, root));
+  const home = homeCanonical();
+  return !exemptRoots.some(
+    (root) => isWithinRoot(candidate, root) && !(home && isWithinRoot(home, root))
+  );
 }
 function canonicalTmpdir() {
   try {
@@ -65340,23 +65350,33 @@ function extractContentId(headers) {
   const id = raw.replace(/^<+/, "").replace(/>+$/, "").trim().toLowerCase();
   return id || null;
 }
-function isEmbeddedResource(headers, htmlBodies) {
+function isEmbeddedResource(headers, referenced) {
   if (!isInlineDisposition(headers)) return false;
   const cid = extractContentId(headers);
   if (!cid) return false;
-  const needle = `cid:${cid}`;
-  return htmlBodies.some((html) => html.includes(needle));
+  return referenced().has(cid);
 }
-function collectHtmlBodies(parts) {
-  const bodies = [];
+function cidReferences(html) {
+  const refs = /* @__PURE__ */ new Set();
+  for (const match of html.matchAll(/cid:([^\s"'<>()]+)/gi)) {
+    let ref = match[1];
+    try {
+      ref = decodeURIComponent(ref);
+    } catch {
+    }
+    refs.add(ref.trim().toLowerCase());
+  }
+  return refs;
+}
+function collectCidReferences(parts) {
+  const refs = /* @__PURE__ */ new Set();
   for (const part of parts) {
     if (extractMimeType(part.headers) !== "text/html") continue;
     const encoding = getHeader(part.headers, "Content-Transfer-Encoding");
-    bodies.push(
-      decodePartText(decodeBody(part.body, encoding), extractCharset(part.headers)).toLowerCase()
-    );
+    const html = decodePartText(decodeBody(part.body, encoding), extractCharset(part.headers));
+    for (const ref of cidReferences(html)) refs.add(ref);
   }
-  return bodies;
+  return refs;
 }
 function extractSize(headers) {
   const dispHeader = getHeader(headers, "Content-Disposition");
@@ -65463,12 +65483,13 @@ function parseMimeAttachments(source) {
   const boundary = extractBoundary(source);
   if (!boundary) return [];
   const parts = walkLeafParts(source, boundary);
-  const htmlBodies = collectHtmlBodies(parts);
+  let refs;
+  const referenced = () => refs ??= collectCidReferences(parts);
   const attachments = [];
   for (const part of parts) {
     const filename = extractFilename(part.headers);
     if (!filename) continue;
-    if (isEmbeddedResource(part.headers, htmlBodies)) continue;
+    if (isEmbeddedResource(part.headers, referenced)) continue;
     const encoding = getHeader(part.headers, "Content-Transfer-Encoding");
     attachments.push({
       name: filename,
@@ -66350,10 +66371,13 @@ async function searchUids(client, path3, criteria, size) {
 async function filterUidsByColor(client, uids, colorIndex) {
   if (uids.length === 0) return uids;
   const keep = /* @__PURE__ */ new Set();
-  for await (const msg of client.fetch(uids.join(","), { uid: true, flags: true }, { uid: true })) {
-    if (typeof msg?.uid !== "number") continue;
-    const idx = mailFlagColorIndex(msg.flags);
-    if (colorIndex === 0 ? idx === void 0 : idx === colorIndex) keep.add(msg.uid);
+  for (let i = 0; i < uids.length; i += COLOR_FETCH_CHUNK) {
+    const slice = uids.slice(i, i + COLOR_FETCH_CHUNK).join(",");
+    for await (const msg of client.fetch(slice, { uid: true, flags: true }, { uid: true })) {
+      if (typeof msg?.uid !== "number") continue;
+      const idx = mailFlagColorIndex(msg.flags);
+      if (colorIndex === 0 ? idx === void 0 : idx === colorIndex) keep.add(msg.uid);
+    }
   }
   return uids.filter((uid) => keep.has(uid));
 }
@@ -67571,8 +67595,10 @@ async function embeddedContentIds(client, uid, root) {
   try {
     for (const part of htmlParts) {
       const dl = await client.download(String(uid), part, { uid: true });
-      const html = (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES)).toString("latin1").toLowerCase();
-      for (const cid of candidates) if (html.includes(`cid:${cid}`)) found.add(cid);
+      const refs = cidReferences(
+        (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES)).toString("latin1")
+      );
+      for (const cid of candidates) if (refs.has(cid)) found.add(cid);
     }
   } catch {
     return /* @__PURE__ */ new Set();
@@ -67880,7 +67906,7 @@ async function imapThread(id, deps = {}, limit = 50) {
     true
   );
 }
-var import_imapflow, IMAP_ENV, defaultConnect, SPECIAL_USE_ALIASES, NOT_DELETED, LARGE_MAILBOX_MESSAGES, FIRST_SEARCH_WINDOW, MAX_WINDOW, MAX_UNSCOPED_SEARCH_DEPTH, ROW_QUERY, ROW_QUERY_NO_STRUCTURE, ROW_QUERY_HEADERS_ONLY, DELETED_MARGIN, poolConnect, pools, connecting, MAX_COMPOSE_SOURCE_BYTES, MAX_RFC822_INLINE_BYTES, MAX_RFC822_FILE_BYTES, HEADER_WINDOW_BYTES, MAIL_FLAG_BITS, FLAG_COLOR_NAMES, imapMarkRead, imapMarkUnread, FALLBACK_TRASH_PATH, BASE64_TAIL_WINDOW, QP_EXACT_MAX_BYTES, MAX_HTML_SCAN_BYTES, imapBatchMarkRead, imapBatchMarkUnread, imapBatchFlag, imapBatchUnflag, imapBatchDelete;
+var import_imapflow, IMAP_ENV, defaultConnect, SPECIAL_USE_ALIASES, NOT_DELETED, LARGE_MAILBOX_MESSAGES, FIRST_SEARCH_WINDOW, MAX_WINDOW, MAX_UNSCOPED_SEARCH_DEPTH, COLOR_FETCH_CHUNK, ROW_QUERY, ROW_QUERY_NO_STRUCTURE, ROW_QUERY_HEADERS_ONLY, DELETED_MARGIN, poolConnect, pools, connecting, MAX_COMPOSE_SOURCE_BYTES, MAX_RFC822_INLINE_BYTES, MAX_RFC822_FILE_BYTES, HEADER_WINDOW_BYTES, MAIL_FLAG_BITS, FLAG_COLOR_NAMES, imapMarkRead, imapMarkUnread, FALLBACK_TRASH_PATH, BASE64_TAIL_WINDOW, QP_EXACT_MAX_BYTES, MAX_HTML_SCAN_BYTES, imapBatchMarkRead, imapBatchMarkUnread, imapBatchFlag, imapBatchUnflag, imapBatchDelete;
 var init_imapClient = __esm({
   "src/services/imapClient.ts"() {
     "use strict";
@@ -67956,6 +67982,7 @@ var init_imapClient = __esm({
     FIRST_SEARCH_WINDOW = 5e3;
     MAX_WINDOW = 5e4;
     MAX_UNSCOPED_SEARCH_DEPTH = 5e3;
+    COLOR_FETCH_CHUNK = 500;
     ROW_QUERY = {
       envelope: true,
       flags: true,
@@ -82630,8 +82657,8 @@ var lastRestartAt = 0;
 var busy = false;
 function autoRecoverEnabled() {
   const flag = (process.env[AUTO_RECOVER_ENV] ?? "").trim().toLowerCase();
-  if (flag === "0" || flag === "false") return false;
-  if (flag === "1" || flag === "true") return true;
+  if (["0", "false", "off", "no"].includes(flag)) return false;
+  if (["1", "true", "on", "yes"].includes(flag)) return true;
   return !process.env.VITEST;
 }
 function markMailUnhealthy() {
@@ -83308,7 +83335,7 @@ var WRITABLE_ACCOUNT_SETTINGS = {
   storeDeletedOnServer: "store deleted messages on server",
   compactMailboxesWhenClosing: "compact mailboxes when closing"
 };
-var escape2 = (text) => text.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+var escape2 = (text) => text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\x00-\x1f\x7f]/g, "");
 function buildAccountSettingsReadScript(accountName) {
   const reads = ACCOUNT_READS.map(
     ([key, prop]) => `
@@ -83827,10 +83854,17 @@ function buildMessageRowLoop(opts) {
         set _sndrs to sender of _msgs
         set _dates to date received of _msgs
         set _reads to read status of _msgs
-        set _flags to flagged status of _msgs
-        set _flagColors to flag index of _msgs${attBulk}
+        set _flags to flagged status of _msgs${attBulk}
       on error
         set _bulkOK to false
+      end try
+      -- Its own try, like the sent dates: a getter that fails on one account type must
+      -- not send every other property down the slow per-message path.
+      set _flagBulkOK to true
+      try
+        set _flagColors to flag index of _msgs
+      on error
+        set _flagBulkOK to false
       end try
       set _sentBulkOK to true
       try
@@ -83859,15 +83893,21 @@ function buildMessageRowLoop(opts) {
             set msgSender to item _i of _sndrs
             set msgRead to (item _i of _reads) as string
             set msgFlagged to (item _i of _flags) as string
-            set msgFlagColorRaw to (item _i of _flagColors) as string
           else
             set _m to item _i of _msgs
             set msgSubject to subject of _m
             set msgSender to sender of _m
             set msgRead to read status of _m as string
             set msgFlagged to flagged status of _m as string
-            set msgFlagColorRaw to flag index of _m as string
-          end if${attRow}
+          end if
+          set msgFlagColorRaw to "-1"
+          try
+            if _bulkOK and _flagBulkOK then
+              set msgFlagColorRaw to (item _i of _flagColors) as string
+            else
+              set msgFlagColorRaw to (flag index of (item _i of _msgs)) as string
+            end if
+          end try${attRow}
           set msgDateStr to ${AS_DATE_TO_STRING}
           set msgDateSentStr to ""
           try
@@ -85137,9 +85177,14 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     const enabled = this.getCachedAccounts().filter((a) => a.enabled);
     const known = enabled.map((a) => `${a.name} <${a.email}>`).join(", ") || "none found";
     const match = enabled.find(
-      (a) => a.name.toLowerCase() === wanted || a.email.toLowerCase() === wanted
+      (a) => a.name.toLowerCase() === wanted || a.email.toLowerCase() === wanted || (a.aliases ?? []).some((alias2) => alias2.toLowerCase() === wanted)
     );
     if (!match) {
+      if (this.lastAccountsError) {
+        throw new Error(
+          `Could not read the Mail accounts (${this.lastAccountsError}), so nothing was sent.`
+        );
+      }
       throw new Error(
         `Account "${account}" does not match any enabled Mail account, so nothing was sent. Enabled accounts: ${known}.`
       );
@@ -85147,7 +85192,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     if (!match.email) {
       throw new Error(`Account "${match.name}" has no email address to send from.`);
     }
-    return match.email;
+    const alias = (match.aliases ?? []).find((a) => a.toLowerCase() === wanted);
+    return alias ?? match.email;
   }
   /**
    * Resolves a mailbox name to its actual name in the account.
@@ -87346,14 +87392,28 @@ ${this.errorEmit("              ")}
       }
     };
     const numericId = Number(id);
-    const script = buildAppLevelScript(`
-      try
-        repeat with acct in accounts
-          repeat with mb in mailboxes of acct
-            try
-              set matchingMsgs to (messages of mb whose id is ${numericId})
-              if (count of matchingMsgs) > 0 then
-                set msg to item 1 of matchingMsgs
+    this.lastMessageLookupError = void 0;
+    const located = this.resolveById(
+      id,
+      `set _where to ""
+                try
+                  ${mailboxPathFragment("_hitMb", "_where")}
+                end try
+                return _hitAcct & "${FIELD_SEP2}" & _where`,
+      void 0
+    );
+    if (located === null) {
+      const why = this.consumeLastMessageLookupError();
+      if (why) {
+        cleanupTemporaryDirectory();
+        console.error(`Failed to save attachment: ${why}`);
+        return false;
+      }
+    }
+    const [holderAccount, holderMailbox] = (located ?? "").split(FIELD_SEP2);
+    if (holderAccount && holderMailbox)
+      this.rememberLocation(String(id), holderAccount, holderMailbox);
+    const saveAction = `
                 repeat with att in mail attachments of msg
                   if name of att is "${safeName}" then
                     set savePath to POSIX file "${safeTemporaryPath}"
@@ -87361,7 +87421,16 @@ ${this.errorEmit("              ")}
                     return "ok"
                   end if
                 end repeat
-                return "error:Attachment not found"
+                return "error:Attachment not found"`;
+    const script = holderAccount && holderMailbox ? this.scopedByIdScript(holderAccount, holderMailbox, id, saveAction) : buildAppLevelScript(`
+      try
+        repeat with acct in accounts
+          repeat with mb in mailboxes of acct
+            try
+              set matchingMsgs to (messages of mb whose id is ${numericId})
+              if (count of matchingMsgs) > 0 then
+                set msg to item 1 of matchingMsgs
+                ${saveAction}
               end if
             end try
           end repeat
@@ -88127,10 +88196,14 @@ end tell`;
         set acctEmail to email addresses of acct
         set acctEnabled to enabled of acct
         set emailStr to ""
+        set aliasStr to ""
         if (count of acctEmail) > 0 then
           set emailStr to item 1 of acctEmail
+          repeat with i from 2 to (count of acctEmail)
+            set aliasStr to aliasStr & " " & (item i of acctEmail)
+          end repeat
         end if
-        set end of accountList to acctName & "${FIELD_SEP2}" & emailStr & "${FIELD_SEP2}" & acctEnabled
+        set end of accountList to acctName & "${FIELD_SEP2}" & emailStr & "${FIELD_SEP2}" & acctEnabled & "${FIELD_SEP2}" & aliasStr
       end repeat
       set AppleScript's text item delimiters to "${RECORD_SEP2}"
       return accountList as text
@@ -88150,10 +88223,12 @@ end tell`;
     for (const item of items) {
       const parts = item.split(FIELD_SEP2);
       if (parts.length < 3) continue;
+      const aliases = (parts[3] ?? "").split(" ").filter(Boolean);
       accounts.push({
         name: parts[0],
         email: parts[1],
-        enabled: parts[2] === "true"
+        enabled: parts[2] === "true",
+        ...aliases.length > 0 ? { aliases } : {}
       });
     }
     return accounts;
@@ -88917,19 +88992,26 @@ function withErrorHandling(handler, errorPrefix) {
 
 // src/tools/compose.ts
 async function readOriginal(deps, id, cfg) {
+  const identities = [cfg.user, cfg.from, ...cfg.allowedFrom ?? []].map(
+    (s) => s.trim().toLowerCase()
+  );
+  const mismatch = new Error(
+    "The source IMAP account does not match the configured SMTP identity. Configure SMTP for that account or explicitly select transport=applescript."
+  );
   if (decodeImapId(id)) {
     const source = await deps.imapSource(id);
-    const identities = [cfg.user, cfg.from, ...cfg.allowedFrom ?? []].map(
-      (s) => s.trim().toLowerCase()
-    );
-    if (!identities.includes(source.accountUser.trim().toLowerCase())) {
-      throw new Error(
-        "The source IMAP account does not match the configured SMTP identity. Configure SMTP for that account or explicitly select transport=applescript."
-      );
-    }
+    if (!identities.includes(source.accountUser.trim().toLowerCase())) throw mismatch;
     const original = parseOriginalHeaders(source.raw);
     if (source.subject !== void 0) original.subject = source.subject;
     return { original, plainText: extractTextBody(source.raw) };
+  }
+  const holder = deps.mail.getMessageById?.(id)?.account;
+  const account = holder ? deps.mail.listAccounts?.().find((a) => a.name === holder) : void 0;
+  if (account?.email) {
+    const addresses = [account.email, ...account.aliases ?? []].map(
+      (s) => s.trim().toLowerCase()
+    );
+    if (!addresses.some((address) => identities.includes(address))) throw mismatch;
   }
   const raw = deps.mail.getRawSource(id);
   if (!raw) {
@@ -89568,7 +89650,7 @@ function jsonResource(uri, data) {
     contents: [{ uri, mimeType: "application/json", text: JSON.stringify(data, null, 2) }]
   };
 }
-function registerResourcesAndPrompts(server2, mailManager2) {
+function registerResourcesAndPrompts(server2, mailManager2, toolAllowed = () => true) {
   server2.registerResource(
     "accounts",
     "mail://accounts",
@@ -89632,7 +89714,7 @@ function registerResourcesAndPrompts(server2, mailManager2) {
       ]
     })
   );
-  server2.registerPrompt(
+  const composeReply = server2.registerPrompt(
     "compose-reply",
     {
       title: "Compose reply",
@@ -89655,6 +89737,7 @@ function registerResourcesAndPrompts(server2, mailManager2) {
       ]
     })
   );
+  if (!toolAllowed("reply-to-message")) composeReply.disable();
   server2.registerPrompt(
     "weekly-summary",
     {
@@ -90048,7 +90131,9 @@ var DESTRUCTIVE_TOOLS = /* @__PURE__ */ new Set([
   "delete-smart-mailbox",
   "create-rule",
   "delete-rule",
-  "delete-template"
+  "delete-template",
+  // It can switch an account off, which stops its mail fetching and sending.
+  "set-account-settings"
 ]);
 function parseToolMode(raw) {
   const value = (raw ?? "").trim().toLowerCase() || "full";
@@ -90265,7 +90350,7 @@ function readConfigText() {
   }
 }
 var mailManager = new AppleMailManager();
-registerResourcesAndPrompts(server, mailManager);
+registerResourcesAndPrompts(server, mailManager, (tool) => isToolAllowed(tool, toolMode));
 function collectForensics(tool, args) {
   const report = mailManager.consumeLastForensics();
   if (!report) return { warnings: [] };
@@ -90933,15 +91018,21 @@ async function checkDraftForSend(draftId, subject) {
   const mismatch = `draftId "${draftId}" is not a draft with subject "${subject}"; nothing was sent.`;
   const ref = decodeImapId(draftId);
   if (ref) {
-    const read = await imapGetMessage(draftId, false);
+    const read = await imapGetMessageHeaders(draftId);
     if (!read.success) return read.error ?? `Draft "${draftId}" could not be read.`;
-    const draftSubject = /^Subject: (.*)$/m.exec(read.info ?? "")?.[1] ?? "";
+    const draftSubject = parseHeaderBlock(read.info ?? "").subject ?? "";
     return isDraftForSend({ subject: draftSubject, mailbox: ref.path }, subject) ? null : mismatch;
   }
   return isDraftForSend(mailManager.getMessageById(draftId), subject) ? null : mismatch;
 }
 async function deleteDraftAfterSend(draftId) {
-  const r = decodeImapId(draftId) ? await imapDeleteMessageById(draftId) : mailManager.deleteMessage(draftId);
+  let r;
+  if (decodeImapId(draftId)) {
+    r = await imapDeleteMessageById(draftId);
+  } else {
+    r = mailManager.deleteMessage(draftId);
+    collectForensics("send-email", { draftId });
+  }
   return r.success ? { deleted: true } : { deleted: false, error: r.error };
 }
 async function cleanUpDraft(draftId, hasSentCopy2) {

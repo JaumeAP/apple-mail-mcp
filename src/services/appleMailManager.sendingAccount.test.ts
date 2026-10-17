@@ -124,6 +124,29 @@ describe("sendEmail sending account", () => {
     expect(send(manager(), "JAP@Nopuedomas.example")).toBe(true);
     expect(h.scripts[0]).toContain('set sender to "jap@nopuedomas.example"');
   });
+
+  it("sends from an alias of the account when asked for that alias", () => {
+    const mgr = new AppleMailManager();
+    vi.spyOn(
+      mgr as unknown as { getCachedAccounts: () => unknown },
+      "getCachedAccounts"
+    ).mockReturnValue([
+      { name: "Work", email: "me@work.example", aliases: ["Boss@Work.example"], enabled: true },
+    ]);
+    expect(send(mgr, "boss@work.example")).toBe(true);
+    expect(h.scripts[0]).toContain('set sender to "Boss@Work.example"');
+  });
+
+  it("says the accounts could not be read, not that none is enabled", () => {
+    const mgr = new AppleMailManager();
+    vi.spyOn(
+      mgr as unknown as { getCachedAccounts: () => unknown },
+      "getCachedAccounts"
+    ).mockReturnValue([]);
+    (mgr as unknown as { lastAccountsError: string }).lastAccountsError = "timed out";
+    expect(() => send(mgr, "Work")).toThrow(/Could not read the Mail accounts \(timed out\)/);
+    expect(h.scripts).toHaveLength(0);
+  });
 });
 
 describe("createDraft sending account", () => {

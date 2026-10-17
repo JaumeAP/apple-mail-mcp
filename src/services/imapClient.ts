@@ -38,7 +38,7 @@ import { ImapFlow } from "imapflow";
 import { readKeychainPassword } from "@/services/smtpMailer.js";
 import { SETUP_HINT } from "@/utils/docsUrls.js";
 import { mailboxNameKey, nfc } from "@/utils/mailboxName.js";
-import { extractHtmlBody, extractTextBody } from "@/utils/mimeParse.js";
+import { cidReferences, extractHtmlBody, extractTextBody } from "@/utils/mimeParse.js";
 import {
   decodeHeaderBytes,
   headerBlockBytes,
@@ -1110,6 +1110,9 @@ async function searchUids(
   );
 }
 
+/** UIDs per flags-only FETCH in {@link filterUidsByColor}. */
+const COLOR_FETCH_CHUNK = 500;
+
 /**
  * Narrows a FLAGGED-search candidate list to one exact color (#286 follow-up,
  * @j5pu), with a flags-only FETCH rather than the full {@link ROW_QUERY} —
@@ -1130,10 +1133,15 @@ async function filterUidsByColor(
 ): Promise<number[]> {
   if (uids.length === 0) return uids;
   const keep = new Set<number>();
-  for await (const msg of client.fetch(uids.join(","), { uid: true, flags: true }, { uid: true })) {
-    if (typeof msg?.uid !== "number") continue;
-    const idx = mailFlagColorIndex(msg.flags);
-    if (colorIndex === 0 ? idx === undefined : idx === colorIndex) keep.add(msg.uid);
+  // A few thousand UIDs in one command line pass a server's line limit (8 KiB is the
+  // floor Dovecot-style servers keep), so the FETCH goes in slices.
+  for (let i = 0; i < uids.length; i += COLOR_FETCH_CHUNK) {
+    const slice = uids.slice(i, i + COLOR_FETCH_CHUNK).join(",");
+    for await (const msg of client.fetch(slice, { uid: true, flags: true }, { uid: true })) {
+      if (typeof msg?.uid !== "number") continue;
+      const idx = mailFlagColorIndex(msg.flags);
+      if (colorIndex === 0 ? idx === undefined : idx === colorIndex) keep.add(msg.uid);
+    }
   }
   // Preserve the caller's (search-result) ordering, not FETCH response order.
   return uids.filter((uid) => keep.has(uid));
@@ -3451,10 +3459,10 @@ async function embeddedContentIds(
   try {
     for (const part of htmlParts) {
       const dl = await client.download(String(uid), part, { uid: true });
-      const html = (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES))
-        .toString("latin1")
-        .toLowerCase();
-      for (const cid of candidates) if (html.includes(`cid:${cid}`)) found.add(cid);
+      const refs = cidReferences(
+        (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES)).toString("latin1")
+      );
+      for (const cid of candidates) if (refs.has(cid)) found.add(cid);
     }
   } catch {
     return new Set();

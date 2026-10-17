@@ -66,6 +66,11 @@ describe("account settings scripts", () => {
     expect(script.match(/on error errMsg/g)).toHaveLength(2);
   });
 
+  it("strips control characters from a written value", () => {
+    const script = buildAccountSettingsWriteScript("Work", { fullName: `A${RS}B\nC${FS}D` });
+    expect(script).toContain('set full name of a to "ABCD"');
+  });
+
   it("parses booleans and the address list", () => {
     const out = [
       `enabled${FS}true`,

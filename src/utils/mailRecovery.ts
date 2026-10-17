@@ -67,8 +67,8 @@ type Probe = "ok" | "wedged" | "denied" | "other";
 /** Automatic recovery is on unless switched off, and stays off under vitest. */
 export function autoRecoverEnabled(): boolean {
   const flag = (process.env[AUTO_RECOVER_ENV] ?? "").trim().toLowerCase();
-  if (flag === "0" || flag === "false") return false;
-  if (flag === "1" || flag === "true") return true;
+  if (["0", "false", "off", "no"].includes(flag)) return false;
+  if (["1", "true", "on", "yes"].includes(flag)) return true;
   return !process.env.VITEST;
 }
 

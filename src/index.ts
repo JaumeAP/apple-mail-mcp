@@ -529,7 +529,7 @@ const mailManager = new AppleMailManager();
 
 // MCP resources (accounts/templates/mailboxes) and prompts (triage/reply/
 // summary) — additive context + workflows alongside the tools (D2).
-registerResourcesAndPrompts(server, mailManager);
+registerResourcesAndPrompts(server, mailManager, (tool) => isToolAllowed(tool, toolMode));
 
 // Response helpers, the AppleScript serial gate, withErrorHandling, and the
 // message backend router now live in @/tools/respond and @/services/messageRouter.
@@ -1478,9 +1478,10 @@ async function checkDraftForSend(draftId: string, subject: string): Promise<stri
   const mismatch = `draftId "${draftId}" is not a draft with subject "${subject}"; nothing was sent.`;
   const ref = decodeImapId(draftId);
   if (ref) {
-    const read = await imapGetMessage(draftId, false);
+    // Only the header block: the subject is all the check needs, not the whole draft.
+    const read = await imapGetMessageHeaders(draftId);
     if (!read.success) return read.error ?? `Draft "${draftId}" could not be read.`;
-    const draftSubject = /^Subject: (.*)$/m.exec(read.info ?? "")?.[1] ?? "";
+    const draftSubject = parseHeaderBlock(read.info ?? "").subject ?? "";
     return isDraftForSend({ subject: draftSubject, mailbox: ref.path }, subject) ? null : mismatch;
   }
   return isDraftForSend(mailManager.getMessageById(draftId), subject) ? null : mismatch;
@@ -1490,9 +1491,15 @@ async function checkDraftForSend(draftId: string, subject: string): Promise<stri
 async function deleteDraftAfterSend(
   draftId: string
 ): Promise<{ deleted: boolean; error?: string }> {
-  const r = decodeImapId(draftId)
-    ? await imapDeleteMessageById(draftId)
-    : mailManager.deleteMessage(draftId);
+  let r: { success: boolean; error?: string };
+  if (decodeImapId(draftId)) {
+    r = await imapDeleteMessageById(draftId);
+  } else {
+    r = mailManager.deleteMessage(draftId);
+    // Read at once (collectForensics' rule), so this delete reaches the audit
+    // record the delete-message tool writes; the warnings have no place in a send's answer.
+    collectForensics("send-email", { draftId });
+  }
   return r.success ? { deleted: true } : { deleted: false, error: r.error };
 }
 

@@ -51,6 +51,15 @@ function sensitiveRoots(): string[] {
   });
 }
 
+/** The home directory in its on-disk spelling, or undefined when it cannot be resolved. */
+function homeCanonical(): string | undefined {
+  try {
+    return canonicalize(homedir());
+  } catch {
+    return undefined;
+  }
+}
+
 function isWithinRoot(candidate: string, root: string): boolean {
   return candidate === root || candidate.startsWith(root + sep);
 }
@@ -77,16 +86,18 @@ const LIBRARY_DOCUMENT_FOLDERS = [["mobile documents", "com~apple~clouddocs"], [
 function userLibraryTail(candidate: string): string[] | undefined {
   const segments = candidate.split(sep).filter(Boolean);
   const lower = segments.map((segment) => segment.toLowerCase());
-  for (let i = 0; i + 2 < lower.length; i++) {
-    if (lower[i] === "users" && lower[i + 2] === "library") return lower.slice(i + 3);
+  // `Users` sits at the top of a volume: the boot volume, another volume under
+  // /Volumes, or the Data volume. A `users/x/library` deeper down is just a folder.
+  const volumeTops = [
+    0,
+    lower[0] === "volumes" ? 2 : -1,
+    lower.slice(0, 3).join("/") === "system/volumes/data" ? 3 : -1,
+  ];
+  for (const i of volumeTops) {
+    if (i >= 0 && lower[i] === "users" && lower[i + 2] === "library") return lower.slice(i + 3);
   }
 
-  let home: string;
-  try {
-    home = canonicalize(homedir());
-  } catch {
-    home = resolve(homedir());
-  }
+  const home = homeCanonical() ?? resolve(homedir());
   if (home === sep || !isWithinRoot(candidate, home)) return undefined;
   const relative = candidate.slice(home.length).split(sep).filter(Boolean);
   if (relative[0]?.toLowerCase() !== "library") return undefined;
@@ -109,7 +120,12 @@ export function isProtectedPath(candidate: string, exemptRoots: string[] = []): 
 
   const tail = userLibraryTail(candidate);
   if (!tail || isLibraryDocument(tail)) return false;
-  return !exemptRoots.some((root) => isWithinRoot(candidate, root));
+  // A root that holds the whole home directory would lift the rule for every app's
+  // config and store (this server's own config.json among them): it cannot.
+  const home = homeCanonical();
+  return !exemptRoots.some(
+    (root) => isWithinRoot(candidate, root) && !(home && isWithinRoot(home, root))
+  );
 }
 
 /** Canonical temporary directory, which the server itself writes to (attachment staging). */

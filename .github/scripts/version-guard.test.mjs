@@ -230,6 +230,18 @@ test("rejects a version downgrade", (t) => {
   assertOutcome(f.run(), 1, /not an increase/);
 });
 
+test("accepts a fork counter as an increase, and orders it", (t) => {
+  const f = fixture(t);
+  bump(f, "2.15.1-jap.1");
+  assertOutcome(f.run(), 0, /Version bumped 2\.15\.1 -> 2\.15\.1-jap\.1/);
+});
+
+test("rejects a fork version below its upstream release", (t) => {
+  const f = fixture(t);
+  bump(f, "2.15.0-jap.9");
+  assertOutcome(f.run(), 1, /not an increase/);
+});
+
 test("rejects a bump without its changelog heading", (t) => {
   const f = fixture(t);
   f.write("package.json", JSON.stringify({ ...packageJson, version: "2.15.2" }));
