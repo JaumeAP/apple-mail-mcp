@@ -72,7 +72,15 @@ export type WritableAccountSetting = keyof typeof WRITABLE_ACCOUNT_SETTINGS;
 export type AccountSettingsChanges = Partial<Record<WritableAccountSetting, boolean | string>>;
 export type AccountSettings = Record<string, string | boolean | string[]>;
 
-const escape = (text: string): string => text.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+// Control characters go too: a newline would end the AppleScript literal early, and
+// \x1e / \x1f are the separators the read-back splits on. (Not imported from the
+// manager, which imports this module.)
+const escape = (text: string): string =>
+  text
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x1f\x7f]/g, "");
 
 /** AppleScript body (inside `tell application "Mail"`) that reads one account's settings. */
 export function buildAccountSettingsReadScript(accountName: string): string {
