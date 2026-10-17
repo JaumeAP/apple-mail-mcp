@@ -89650,7 +89650,7 @@ function jsonResource(uri, data) {
     contents: [{ uri, mimeType: "application/json", text: JSON.stringify(data, null, 2) }]
   };
 }
-function registerResourcesAndPrompts(server2, mailManager2) {
+function registerResourcesAndPrompts(server2, mailManager2, toolAllowed = () => true) {
   server2.registerResource(
     "accounts",
     "mail://accounts",
@@ -89714,7 +89714,7 @@ function registerResourcesAndPrompts(server2, mailManager2) {
       ]
     })
   );
-  server2.registerPrompt(
+  const composeReply = server2.registerPrompt(
     "compose-reply",
     {
       title: "Compose reply",
@@ -89737,6 +89737,7 @@ function registerResourcesAndPrompts(server2, mailManager2) {
       ]
     })
   );
+  if (!toolAllowed("reply-to-message")) composeReply.disable();
   server2.registerPrompt(
     "weekly-summary",
     {
@@ -90349,7 +90350,7 @@ function readConfigText() {
   }
 }
 var mailManager = new AppleMailManager();
-registerResourcesAndPrompts(server, mailManager);
+registerResourcesAndPrompts(server, mailManager, (tool) => isToolAllowed(tool, toolMode));
 function collectForensics(tool, args) {
   const report = mailManager.consumeLastForensics();
   if (!report) return { warnings: [] };
