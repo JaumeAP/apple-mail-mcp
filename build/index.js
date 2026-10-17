@@ -83367,6 +83367,16 @@ function buildAccountSettingsWriteScript(accountName, changes) {
       return fails as text
     `;
 }
+function describeAccountSettings(settings) {
+  return Object.entries(settings).map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(", ") : String(value)}`).join("\n");
+}
+function splitAppliedSettings(changes, refused) {
+  const refusedKeys = refused.map((entry) => entry.split(":")[0].trim());
+  const applied = Object.keys(changes).filter(
+    (key) => changes[key] !== void 0 && !refusedKeys.includes(key)
+  );
+  return { applied, refusedKeys };
+}
 function validateAccountSettingsChanges(changes) {
   const keys = Object.keys(changes).filter((k) => changes[k] !== void 0);
   if (keys.length === 0) {
@@ -92234,11 +92244,11 @@ registerTool(
   },
   withErrorHandling(({ account }) => {
     const result = mailManager.getAccountSettings(account);
-    const lines = Object.entries(result.settings).map(
-      ([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(", ") : String(value)}`
+    return successResponse(
+      `Settings of "${result.account}":
+${describeAccountSettings(result.settings)}`,
+      result
     );
-    return successResponse(`Settings of "${result.account}":
-${lines.join("\n")}`, result);
   }, "Error reading account settings")
 );
 registerTool(
@@ -92269,8 +92279,12 @@ registerTool(
   withErrorHandling(({ account, ...changes }) => {
     const result = mailManager.setAccountSettings(account, changes);
     if (result.refused.length > 0) {
+      const { applied } = splitAppliedSettings(changes, result.refused);
       return errorResponse(
-        `Mail refused part of the change on "${result.account}": ${result.refused.join("; ")}`
+        `Mail refused part of the change on "${result.account}": ${result.refused.join("; ")}. ` + (applied.length > 0 ? `Applied: ${applied.join(", ")}.` : "None of the requested settings was applied.") + `
+Settings now:
+${describeAccountSettings(result.settings)}`,
+        { ...result, applied }
       );
     }
     return successResponse(`Settings of "${result.account}" updated.`, result);

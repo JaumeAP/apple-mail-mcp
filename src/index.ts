@@ -107,6 +107,7 @@ import {
 } from "@/tools/respond.js";
 import { unlistableStoreError } from "@/tools/mailboxListing.js";
 import { createCallStop, searchDeadlineMs, stoppedByDeadline } from "@/utils/callStop.js";
+import { describeAccountSettings, splitAppliedSettings } from "@/utils/accountSettings.js";
 import { hybridBatchCounts, batchResponse } from "@/tools/batchResults.js";
 import { runBatchDelete, runBatchMove } from "@/tools/batchMutations.js";
 import {
@@ -3223,10 +3224,10 @@ registerTool(
   },
   withErrorHandling(({ account }) => {
     const result = mailManager.getAccountSettings(account);
-    const lines = Object.entries(result.settings).map(
-      ([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(", ") : String(value)}`
+    return successResponse(
+      `Settings of "${result.account}":\n${describeAccountSettings(result.settings)}`,
+      result
     );
-    return successResponse(`Settings of "${result.account}":\n${lines.join("\n")}`, result);
   }, "Error reading account settings")
 );
 
@@ -3261,8 +3262,16 @@ registerTool(
   withErrorHandling(({ account, ...changes }) => {
     const result = mailManager.setAccountSettings(account, changes);
     if (result.refused.length > 0) {
+      // The rest of the change stands: say which settings, and show what Mail
+      // reads back, so the caller does not have to guess or re-read.
+      const { applied } = splitAppliedSettings(changes, result.refused);
       return errorResponse(
-        `Mail refused part of the change on "${result.account}": ${result.refused.join("; ")}`
+        `Mail refused part of the change on "${result.account}": ${result.refused.join("; ")}. ` +
+          (applied.length > 0
+            ? `Applied: ${applied.join(", ")}.`
+            : "None of the requested settings was applied.") +
+          `\nSettings now:\n${describeAccountSettings(result.settings)}`,
+        { ...result, applied }
       );
     }
     return successResponse(`Settings of "${result.account}" updated.`, result);

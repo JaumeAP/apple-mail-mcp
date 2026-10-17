@@ -18,7 +18,9 @@ import {
   WRITABLE_ACCOUNT_SETTINGS,
   buildAccountSettingsReadScript,
   buildAccountSettingsWriteScript,
+  describeAccountSettings,
   parseAccountSettings,
+  splitAppliedSettings,
   validateAccountSettingsChanges,
 } from "@/utils/accountSettings.js";
 
@@ -79,6 +81,23 @@ describe("account settings scripts", () => {
       serverName: "imap.x.com",
       port: "993",
     });
+  });
+});
+
+describe("describeAccountSettings and splitAppliedSettings", () => {
+  it("shows one line per setting, lists joined", () => {
+    expect(describeAccountSettings({ enabled: true, emailAddresses: ["a@x", "b@x"] })).toBe(
+      "  enabled: true\n  emailAddresses: a@x, b@x"
+    );
+  });
+
+  it("tells which requested settings Mail took and which it refused", () => {
+    const changes = { enabled: false, emptyTrashOnQuit: true, fullName: undefined };
+    expect(splitAppliedSettings(changes, ["emptyTrashOnQuit: not supported"])).toEqual({
+      applied: ["enabled"],
+      refusedKeys: ["emptyTrashOnQuit"],
+    });
+    expect(splitAppliedSettings({ enabled: true }, ["enabled: no"]).applied).toEqual([]);
   });
 });
 
