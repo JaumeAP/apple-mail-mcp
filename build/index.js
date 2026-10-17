@@ -91026,7 +91026,13 @@ async function checkDraftForSend(draftId, subject) {
   return isDraftForSend(mailManager.getMessageById(draftId), subject) ? null : mismatch;
 }
 async function deleteDraftAfterSend(draftId) {
-  const r = decodeImapId(draftId) ? await imapDeleteMessageById(draftId) : mailManager.deleteMessage(draftId);
+  let r;
+  if (decodeImapId(draftId)) {
+    r = await imapDeleteMessageById(draftId);
+  } else {
+    r = mailManager.deleteMessage(draftId);
+    collectForensics("send-email", { draftId });
+  }
   return r.success ? { deleted: true } : { deleted: false, error: r.error };
 }
 async function cleanUpDraft(draftId, hasSentCopy2) {

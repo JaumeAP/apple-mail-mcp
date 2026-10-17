@@ -1491,9 +1491,15 @@ async function checkDraftForSend(draftId: string, subject: string): Promise<stri
 async function deleteDraftAfterSend(
   draftId: string
 ): Promise<{ deleted: boolean; error?: string }> {
-  const r = decodeImapId(draftId)
-    ? await imapDeleteMessageById(draftId)
-    : mailManager.deleteMessage(draftId);
+  let r: { success: boolean; error?: string };
+  if (decodeImapId(draftId)) {
+    r = await imapDeleteMessageById(draftId);
+  } else {
+    r = mailManager.deleteMessage(draftId);
+    // Read at once (collectForensics' rule), so this delete reaches the audit
+    // record the delete-message tool writes; the warnings have no place in a send's answer.
+    collectForensics("send-email", { draftId });
+  }
   return r.success ? { deleted: true } : { deleted: false, error: r.error };
 }
 
