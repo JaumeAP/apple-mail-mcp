@@ -57785,6 +57785,18 @@ function getHeader(headers, name2) {
   if (!match) return null;
   return match[1].replace(/\r?\n[ \t]+/g, " ").trim();
 }
+function cidReferences(html) {
+  const refs = /* @__PURE__ */ new Set();
+  for (const match of html.matchAll(/cid:([^\s"'<>()]+)/gi)) {
+    let ref = match[1];
+    try {
+      ref = decodeURIComponent(ref);
+    } catch {
+    }
+    refs.add(ref.trim().toLowerCase());
+  }
+  return refs;
+}
 function extractMimeType(headers) {
   const ctHeader = getHeader(headers, "Content-Type");
   if (!ctHeader) return "application/octet-stream";
@@ -59842,8 +59854,10 @@ async function embeddedContentIds(client, uid, root) {
   try {
     for (const part of htmlParts) {
       const dl = await client.download(String(uid), part, { uid: true });
-      const html = (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES)).toString("latin1").toLowerCase();
-      for (const cid of candidates) if (html.includes(`cid:${cid}`)) found.add(cid);
+      const refs = cidReferences(
+        (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES)).toString("latin1")
+      );
+      for (const cid of candidates) if (refs.has(cid)) found.add(cid);
     }
   } catch {
     return /* @__PURE__ */ new Set();

@@ -209,25 +209,42 @@ function extractContentId(headers: string): string | null {
  * attachment from an embedded image. What does: the HTML body points at the
  * embedded one with `cid:<id>`. An inline part nothing refers to is a file.
  */
-function isEmbeddedResource(headers: string, htmlBodies: string[]): boolean {
+function isEmbeddedResource(headers: string, referenced: () => ReadonlySet<string>): boolean {
   if (!isInlineDisposition(headers)) return false;
   const cid = extractContentId(headers);
   if (!cid) return false;
-  const needle = `cid:${cid}`;
-  return htmlBodies.some((html) => html.includes(needle));
+  return referenced().has(cid);
 }
 
-/** Decoded, lower-cased text of every text/html leaf part. */
-function collectHtmlBodies(parts: MimePart[]): string[] {
-  const bodies: string[] = [];
+/**
+ * The Content-IDs an HTML body points at with `cid:`, lower-cased and
+ * percent-decoded (`cid:logo%40x` names `logo@x`). A reference ends at a quote,
+ * whitespace, a bracket or a parenthesis, so `cid:logo` is not found in `cid:logo2`.
+ */
+export function cidReferences(html: string): Set<string> {
+  const refs = new Set<string>();
+  for (const match of html.matchAll(/cid:([^\s"'<>()]+)/gi)) {
+    let ref = match[1];
+    try {
+      ref = decodeURIComponent(ref);
+    } catch {
+      // Not valid percent-encoding: take it as written.
+    }
+    refs.add(ref.trim().toLowerCase());
+  }
+  return refs;
+}
+
+/** The `cid:` references of every text/html leaf part. */
+function collectCidReferences(parts: MimePart[]): Set<string> {
+  const refs = new Set<string>();
   for (const part of parts) {
     if (extractMimeType(part.headers) !== "text/html") continue;
     const encoding = getHeader(part.headers, "Content-Transfer-Encoding");
-    bodies.push(
-      decodePartText(decodeBody(part.body, encoding), extractCharset(part.headers)).toLowerCase()
-    );
+    const html = decodePartText(decodeBody(part.body, encoding), extractCharset(part.headers));
+    for (const ref of cidReferences(html)) refs.add(ref);
   }
-  return bodies;
+  return refs;
 }
 
 /**
@@ -427,14 +444,16 @@ export function parseMimeAttachments(source: string): MimeAttachmentInfo[] {
   if (!boundary) return [];
 
   const parts = walkLeafParts(source, boundary);
-  const htmlBodies = collectHtmlBodies(parts);
+  // Decoded only when a named inline part with a Content-ID makes it necessary.
+  let refs: Set<string> | undefined;
+  const referenced = (): Set<string> => (refs ??= collectCidReferences(parts));
   const attachments: MimeAttachmentInfo[] = [];
 
   for (const part of parts) {
     const filename = extractFilename(part.headers);
     if (!filename) continue;
 
-    if (isEmbeddedResource(part.headers, htmlBodies)) continue;
+    if (isEmbeddedResource(part.headers, referenced)) continue;
 
     const encoding = getHeader(part.headers, "Content-Transfer-Encoding");
 

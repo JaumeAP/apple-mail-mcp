@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  cidReferences,
   parseMimeAttachments,
   extractMimeAttachment,
   extractHtmlBody,
@@ -277,6 +278,38 @@ describe("parseMimeAttachments — Apple Mail inline attachments", () => {
       ].join("\n")
     );
     expect(parseMimeAttachments(src).map((a) => a.name)).toEqual(["JAP 2026_40_transperfect.pdf"]);
+  });
+
+  it("matches a cid reference whole: a longer id does not hide a shorter one", () => {
+    const withLogo = (htmlRef: string): string =>
+      APPLE_MAIL_SENT.replace(
+        "<html><body>Us adjunto la factura.</body></html>",
+        `<html><body>Us adjunto la factura.<img src="${htmlRef}"></body></html>`
+      ).replace(
+        "--Apple-Mail=_MIXED--",
+        [
+          "--Apple-Mail=_MIXED",
+          "Content-Disposition: inline;",
+          '\tfilename="logo.png"',
+          'Content-Type: image/png; name="logo.png"',
+          "Content-Id: <logo@sig>",
+          "Content-Transfer-Encoding: base64",
+          "",
+          "iVBORw0KGgo=",
+          "",
+          "--Apple-Mail=_MIXED--",
+        ].join("\n")
+      );
+    const names = (src: string): string[] => parseMimeAttachments(src).map((a) => a.name);
+    expect(names(withLogo("cid:logo@sig2"))).toContain("logo.png");
+    expect(names(withLogo("cid:logo@sig"))).not.toContain("logo.png");
+    expect(names(withLogo("cid:logo%40sig"))).not.toContain("logo.png");
+  });
+
+  it("reads the cid references of an HTML body, percent-decoded and lower-cased", () => {
+    expect([
+      ...cidReferences(`<img src="cid:Logo%40Sig"><img src='cid:b@x'> url(cid:c@x)`),
+    ]).toEqual(["logo@sig", "b@x", "c@x"]);
   });
 
   it("lists an inline photo that no HTML refers to (a picture the user attached)", () => {

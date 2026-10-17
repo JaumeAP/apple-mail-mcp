@@ -38,7 +38,7 @@ import { ImapFlow } from "imapflow";
 import { readKeychainPassword } from "@/services/smtpMailer.js";
 import { SETUP_HINT } from "@/utils/docsUrls.js";
 import { mailboxNameKey, nfc } from "@/utils/mailboxName.js";
-import { extractHtmlBody, extractTextBody } from "@/utils/mimeParse.js";
+import { cidReferences, extractHtmlBody, extractTextBody } from "@/utils/mimeParse.js";
 import {
   decodeHeaderBytes,
   headerBlockBytes,
@@ -3459,10 +3459,10 @@ async function embeddedContentIds(
   try {
     for (const part of htmlParts) {
       const dl = await client.download(String(uid), part, { uid: true });
-      const html = (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES))
-        .toString("latin1")
-        .toLowerCase();
-      for (const cid of candidates) if (html.includes(`cid:${cid}`)) found.add(cid);
+      const refs = cidReferences(
+        (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES)).toString("latin1")
+      );
+      for (const cid of candidates) if (refs.has(cid)) found.add(cid);
     }
   } catch {
     return new Set();

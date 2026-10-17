@@ -65350,23 +65350,33 @@ function extractContentId(headers) {
   const id = raw.replace(/^<+/, "").replace(/>+$/, "").trim().toLowerCase();
   return id || null;
 }
-function isEmbeddedResource(headers, htmlBodies) {
+function isEmbeddedResource(headers, referenced) {
   if (!isInlineDisposition(headers)) return false;
   const cid = extractContentId(headers);
   if (!cid) return false;
-  const needle = `cid:${cid}`;
-  return htmlBodies.some((html) => html.includes(needle));
+  return referenced().has(cid);
 }
-function collectHtmlBodies(parts) {
-  const bodies = [];
+function cidReferences(html) {
+  const refs = /* @__PURE__ */ new Set();
+  for (const match of html.matchAll(/cid:([^\s"'<>()]+)/gi)) {
+    let ref = match[1];
+    try {
+      ref = decodeURIComponent(ref);
+    } catch {
+    }
+    refs.add(ref.trim().toLowerCase());
+  }
+  return refs;
+}
+function collectCidReferences(parts) {
+  const refs = /* @__PURE__ */ new Set();
   for (const part of parts) {
     if (extractMimeType(part.headers) !== "text/html") continue;
     const encoding = getHeader(part.headers, "Content-Transfer-Encoding");
-    bodies.push(
-      decodePartText(decodeBody(part.body, encoding), extractCharset(part.headers)).toLowerCase()
-    );
+    const html = decodePartText(decodeBody(part.body, encoding), extractCharset(part.headers));
+    for (const ref of cidReferences(html)) refs.add(ref);
   }
-  return bodies;
+  return refs;
 }
 function extractSize(headers) {
   const dispHeader = getHeader(headers, "Content-Disposition");
@@ -65473,12 +65483,13 @@ function parseMimeAttachments(source) {
   const boundary = extractBoundary(source);
   if (!boundary) return [];
   const parts = walkLeafParts(source, boundary);
-  const htmlBodies = collectHtmlBodies(parts);
+  let refs;
+  const referenced = () => refs ??= collectCidReferences(parts);
   const attachments = [];
   for (const part of parts) {
     const filename = extractFilename(part.headers);
     if (!filename) continue;
-    if (isEmbeddedResource(part.headers, htmlBodies)) continue;
+    if (isEmbeddedResource(part.headers, referenced)) continue;
     const encoding = getHeader(part.headers, "Content-Transfer-Encoding");
     attachments.push({
       name: filename,
@@ -67584,8 +67595,10 @@ async function embeddedContentIds(client, uid, root) {
   try {
     for (const part of htmlParts) {
       const dl = await client.download(String(uid), part, { uid: true });
-      const html = (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES)).toString("latin1").toLowerCase();
-      for (const cid of candidates) if (html.includes(`cid:${cid}`)) found.add(cid);
+      const refs = cidReferences(
+        (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES)).toString("latin1")
+      );
+      for (const cid of candidates) if (refs.has(cid)) found.add(cid);
     }
   } catch {
     return /* @__PURE__ */ new Set();
