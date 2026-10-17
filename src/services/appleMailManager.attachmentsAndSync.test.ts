@@ -4,6 +4,9 @@
  * what is checked.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { mkdtempSync, rmSync } from "fs";
+import { homedir } from "os";
+import { join } from "path";
 
 const h = vi.hoisted(() => ({ scripts: [] as string[], output: "", source: "" }));
 
@@ -122,6 +125,31 @@ describe("listAttachments survives an unreadable property (2026-10-14)", () => {
     ].join("\n");
     const found = manager({ account: "Nopuedomas", mailbox: "Sent" }).listAttachments("538547");
     expect(found.map((a) => a.name)).toEqual(["JAP 2026_40_transperfect.pdf"]);
+  });
+});
+
+describe("saveAttachment resolves the message the way the reads do", () => {
+  function saveInto(mgr: AppleMailManager): boolean {
+    const dir = mkdtempSync(join(homedir(), "amcp-save-"));
+    try {
+      return mgr.saveAttachment("538208", "a.pdf", dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("saves from the mailbox the lookup found, not from the first one holding the id", () => {
+    h.output = "Nopuedomas\x1fINBOX";
+    saveInto(manager(undefined));
+    const save = h.scripts.find((s) => s.includes("save att in savePath")) ?? "";
+    expect(save).toContain('first account whose name is "Nopuedomas"');
+    expect(save).not.toContain("repeat with acct in accounts");
+  });
+
+  it("refuses an id that several mailboxes hold and saves nothing", () => {
+    h.output = `${ERR}Message 538208 is present in more than one mailbox (A/INBOX, A/All Mail); list or search that mailbox first so the read targets the right copy`;
+    expect(saveInto(manager(undefined))).toBe(false);
+    expect(h.scripts.some((s) => s.includes("save att in savePath"))).toBe(false);
   });
 });
 
