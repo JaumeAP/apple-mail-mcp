@@ -131,8 +131,8 @@ describe("outbound attachment read policy", () => {
   });
 
   it("keeps a dot-named attachment's name only in a staging directory", () => {
-    // Same root as getAttachmentBase64's staging dir (tmpdir() is not a save root).
-    const dir = mkdtempSync("/private/tmp/amcp-stage-");
+    // Any visible save root will do; the home keeps the test inside a sandboxed run.
+    const dir = mkdtempSync(join(homedir(), "amcp-stage-"));
     try {
       expect(() => resolveAttachmentSaveTarget(dir, ".env")).toThrow(/outside allowed/);
       expect(resolveAttachmentSaveTarget(dir, ".env", { stagingDirectory: true }).savedPath).toBe(
