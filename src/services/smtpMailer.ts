@@ -484,6 +484,8 @@ export async function sendSerialViaSmtp(
   config: SmtpConfig,
   opts: {
     delayMs?: number;
+    /** From override for the whole batch; the configured identity when omitted. */
+    from?: string;
     send?: typeof sendViaSmtp;
     sleep?: (ms: number) => Promise<void>;
   } = {}
@@ -501,7 +503,7 @@ export async function sendSerialViaSmtp(
           to: [r.email],
           subject: applyPlaceholders(subject, r.variables),
           body: applyPlaceholders(body, r.variables),
-          from: config.from,
+          from: opts.from ?? config.from,
         },
         config
       );

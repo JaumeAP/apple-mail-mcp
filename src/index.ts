@@ -1725,8 +1725,10 @@ registerTool(
         .string()
         .optional()
         .describe(
-          "Account to send from: its name or its email address (see list-accounts). The whole " +
-            "batch is refused when it is missing or matches no enabled account."
+          "Account to send from: its name or its email address (see list-accounts). Through " +
+            "Mail.app the whole batch is refused when it is missing or matches no enabled " +
+            "account. Through SMTP an email address sets the From; without one the configured " +
+            "SMTP identity is used."
         ),
       delayMs: z
         .number()
@@ -1756,8 +1758,12 @@ registerTool(
     // 2.5.0: prefer direct SMTP for mail-merge when configured (and not targeting
     // a bare Mail.app account label); Mail.app fallback when not configured.
     const smtpCfg = shouldUseSmtp(undefined, account) ? resolveSmtpOrFallback() : null;
+    // As in send-email: an `account` that is an address is the From override.
     const results = smtpCfg
-      ? await sendSerialViaSmtp(recipients, subject, body, smtpCfg, { delayMs })
+      ? await sendSerialViaSmtp(recipients, subject, body, smtpCfg, {
+          delayMs,
+          from: account?.includes("@") ? account : undefined,
+        })
       : mailManager.sendSerialEmail(recipients, subject, body, account, delayMs);
     const successCount = results.filter((r) => r.success).length;
     const failCount = results.length - successCount;

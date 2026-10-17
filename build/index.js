@@ -65153,7 +65153,7 @@ async function sendSerialViaSmtp(recipients, subject, body, config2, opts = {}) 
           to: [r.email],
           subject: applyPlaceholders(subject, r.variables),
           body: applyPlaceholders(body, r.variables),
-          from: config2.from
+          from: opts.from ?? config2.from
         },
         config2
       );
@@ -90909,7 +90909,7 @@ registerTool(
       subject: external_exports.string().min(1, "Subject is required").describe("Subject line \u2014 use {{Key}} for placeholders"),
       body: external_exports.string().min(1, "Body is required").describe("Email body \u2014 use {{Key}} for placeholders"),
       account: external_exports.string().optional().describe(
-        "Account to send from: its name or its email address (see list-accounts). The whole batch is refused when it is missing or matches no enabled account."
+        "Account to send from: its name or its email address (see list-accounts). Through Mail.app the whole batch is refused when it is missing or matches no enabled account. Through SMTP an email address sets the From; without one the configured SMTP identity is used."
       ),
       delayMs: external_exports.number().min(0).max(1e4).optional().describe("Delay between sends in ms (default: 500, max: 10000)")
     },
@@ -90928,7 +90928,10 @@ registerTool(
   },
   withErrorHandling(async ({ recipients, subject, body, account, delayMs }) => {
     const smtpCfg = shouldUseSmtp(void 0, account) ? resolveSmtpOrFallback() : null;
-    const results = smtpCfg ? await sendSerialViaSmtp(recipients, subject, body, smtpCfg, { delayMs }) : mailManager.sendSerialEmail(recipients, subject, body, account, delayMs);
+    const results = smtpCfg ? await sendSerialViaSmtp(recipients, subject, body, smtpCfg, {
+      delayMs,
+      from: account?.includes("@") ? account : void 0
+    }) : mailManager.sendSerialEmail(recipients, subject, body, account, delayMs);
     const successCount = results.filter((r) => r.success).length;
     const failCount = results.length - successCount;
     const details = results.map((r) => `  - ${r.email}: ${r.success ? "sent" : `FAILED (${r.error})`}`).join("\n");
