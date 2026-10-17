@@ -64830,6 +64830,13 @@ function sensitiveRoots() {
     }
   });
 }
+function homeCanonical() {
+  try {
+    return canonicalize(homedir());
+  } catch {
+    return void 0;
+  }
+}
 function isWithinRoot(candidate, root) {
   return candidate === root || candidate.startsWith(root + sep);
 }
@@ -64839,15 +64846,15 @@ function hasHiddenPathSegment(candidate) {
 function userLibraryTail(candidate) {
   const segments = candidate.split(sep).filter(Boolean);
   const lower = segments.map((segment) => segment.toLowerCase());
-  for (let i = 0; i + 2 < lower.length; i++) {
-    if (lower[i] === "users" && lower[i + 2] === "library") return lower.slice(i + 3);
+  const volumeTops = [
+    0,
+    lower[0] === "volumes" ? 2 : -1,
+    lower.slice(0, 3).join("/") === "system/volumes/data" ? 3 : -1
+  ];
+  for (const i of volumeTops) {
+    if (i >= 0 && lower[i] === "users" && lower[i + 2] === "library") return lower.slice(i + 3);
   }
-  let home;
-  try {
-    home = canonicalize(homedir());
-  } catch {
-    home = resolve3(homedir());
-  }
+  const home = homeCanonical() ?? resolve3(homedir());
   if (home === sep || !isWithinRoot(candidate, home)) return void 0;
   const relative = candidate.slice(home.length).split(sep).filter(Boolean);
   if (relative[0]?.toLowerCase() !== "library") return void 0;
@@ -64861,7 +64868,10 @@ function isProtectedPath(candidate, exemptRoots = []) {
   if (sensitiveRoots().some((root) => isWithinRoot(candidate, root))) return true;
   const tail = userLibraryTail(candidate);
   if (!tail || isLibraryDocument(tail)) return false;
-  return !exemptRoots.some((root) => isWithinRoot(candidate, root));
+  const home = homeCanonical();
+  return !exemptRoots.some(
+    (root) => isWithinRoot(candidate, root) && !(home && isWithinRoot(home, root))
+  );
 }
 function canonicalTmpdir() {
   try {
