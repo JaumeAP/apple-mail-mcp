@@ -219,9 +219,15 @@ jobs:
           node -e '
             const fs = require("fs");
             const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-            const p = pkg.version.split(".");
-            p[2] = String(Number(p[2]) + 1);
-            pkg.version = p.join(".");
+            // A fork version X.Y.Z-jap.N bumps its counter; any other bumps the patch.
+            const fork = /^(.*-jap\.)(\d+)$/.exec(pkg.version);
+            if (fork) {
+              pkg.version = fork[1] + (Number(fork[2]) + 1);
+            } else {
+              const p = pkg.version.split(".");
+              p[2] = String(Number(p[2]) + 1);
+              pkg.version = p.join(".");
+            }
             fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
             console.log("Auto-bumped version to " + pkg.version);
           '

@@ -103,9 +103,15 @@ fi
 if [ "$oldv" != "$newv" ]; then
   # Bump present: require it to be an increase (typo'd downgrades)…
   OLDV="$oldv" NEWV="$newv" node -e '
-    const a = process.env.OLDV.split(".").map(Number);
-    const b = process.env.NEWV.split(".").map(Number);
-    const cmp = (b[0]-a[0]) || (b[1]-a[1]) || (b[2]-a[2]);
+    // X.Y.Z, then the fork counter of an X.Y.Z-jap.N version (none counts as 0), so
+    // 2.20.12-jap.2 does not turn into NaN and is above 2.20.12-jap.1.
+    const key = (v) => {
+      const [core, pre = ""] = v.split("-");
+      return [...core.split(".").map(Number), Number(pre.match(/(\d+)$/)?.[1] ?? 0)];
+    };
+    const a = key(process.env.OLDV);
+    const b = key(process.env.NEWV);
+    const cmp = (b[0]-a[0]) || (b[1]-a[1]) || (b[2]-a[2]) || (b[3]-a[3]);
     if (cmp > 0) { console.log("Version bumped " + process.env.OLDV + " -> " + process.env.NEWV + "."); process.exit(0); }
     console.error("::error::package.json version went " + process.env.OLDV + " -> " + process.env.NEWV + " (not an increase). Bump it forward.");
     process.exit(1);
