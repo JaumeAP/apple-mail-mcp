@@ -64910,7 +64910,8 @@ function resolveAttachmentReadPath(filePath, env = process.env) {
     throw new Error(`Attachment file not found: "${filePath}"`);
   }
   const explicit = explicitRoots(env);
-  if (isProtectedPath(canonical, [...explicit, ...canonicalTmpdir()])) {
+  const exempt = [...explicit, ...canonicalTmpdir()];
+  if (isProtectedPath(canonical, exempt) || isProtectedPath(resolve3(filePath), exempt)) {
     throw new Error(
       `Attachment path is in a protected location: "${filePath}". Hidden files, credential locations and user Library folders (except iCloud Drive and CloudStorage) cannot be sent as attachments unless ${ATTACHMENT_READ_ROOTS_ENV} names a root for them.`
     );

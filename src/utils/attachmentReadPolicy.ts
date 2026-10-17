@@ -162,7 +162,9 @@ function explicitRoots(env: NodeJS.ProcessEnv): string[] {
  *
  * The returned canonical path is what callers should pass to a downstream
  * reader. Symlinks are resolved before the root check, so a link inside an
- * allowed directory cannot escape to a sensitive location.
+ * allowed directory cannot escape to a sensitive location; the protected-path
+ * rules also apply to the path as given, so a hidden link to an ordinary file
+ * is refused too.
  */
 export function resolveAttachmentReadPath(
   filePath: string,
@@ -188,8 +190,13 @@ export function resolveAttachmentReadPath(
     throw new Error(`Attachment file not found: "${filePath}"`);
   }
 
+  // Both spellings are judged: the one the caller typed too, not only the target
+  // it resolves to. A hidden path that is a symlink to a visible file (a dotfile
+  // manager's `~/.npmrc` -> `~/dotfiles/npmrc`) names a credential location all
+  // the same, and the target alone looks ordinary.
   const explicit = explicitRoots(env);
-  if (isProtectedPath(canonical, [...explicit, ...canonicalTmpdir()])) {
+  const exempt = [...explicit, ...canonicalTmpdir()];
+  if (isProtectedPath(canonical, exempt) || isProtectedPath(resolve(filePath), exempt)) {
     throw new Error(
       `Attachment path is in a protected location: "${filePath}". ` +
         "Hidden files, credential locations and user Library folders (except iCloud Drive and CloudStorage) " +

@@ -154,6 +154,38 @@ describe("outbound attachment read policy", () => {
     );
   });
 
+  it("refuses a hidden path that is a symlink to an ordinary file", () => {
+    // A dotfile manager's `~/.npmrc` -> `~/dotfiles/npmrc`: the target looks
+    // ordinary, the path asked for names a credential location.
+    const dir = mkdtempSync(join(homedir(), "amcp-dotfiles-"));
+    const hidden = join(homedir(), `.amcp-npmrc-${process.pid}`);
+    try {
+      const target = join(dir, "npmrc");
+      writeFileSync(target, "//registry.npmjs.org/:_authToken=secret");
+      symlinkSync(target, hidden);
+      expect(() => resolveAttachmentReadPath(hidden)).toThrow(/protected location/);
+      expect(resolveAttachmentReadPath(target)).toBe(realpathSync(target));
+    } finally {
+      rmSync(hidden, { force: true });
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a file reached through a hidden folder that is a symlink to a visible one", () => {
+    const dir = mkdtempSync(join(homedir(), "amcp-dotfiles-"));
+    const hidden = join(homedir(), `.amcp-dir-${process.pid}`);
+    try {
+      writeFileSync(join(dir, "notes.txt"), "notes");
+      symlinkSync(dir, hidden, "dir");
+      expect(() => resolveAttachmentReadPath(join(hidden, "notes.txt"))).toThrow(
+        /protected location/
+      );
+    } finally {
+      rmSync(hidden, { force: true });
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("rejects a symlink that resolves outside an allowed temporary root", () => {
     const allowed = mkdtempSync(join(tmpdir(), "amcp-read-policy-"));
     try {
