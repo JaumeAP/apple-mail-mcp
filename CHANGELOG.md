@@ -1,5 +1,47 @@
 ## [Unreleased]
 
+## [2.20.12-jap.2] - 2026-10-17 (JaumeAP fork)
+
+Fixes from a review of the fork's own changes (`a98e669..origin/main`).
+
+### Fixed
+
+- **Mail recovery no longer restarts a busy Mail.** A restart needs two stalled
+  probes five seconds apart, not one. A refused or failed recovery is remembered
+  for 30 s (and a Mail that will not launch is tried once per cooldown), so later
+  calls do not pay the probes again. A call whose script checks that Mail is
+  running first no longer gets a closed Mail opened for it (#270).
+- **`send-email` with `draftId`:** a failing draft clean-up after the send no
+  longer turns the send into an error (a retry would send twice), and the wait
+  for the Sent copy is bounded by the clock, not by the sleeps alone.
+- **Localized mailboxes:** Drafts and Sent are recognized by name in the common
+  languages and by whole word, so `Borradores` or `Enviados` work and
+  `Presentations` is not a Sent folder.
+- **`send-serial-email` over SMTP** uses an `account` that is an address as the
+  From, as `send-email` does.
+- **IMAP attachments:** an inline named part with a Content-ID is an embedded
+  image only when the HTML refers to it with `cid:`; otherwise it is listed.
+- **MIME attachment names** in RFC 2231 and RFC 2047 form are decoded.
+- **Account settings:** an account name two accounts share is refused instead of
+  changing the first; the account list is read again after a change; a partly
+  refused change says which settings were applied and shows the settings read
+  back.
+- **`list-attachments`** goes through the bounded by-id resolution and refuses an
+  id that several mailboxes hold.
+- **Startup:** a config file that exists but cannot be read stops the server
+  instead of starting it as `full` when it may name another mode.
+- **Attachment paths:** the protected-path rules also judge the path as given, so
+  a hidden symlink to an ordinary file is refused.
+
+### Changed
+
+- Without `account`, `send-email`, `send-serial-email`, `create-draft` and
+  `use-template` send from the default sender set in Mail's settings (read from
+  Mail and set explicitly). A named account that matches no enabled account still
+  fails. `use-template` takes `account` as optional.
+- `list-attachments` answers with the lookup error (not found, Mail busy,
+  ambiguous id) instead of "No attachments found" when it cannot find the message.
+
 ## [2.20.12-jap.1] - 2026-10-16 (JaumeAP fork)
 
 ### Changed

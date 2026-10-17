@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "jaumeap-apple-mail",
-  "version": "2.20.12-jap.1",
+  "version": "2.20.12-jap.2",
   "description": "JaumeAP's fork of sweetrb/apple-mail-mcp: Apple Mail via MCP with a server-side tool gate (APPLE_MAIL_MCP_MODE) and tighter attachment paths",
   "owner": {
     "name": "JaumeAP"
@@ -11,7 +11,7 @@
       "name": "apple-mail",
       "displayName": "Apple Mail",
       "description": "Manage Apple Mail through natural language - read, search, send, and organize emails (macOS only)",
-      "version": "2.20.12-jap.1",
+      "version": "2.20.12-jap.2",
       "author": {
         "name": "Rob Sweet (upstream); fork by JaumeAP"
       },
