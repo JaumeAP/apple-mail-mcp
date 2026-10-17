@@ -83601,6 +83601,7 @@ var CONTENT_MARKER = "CONTENT";
 var MSGID_MARKER = "MSGID";
 var DATES_MARKER = "DATES";
 var HTML_MARKER = "HTML";
+var ATTACHMENTS_MARKER = "ATT";
 var LOOKUP_ERROR_MARKER = "ERR";
 var BATCH_FATAL = "FATAL";
 var RECON_TAG = "RECON";
@@ -87262,40 +87263,19 @@ ${this.errorEmit("              ")}
                     set attCount to attCount + 1
                   end if
                 end repeat`;
-    const loc = this.locationFor(id);
-    const lookup = loc ? `
-        ${this.resolveMailboxFragment(loc.account, loc.mailbox)}
-        if _tmb is missing value then return ""
-        set matchingMsgs to (messages of _tmb whose id is ${Number(id)})
-        if (count of matchingMsgs) > 0 then
-          set msg to item 1 of matchingMsgs
-          ${attachmentLoop}
-          return outputText
-        end if
-        return ""` : `
-        repeat with acct in accounts
-          repeat with mb in mailboxes of acct
-            try
-              set matchingMsgs to (messages of mb whose id is ${Number(id)})
-              if (count of matchingMsgs) > 0 then
-                set msg to item 1 of matchingMsgs
-                ${attachmentLoop}
-                if outputText is not "" then return outputText
-              end if
-            end try
-          end repeat
-        end repeat
-        return ""`;
-    const script = buildAppLevelScript(`
-      try
-        ${lookup}
-      on error errMsg
-        return ""
-      end try
-    `);
-    const result = executeAppleScript(script, { timeoutMs: 6e4 });
-    if (result.success && result.output.trim()) {
-      const items = result.output.split(RECORD_SEP2);
+    this.lastMessageLookupError = void 0;
+    const output = this.resolveById(
+      id,
+      `${attachmentLoop}
+                return "${ATTACHMENTS_MARKER}" & outputText`,
+      void 0
+    );
+    if (output === null) {
+      const refusal = this.consumeLastMessageLookupError();
+      if (refusal) throw new Error(refusal);
+    }
+    if (output?.startsWith(ATTACHMENTS_MARKER) && output.length > ATTACHMENTS_MARKER.length) {
+      const items = output.slice(ATTACHMENTS_MARKER.length).split(RECORD_SEP2);
       const attachments = [];
       for (const item of items) {
         const parts = item.split(FIELD_SEP2);

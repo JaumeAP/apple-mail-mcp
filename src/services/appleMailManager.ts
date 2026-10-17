@@ -393,6 +393,8 @@ const CONTENT_MARKER = "\x1dCONTENT\x1d"; // subject/plain-text boundary
 const MSGID_MARKER = "\x1dMSGID\x1d"; // subject/RFC-Message-ID boundary (get-message content)
 const DATES_MARKER = "\x1dDATES\x1d"; // RFC-Message-ID/dates boundary (get-message content, #224)
 const HTML_MARKER = "\x1dHTML\x1d"; // plain-text/source boundary
+/** Leads a found message's attachment list, so a message with none still reads as found. */
+const ATTACHMENTS_MARKER = "\x1dATT\x1d";
 const LOOKUP_ERROR_MARKER = "\x1dERR\x1d"; // GS-wrapped — by-id lookup failure; must not be a bare text prefix because the success payload of the same script leads with the sender-controlled subject
 const BATCH_FATAL = "\x1dFATAL\x1d"; // prefix for a whole-batch failure (e.g. bad destination)
 /**
@@ -5580,8 +5582,8 @@ ${this.errorEmit("              ")}
     // return its attachments, so a different message with the same id answered
     // "no attachments" for a message that had them (2026-10-10: the copy of an
     // email with two PDFs listed none, while saving them by name worked). The
-    // mailbox the id was listed from is used when known; otherwise the scan
-    // goes on past a hit that has no attachments.
+    // mailbox the id was listed from is used when known; otherwise the id must
+    // belong to exactly one mailbox, or the call is refused (see resolveById).
     // Each property is read inside its own `try`. `MIME type of att` throws
     // "AppleEvent handler failed" for attachments Apple Mail itself composed
     // (2026-10-14: a sent PDF), and one unguarded throw used to discard the
@@ -5610,44 +5612,25 @@ ${this.errorEmit("              ")}
                     set attCount to attCount + 1
                   end if
                 end repeat`;
-    const loc = this.locationFor(id);
-    const lookup = loc
-      ? `
-        ${this.resolveMailboxFragment(loc.account, loc.mailbox)}
-        if _tmb is missing value then return ""
-        set matchingMsgs to (messages of _tmb whose id is ${Number(id)})
-        if (count of matchingMsgs) > 0 then
-          set msg to item 1 of matchingMsgs
-          ${attachmentLoop}
-          return outputText
-        end if
-        return ""`
-      : `
-        repeat with acct in accounts
-          repeat with mb in mailboxes of acct
-            try
-              set matchingMsgs to (messages of mb whose id is ${Number(id)})
-              if (count of matchingMsgs) > 0 then
-                set msg to item 1 of matchingMsgs
-                ${attachmentLoop}
-                if outputText is not "" then return outputText
-              end if
-            end try
-          end repeat
-        end repeat
-        return ""`;
-    const script = buildAppLevelScript(`
-      try
-        ${lookup}
-      on error errMsg
-        return ""
-      end try
-    `);
+    // The same bounded by-id resolution as the other reads (resolveById): the
+    // mailbox the id was listed from when known, else the guarded scan, which
+    // skips huge mailboxes, stops at its time budget and refuses an id that
+    // several mailboxes hold instead of answering for whichever came first. The
+    // marker keeps a message with no attachments from reading as a miss.
+    this.lastMessageLookupError = undefined;
+    const output = this.resolveById(
+      id,
+      `${attachmentLoop}
+                return "${ATTACHMENTS_MARKER}" & outputText`,
+      undefined
+    );
+    if (output === null) {
+      const refusal = this.consumeLastMessageLookupError();
+      if (refusal) throw new Error(refusal);
+    }
 
-    const result = executeAppleScript(script, { timeoutMs: 60000 });
-
-    if (result.success && result.output.trim()) {
-      const items = result.output.split(RECORD_SEP);
+    if (output?.startsWith(ATTACHMENTS_MARKER) && output.length > ATTACHMENTS_MARKER.length) {
+      const items = output.slice(ATTACHMENTS_MARKER.length).split(RECORD_SEP);
       const attachments: Attachment[] = [];
 
       for (const item of items) {
