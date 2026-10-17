@@ -2810,9 +2810,19 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     const enabled = this.getCachedAccounts().filter((a) => a.enabled);
     const known = enabled.map((a) => `${a.name} <${a.email}>`).join(", ") || "none found";
     const match = enabled.find(
-      (a) => a.name.toLowerCase() === wanted || a.email.toLowerCase() === wanted
+      (a) =>
+        a.name.toLowerCase() === wanted ||
+        a.email.toLowerCase() === wanted ||
+        (a.aliases ?? []).some((alias) => alias.toLowerCase() === wanted)
     );
     if (!match) {
+      // A cold cache and a failed read leave no accounts to match: say that, not
+      // "no enabled account", which would send the caller off to enable one.
+      if (this.lastAccountsError) {
+        throw new Error(
+          `Could not read the Mail accounts (${this.lastAccountsError}), so nothing was sent.`
+        );
+      }
       throw new Error(
         `Account "${account}" does not match any enabled Mail account, so nothing was sent. ` +
           `Enabled accounts: ${known}.`
@@ -2821,7 +2831,9 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     if (!match.email) {
       throw new Error(`Account "${match.name}" has no email address to send from.`);
     }
-    return match.email;
+    // An alias asked for by address is the sender; any other spelling gets the primary address.
+    const alias = (match.aliases ?? []).find((a) => a.toLowerCase() === wanted);
+    return alias ?? match.email;
   }
 
   /**
@@ -6741,10 +6753,14 @@ end tell`;
         set acctEmail to email addresses of acct
         set acctEnabled to enabled of acct
         set emailStr to ""
+        set aliasStr to ""
         if (count of acctEmail) > 0 then
           set emailStr to item 1 of acctEmail
+          repeat with i from 2 to (count of acctEmail)
+            set aliasStr to aliasStr & " " & (item i of acctEmail)
+          end repeat
         end if
-        set end of accountList to acctName & "${FIELD_SEP}" & emailStr & "${FIELD_SEP}" & acctEnabled
+        set end of accountList to acctName & "${FIELD_SEP}" & emailStr & "${FIELD_SEP}" & acctEnabled & "${FIELD_SEP}" & aliasStr
       end repeat
       set AppleScript's text item delimiters to "${RECORD_SEP}"
       return accountList as text
@@ -6774,10 +6790,12 @@ end tell`;
       const parts = item.split(FIELD_SEP);
       if (parts.length < 3) continue;
 
+      const aliases = (parts[3] ?? "").split(" ").filter(Boolean);
       accounts.push({
         name: parts[0],
         email: parts[1],
         enabled: parts[2] === "true",
+        ...(aliases.length > 0 ? { aliases } : {}),
       });
     }
 
