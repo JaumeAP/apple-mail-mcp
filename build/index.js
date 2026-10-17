@@ -85095,6 +85095,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
       buildAppLevelScript(buildAccountSettingsWriteScript(name2, changes)),
       { timeoutMs: 3e4, maxRetries: 1 }
     );
+    this.invalidateCache();
+    this.defaultAccount = null;
     if (!result.success) {
       throw new Error(`Could not change the settings of "${name2}": ${result.error}`);
     }

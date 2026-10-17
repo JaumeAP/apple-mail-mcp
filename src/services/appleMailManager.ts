@@ -2775,6 +2775,11 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
       buildAppLevelScript(buildAccountSettingsWriteScript(name, changes)),
       { timeoutMs: 30000, maxRetries: 1 }
     );
+    // Even a failed or partial write may have changed `enabled`: the account list
+    // and the default account chosen from it must be read again, not served for up
+    // to CACHE_TTL_MS, or a send would go by the old state.
+    this.invalidateCache();
+    this.defaultAccount = null;
     if (!result.success) {
       throw new Error(`Could not change the settings of "${name}": ${result.error}`);
     }

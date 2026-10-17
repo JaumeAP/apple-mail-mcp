@@ -126,6 +126,20 @@ describe("AppleMailManager account settings", () => {
     expect(h.scripts).toHaveLength(0);
   });
 
+  it("reads the account list again after a change, so a send sees the new state", () => {
+    const mgr = new AppleMailManager();
+    const accounts = [{ name: "Nopuedomas", email: "jap@nopuedomas.example", enabled: true }];
+    const fetch = vi
+      .spyOn(mgr as unknown as { fetchAccounts: () => unknown }, "fetchAccounts")
+      .mockReturnValue(accounts);
+    h.output = `enabled${FS}true`;
+    mgr.getAccountSettings("Nopuedomas");
+    expect(fetch).toHaveBeenCalledTimes(1);
+    mgr.setAccountSettings("Nopuedomas", { enabled: false });
+    // the read-back after the write needed a fresh list
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it("accepts the address and reads the settings", () => {
     h.output = `enabled${FS}true`;
     const result = manager().getAccountSettings("JAP@nopuedomas.example");
