@@ -688,6 +688,9 @@ export function describeMailboxOpError(op: "create" | "delete" | "rename", raw: 
 /** Env var to pin the default account (matched by account name or email). */
 export const DEFAULT_ACCOUNT_ENV = "APPLE_MAIL_MCP_DEFAULT_ACCOUNT";
 
+/** How long Mail's default sender, once read, is trusted. */
+const DEFAULT_SENDER_TTL_MS = 60_000;
+
 /**
  * Choose the account to use when a tool call omits `account`.
  *
@@ -1570,6 +1573,8 @@ export class AppleMailManager {
    * Default account used when no account is specified.
    */
   private defaultAccount: string | null = null;
+  /** The sender Mail's own settings choose, read for at most DEFAULT_SENDER_TTL_MS. */
+  private defaultSender?: { address: string | undefined; until: number };
 
   /**
    * TTL cache for expensive AppleScript queries that rarely change.
@@ -2635,26 +2640,9 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
 
     const accounts = this.getCachedAccounts();
 
-    // Mail.app's default send account (inspect a throwaway outgoing message).
-    let defaultSendEmail: string | undefined;
-    const defaultResult = executeAppleScript(
-      buildAppLevelScript(`
-        set newMsg to make new outgoing message
-        set fromAddr to sender of newMsg
-        delete newMsg
-        return fromAddr
-      `)
-    );
-    if (defaultResult.success && defaultResult.output.trim()) {
-      // sender returns "Name <email>" — pull out the address
-      const senderOutput = defaultResult.output.trim();
-      const emailMatch = senderOutput.match(/<([^>]+)>/);
-      defaultSendEmail = emailMatch ? emailMatch[1] : senderOutput;
-    }
-
     const chosen = chooseDefaultAccount(accounts, {
       override: process.env[DEFAULT_ACCOUNT_ENV],
-      defaultSendEmail,
+      defaultSendEmail: this.mailDefaultSender(),
     });
     if (chosen) {
       this.defaultAccount = chosen;
@@ -2664,6 +2652,34 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     // No accounts at all — return something rather than throw; downstream
     // AppleScript will surface a clear "account not found".
     return accounts[0]?.name ?? "iCloud";
+  }
+
+  /**
+   * The address of Mail's default sender, the one its settings choose for a new
+   * message (Settings ▸ Composing ▸ "Send new messages from"), read from a
+   * throwaway outgoing message. Undefined when Mail does not answer. Kept for
+   * DEFAULT_SENDER_TTL_MS so a mail merge reads it once, not once per recipient.
+   */
+  private mailDefaultSender(): string | undefined {
+    const now = Date.now();
+    if (this.defaultSender && now < this.defaultSender.until) return this.defaultSender.address;
+    const result = executeAppleScript(
+      buildAppLevelScript(`
+        set newMsg to make new outgoing message
+        set fromAddr to sender of newMsg
+        delete newMsg
+        return fromAddr
+      `)
+    );
+    let address: string | undefined;
+    if (result.success && result.output.trim()) {
+      // sender returns "Name <email>" — pull out the address
+      const output = result.output.trim();
+      const emailMatch = output.match(/<([^>]+)>/);
+      address = emailMatch ? emailMatch[1] : output;
+    }
+    this.defaultSender = { address, until: now + DEFAULT_SENDER_TTL_MS };
+    return address;
   }
 
   /**
@@ -2771,18 +2787,18 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * The address Mail must send from, for an `account` that names an enabled
    * account by its name or its email address.
    *
-   * Returns undefined when no `account` is given: the message is then composed
-   * without a `set sender`, so Mail uses the sender chosen in its own settings
-   * (Settings ▸ Composing ▸ "Send new messages from"), which is the caller's
-   * intent when they name no account. A named account that matches no enabled
-   * account throws instead of falling back to that default: `set sender to
-   * "<account name>"` is not a valid sender, so Mail silently used the default
-   * account and a message asked to leave from one account left from another
-   * (2026-10-10). Nothing is composed or sent when this throws.
+   * With no `account`, the address of Mail's default sender (see
+   * mailDefaultSender), read from its configuration; undefined when Mail does not
+   * answer, and the message is then composed without a `set sender`, which Mail
+   * fills with that same default. An `account` that is given wins, and one that
+   * matches no enabled account throws instead of falling back to the default:
+   * `set sender to "<account name>"` is not a valid sender, so Mail silently used
+   * the default account and a message asked to leave from one account left from
+   * another (2026-10-10). Nothing is composed or sent when this throws.
    */
   private resolveSendingAddress(account: string | undefined): string | undefined {
     const wanted = account?.trim().toLowerCase();
-    if (!wanted) return undefined;
+    if (!wanted) return this.mailDefaultSender();
     const enabled = this.getCachedAccounts().filter((a) => a.enabled);
     const known = enabled.map((a) => `${a.name} <${a.email}>`).join(", ") || "none found";
     const match = enabled.find(
