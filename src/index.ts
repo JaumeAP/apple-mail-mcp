@@ -1530,11 +1530,7 @@ registerTool(
       account: z
         .string()
         .optional()
-        .describe(
-          "Account to send from: its name or its email address (see list-accounts). On the " +
-            "AppleScript transport the send is refused when it matches no enabled account; when " +
-            "omitted, it leaves from the default sender set in Mail's settings."
-        ),
+        .describe("Account to send from: its name or its email address (see list-accounts)."),
       attachments: ATTACHMENTS_SCHEMA,
       inReplyTo: IN_REPLY_TO_SCHEMA,
       references: REFERENCES_SCHEMA,
@@ -1724,12 +1720,7 @@ registerTool(
       account: z
         .string()
         .optional()
-        .describe(
-          "Account to send from: its name or its email address (see list-accounts). Through " +
-            "Mail.app the whole batch is refused when it matches no enabled account, and it " +
-            "leaves from the default sender set in Mail's settings when omitted. Through SMTP " +
-            "an email address sets the From; without one the configured SMTP identity is used."
-        ),
+        .describe("Account to send from: its name or its email address (see list-accounts)."),
       delayMs: z
         .number()
         .min(0)
@@ -1810,8 +1801,7 @@ registerTool(
         .optional()
         .describe(
           "Account to create the draft from (name or email address of an enabled account). " +
-            "A plain draft with no account is made from the default sender set in Mail's " +
-            "settings. With inReplyTo/references this must name a " +
+            "With inReplyTo/references this must name a " +
             "configured IMAP account (label or login); when omitted, the IMAP account matching " +
             "the SMTP identity, else the only IMAP account, is used."
         ),
@@ -3646,8 +3636,7 @@ registerTool(
         .string()
         .optional()
         .describe(
-          "Account to create the draft from (name or email address of an enabled account). " +
-            "When omitted, the draft is made from the default sender set in Mail's settings."
+          "Account to create the draft from (name or email address of an enabled account)."
         ),
     },
     outputSchema: {
