@@ -110,6 +110,22 @@ describe("AppleMailManager account settings", () => {
     expect(h.scripts).toHaveLength(0);
   });
 
+  it("refuses a name that two accounts share, by name or by address", () => {
+    const mgr = new AppleMailManager();
+    vi.spyOn(
+      mgr as unknown as { getCachedAccounts: () => unknown },
+      "getCachedAccounts"
+    ).mockReturnValue([
+      { name: "Work", email: "a@work.example", enabled: true },
+      { name: "Work", email: "b@work.example", enabled: true },
+    ]);
+    for (const wanted of ["Work", "b@work.example"]) {
+      expect(() => mgr.getAccountSettings(wanted)).toThrow(/ambiguous/);
+      expect(() => mgr.setAccountSettings(wanted, { enabled: true })).toThrow(/ambiguous/);
+    }
+    expect(h.scripts).toHaveLength(0);
+  });
+
   it("accepts the address and reads the settings", () => {
     h.output = `enabled${FS}true`;
     const result = manager().getAccountSettings("JAP@nopuedomas.example");

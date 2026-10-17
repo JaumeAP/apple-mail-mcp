@@ -85023,18 +85023,36 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     }
     return { accounts: name2 ?? "all", synchronized: result.output.trim() === "true" };
   }
-  /** Mail's own name for an account given by its name or its email address. */
+  /**
+   * Mail's own name for an account given by its name or its email address.
+   *
+   * Refuses an ambiguous account: Mail's AppleScript addresses an account only by
+   * name (`account "Name"`) and takes the first one with that name, so a name
+   * shared by two accounts, or an input that matches two, could change the wrong one.
+   */
   resolveAccountName(account) {
     const wanted = account.trim().toLowerCase();
-    const match = this.getCachedAccounts().find(
+    const accounts = this.getCachedAccounts();
+    const matches = accounts.filter(
       (a) => a.name.toLowerCase() === wanted || a.email.toLowerCase() === wanted
     );
-    if (!match) {
+    if (matches.length === 0) {
       throw new Error(
         `Account "${account}" does not match any Mail account. Use list-accounts for the names.`
       );
     }
-    return match.name;
+    const name2 = matches[0].name.toLowerCase();
+    const candidates = [
+      ...matches,
+      ...accounts.filter((a) => a.name.toLowerCase() === name2 && !matches.includes(a))
+    ];
+    if (candidates.length > 1) {
+      const list = candidates.map((a) => `${a.name} <${a.email}>`).join(", ");
+      throw new Error(
+        `Account "${account}" is ambiguous (${list}). Mail can address an account only by name, so rename one of them in Mail first.`
+      );
+    }
+    return matches[0].name;
   }
   /**
    * The settings of one account: identity, fetch and trash behaviour, the
