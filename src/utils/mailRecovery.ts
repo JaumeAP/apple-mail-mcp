@@ -177,12 +177,17 @@ export function restartMail(): RecoveryReport {
 /**
  * Called before an AppleScript call. Returns nothing: it only makes the next
  * call more likely to find Mail answering, and logs what it did to stderr.
+ * `launch: false` leaves a closed Mail closed; a running one is still checked.
  */
-export function ensureMailReady(): void {
+export function ensureMailReady(options: { launch?: boolean } = {}): void {
   if (busy || !autoRecoverEnabled() || Date.now() < Math.max(healthyUntil, skipUntil)) return;
   busy = true;
   try {
     if (mailPids().length === 0) {
+      // A call that checks "Mail is running" first exists to NOT launch Mail (a
+      // by-id read launched it with no accounts loaded and answered "not found"):
+      // leave Mail closed and let the call say so.
+      if (options.launch === false) return;
       // A Mail that cannot be launched costs READY_WAIT_MS per call: one try per cooldown.
       if (Date.now() - lastRestartAt < RESTART_COOLDOWN_MS) {
         console.error(

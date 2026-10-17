@@ -115,6 +115,20 @@ describe("mailRecovery", () => {
     expect(world.quits).toBe(0);
   });
 
+  it("does not open a closed Mail for a call that must not launch it", async () => {
+    const { ensureMailReady } = await load();
+    ensureMailReady({ launch: false });
+    expect(world.opened).toBe(0);
+  });
+
+  it("still restarts a wedged Mail for a call that must not launch it", async () => {
+    world.pids = [123];
+    world.probe = "wedged";
+    const { ensureMailReady } = await load();
+    ensureMailReady({ launch: false });
+    expect(world.opened).toBe(1);
+  });
+
   it("leaves a healthy Mail alone and trusts the probe for a while", async () => {
     world.pids = [123];
     const { ensureMailReady } = await load();

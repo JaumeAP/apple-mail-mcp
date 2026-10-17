@@ -12,6 +12,13 @@ import type { AppleScriptResult, AppleScriptOptions } from "@/types.js";
 import { ensureMailReady, markMailUnhealthy } from "@/utils/mailRecovery.js";
 
 /**
+ * The test a script runs first when it must not launch Mail (`application "Mail"
+ * is running` does not start the app). Such a script is not given a Mail that
+ * the recovery opens for it.
+ */
+export const MAIL_RUNNING_GUARD = 'if application "Mail" is running then';
+
+/**
  * Default execution timeout for AppleScript commands in milliseconds.
  * 30 seconds is sufficient for most operations, including complex
  * searches on large mailboxes. Can be overridden per-call.
@@ -434,7 +441,7 @@ export function executeAppleScript(
 
   // Open Mail if it is closed, restart it if it is wedged (utils/mailRecovery).
   // Before the call, never after a failure: a failed send is not retried.
-  ensureMailReady();
+  ensureMailReady({ launch: !script.includes(MAIL_RUNNING_GUARD) });
 
   let lastError: AppleScriptResult | null = null;
   const startTime = Date.now();

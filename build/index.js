@@ -82719,11 +82719,12 @@ function restartMail() {
   if (ready) healthyUntil = Date.now() + HEALTHY_TTL_MS;
   return { ok: ready, steps };
 }
-function ensureMailReady() {
+function ensureMailReady(options = {}) {
   if (busy || !autoRecoverEnabled() || Date.now() < Math.max(healthyUntil, skipUntil)) return;
   busy = true;
   try {
     if (mailPids().length === 0) {
+      if (options.launch === false) return;
       if (Date.now() - lastRestartAt < RESTART_COOLDOWN_MS) {
         console.error(
           "mail-recovery: Mail.app is not running; last open failed under 10 minutes ago, not retrying"
@@ -82767,6 +82768,7 @@ function ensureMailReady() {
 }
 
 // src/utils/applescript.ts
+var MAIL_RUNNING_GUARD = 'if application "Mail" is running then';
 var DEFAULT_TIMEOUT_MS = 3e4;
 var DEFAULT_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 function getMaxBuffer() {
@@ -82932,7 +82934,7 @@ function executeAppleScript(script, options = {}) {
     timeout: timeoutMs,
     maxRetries
   });
-  ensureMailReady();
+  ensureMailReady({ launch: !script.includes(MAIL_RUNNING_GUARD) });
   let lastError = null;
   const startTime = Date.now();
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -83977,7 +83979,7 @@ function buildAppLevelScriptIfRunning(command) {
 }
 function guardMailRunning(script) {
   return `
-    if application "Mail" is running then
+    ${MAIL_RUNNING_GUARD}
       ${script}
     else
       return "${MAIL_NOT_RUNNING_MARKER}"
