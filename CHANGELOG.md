@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+### Fixed
+
+- **By-id lookup with `account` and no `mailbox`** walks only that account (and no
+  local mailboxes) instead of every account; an unknown account is reported as such.
+
 ## [2.20.12-jap.3] - 2026-10-17 (JaumeAP fork)
 
 The 19 minor findings of the same review.
