@@ -20,31 +20,56 @@ export const SENT_COPY_WAIT_MS = 30_000;
 export const SENT_COPY_POLL_MS = 2_000;
 
 /**
- * Polls `check` until it returns true or `timeoutMs` has passed. Mail.app files
- * the Sent copy a moment after `send`, so a single look right after the send
- * misses it. Always checks at least once.
+ * Polls `check` until it returns true or `timeoutMs` has passed on the clock.
+ * Mail.app files the Sent copy a moment after `send`, so a single look right
+ * after the send misses it. Always checks at least once. The deadline counts
+ * the time `check` itself takes (a synchronous Mail.app search can run for
+ * seconds), not just the sleeps: otherwise a slow search stretches the wait far
+ * past the timeout and the caller's own deadline reports a delivered mail as lost.
  */
 export async function pollUntil(
   check: () => boolean,
   timeoutMs: number = SENT_COPY_WAIT_MS,
   intervalMs: number = SENT_COPY_POLL_MS,
-  sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+  now: () => number = Date.now
 ): Promise<boolean> {
-  for (let waited = 0; ; waited += intervalMs) {
+  const deadline = now() + timeoutMs;
+  for (;;) {
     if (check()) return true;
-    if (waited + intervalMs > timeoutMs) return false;
+    if (now() + intervalMs > deadline) return false;
     await sleep(intervalMs);
   }
 }
 
-/** True for a Drafts mailbox, including Gmail's `[Gmail]/Drafts`. */
+/**
+ * A whole word in any script (`\b` only knows ASCII letters), so "Presentations"
+ * or "Consent" never read as Sent. Names are matched with accents removed.
+ */
+const word = (alternatives: string): RegExp =>
+  new RegExp(`(?<!\\p{L})(?:${alternatives})(?!\\p{L})`, "u");
+
+// Mail names its special mailboxes in the language of macOS, and a server may
+// name them in its own: the common names below, accents folded away.
+const DRAFTS = word(
+  "drafts?|borradore?s?|esborranys?|entwurfe?|brouillons?|bozze|bozza|rascunhos?|concepten|concept" +
+    "|utkast|kladder|kladde|luonnokset|luonnos|szkice|szkic"
+);
+const SENT = word(
+  "sent|enviados?|enviadas?|enviats?|gesendet\\p{L}*|envoyes?|inviat[ie]|verzonden|skickat\\p{L}*" +
+    "|sendte?|lahetetyt|wyslane"
+);
+
+const fold = (name: string): string => name.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+/** True for a Drafts mailbox, including Gmail's `[Gmail]/Drafts` and localized names. */
 export function isDraftMailbox(mailbox: string): boolean {
-  return /draft/i.test(mailbox);
+  return DRAFTS.test(fold(mailbox));
 }
 
-/** True for a Sent mailbox ("Sent Messages", "Sent", "[Gmail]/Sent Mail"). */
+/** True for a Sent mailbox ("Sent Messages", "Sent", "[Gmail]/Sent Mail", "Enviados"). */
 export function isSentMailbox(mailbox: string): boolean {
-  return /sent/i.test(mailbox);
+  return SENT.test(fold(mailbox));
 }
 
 /** The draft exists, is still in a Drafts mailbox and carries the subject being sent. */

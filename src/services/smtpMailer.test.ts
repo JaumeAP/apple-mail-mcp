@@ -582,6 +582,23 @@ describe("sendSerialViaSmtp", () => {
     expect(sleep).toHaveBeenCalledWith(250);
   });
 
+  it("sends from the From override when one is given, else from the configured identity", async () => {
+    const froms: Array<string | undefined> = [];
+    const send = vi.fn(async (opts: SmtpSendOptions) => {
+      froms.push(opts.from);
+      return { success: true, messageId: "<ok>" };
+    });
+    const sleep = vi.fn(async () => {});
+    const recipients = [{ email: "a@x.com", variables: {} }];
+    await sendSerialViaSmtp(recipients, "s", "b", testConfig, {
+      from: "team@example.com",
+      send: send as never,
+      sleep,
+    });
+    await sendSerialViaSmtp(recipients, "s", "b", testConfig, { send: send as never, sleep });
+    expect(froms).toEqual(["team@example.com", "alice@example.com"]);
+  });
+
   it("skips sleeping entirely when delayMs is 0", async () => {
     const sleep = vi.fn(async () => {});
     const send = vi.fn(async () => ({ success: true, messageId: "<ok>" }));

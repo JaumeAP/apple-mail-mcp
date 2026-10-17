@@ -148,6 +148,28 @@ export function buildAccountSettingsWriteScript(
     `;
 }
 
+/** One `key: value` line per setting, as `get-account-settings` and `set-account-settings` show them. */
+export function describeAccountSettings(settings: AccountSettings): string {
+  return Object.entries(settings)
+    .map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(", ") : String(value)}`)
+    .join("\n");
+}
+
+/**
+ * Splits the settings asked for into those Mail took and those it refused.
+ * `refused` holds `key: reason` entries (see buildAccountSettingsWriteScript).
+ */
+export function splitAppliedSettings(
+  changes: Record<string, unknown>,
+  refused: readonly string[]
+): { applied: string[]; refusedKeys: string[] } {
+  const refusedKeys = refused.map((entry) => entry.split(":")[0].trim());
+  const applied = Object.keys(changes).filter(
+    (key) => changes[key] !== undefined && !refusedKeys.includes(key)
+  );
+  return { applied, refusedKeys };
+}
+
 /** Validates `changes`: at least one known setting, boolean unless it is `fullName`. */
 export function validateAccountSettingsChanges(changes: Record<string, unknown>): void {
   const keys = Object.keys(changes).filter((k) => changes[k] !== undefined);

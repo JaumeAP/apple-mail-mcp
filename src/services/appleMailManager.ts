@@ -33,6 +33,7 @@ import { dirname, resolve, sep, join } from "path";
 import { homedir } from "os";
 import { randomUUID } from "crypto";
 import { executeAppleScript, isPermissionDenied } from "@/utils/applescript.js";
+import { MAIL_RUNNING_GUARD } from "@/utils/mailRecovery.js";
 import { flagColorName } from "@/services/imapClient.js";
 import { SETUP_HINT } from "@/utils/docsUrls.js";
 import { parseMimeAttachments, extractMimeAttachment, extractHtmlBody } from "@/utils/mimeParse.js";
@@ -393,6 +394,8 @@ const CONTENT_MARKER = "\x1dCONTENT\x1d"; // subject/plain-text boundary
 const MSGID_MARKER = "\x1dMSGID\x1d"; // subject/RFC-Message-ID boundary (get-message content)
 const DATES_MARKER = "\x1dDATES\x1d"; // RFC-Message-ID/dates boundary (get-message content, #224)
 const HTML_MARKER = "\x1dHTML\x1d"; // plain-text/source boundary
+/** Leads a found message's attachment list, so a message with none still reads as found. */
+const ATTACHMENTS_MARKER = "\x1dATT\x1d";
 const LOOKUP_ERROR_MARKER = "\x1dERR\x1d"; // GS-wrapped — by-id lookup failure; must not be a bare text prefix because the success payload of the same script leads with the sender-controlled subject
 const BATCH_FATAL = "\x1dFATAL\x1d"; // prefix for a whole-batch failure (e.g. bad destination)
 /**
@@ -687,6 +690,9 @@ export function describeMailboxOpError(op: "create" | "delete" | "rename", raw: 
 
 /** Env var to pin the default account (matched by account name or email). */
 export const DEFAULT_ACCOUNT_ENV = "APPLE_MAIL_MCP_DEFAULT_ACCOUNT";
+
+/** How long Mail's default sender, once read, is trusted. */
+const DEFAULT_SENDER_TTL_MS = 60_000;
 
 /**
  * Choose the account to use when a tool call omits `account`.
@@ -1303,7 +1309,7 @@ function buildAppLevelScriptIfRunning(command: string): string {
 /** Wrap a whole `tell application "Mail"` script in the not-launching running check. */
 function guardMailRunning(script: string): string {
   return `
-    if application "Mail" is running then
+    ${MAIL_RUNNING_GUARD}
       ${script}
     else
       return "${MAIL_NOT_RUNNING_MARKER}"
@@ -1570,6 +1576,8 @@ export class AppleMailManager {
    * Default account used when no account is specified.
    */
   private defaultAccount: string | null = null;
+  /** The sender Mail's own settings choose, read for at most DEFAULT_SENDER_TTL_MS. */
+  private defaultSender?: { address: string | undefined; until: number };
 
   /**
    * TTL cache for expensive AppleScript queries that rarely change.
@@ -2635,26 +2643,9 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
 
     const accounts = this.getCachedAccounts();
 
-    // Mail.app's default send account (inspect a throwaway outgoing message).
-    let defaultSendEmail: string | undefined;
-    const defaultResult = executeAppleScript(
-      buildAppLevelScript(`
-        set newMsg to make new outgoing message
-        set fromAddr to sender of newMsg
-        delete newMsg
-        return fromAddr
-      `)
-    );
-    if (defaultResult.success && defaultResult.output.trim()) {
-      // sender returns "Name <email>" — pull out the address
-      const senderOutput = defaultResult.output.trim();
-      const emailMatch = senderOutput.match(/<([^>]+)>/);
-      defaultSendEmail = emailMatch ? emailMatch[1] : senderOutput;
-    }
-
     const chosen = chooseDefaultAccount(accounts, {
       override: process.env[DEFAULT_ACCOUNT_ENV],
-      defaultSendEmail,
+      defaultSendEmail: this.mailDefaultSender(),
     });
     if (chosen) {
       this.defaultAccount = chosen;
@@ -2664,6 +2655,34 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     // No accounts at all — return something rather than throw; downstream
     // AppleScript will surface a clear "account not found".
     return accounts[0]?.name ?? "iCloud";
+  }
+
+  /**
+   * The address of Mail's default sender, the one its settings choose for a new
+   * message (Settings ▸ Composing ▸ "Send new messages from"), read from a
+   * throwaway outgoing message. Undefined when Mail does not answer. Kept for
+   * DEFAULT_SENDER_TTL_MS so a mail merge reads it once, not once per recipient.
+   */
+  private mailDefaultSender(): string | undefined {
+    const now = Date.now();
+    if (this.defaultSender && now < this.defaultSender.until) return this.defaultSender.address;
+    const result = executeAppleScript(
+      buildAppLevelScript(`
+        set newMsg to make new outgoing message
+        set fromAddr to sender of newMsg
+        delete newMsg
+        return fromAddr
+      `)
+    );
+    let address: string | undefined;
+    if (result.success && result.output.trim()) {
+      // sender returns "Name <email>" — pull out the address
+      const output = result.output.trim();
+      const emailMatch = output.match(/<([^>]+)>/);
+      address = emailMatch ? emailMatch[1] : output;
+    }
+    this.defaultSender = { address, until: now + DEFAULT_SENDER_TTL_MS };
+    return address;
   }
 
   /**
@@ -2696,18 +2715,37 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     return { accounts: name ?? "all", synchronized: result.output.trim() === "true" };
   }
 
-  /** Mail's own name for an account given by its name or its email address. */
+  /**
+   * Mail's own name for an account given by its name or its email address.
+   *
+   * Refuses an ambiguous account: Mail's AppleScript addresses an account only by
+   * name (`account "Name"`) and takes the first one with that name, so a name
+   * shared by two accounts, or an input that matches two, could change the wrong one.
+   */
   private resolveAccountName(account: string): string {
     const wanted = account.trim().toLowerCase();
-    const match = this.getCachedAccounts().find(
+    const accounts = this.getCachedAccounts();
+    const matches = accounts.filter(
       (a) => a.name.toLowerCase() === wanted || a.email.toLowerCase() === wanted
     );
-    if (!match) {
+    if (matches.length === 0) {
       throw new Error(
         `Account "${account}" does not match any Mail account. Use list-accounts for the names.`
       );
     }
-    return match.name;
+    const name = matches[0].name.toLowerCase();
+    const candidates = [
+      ...matches,
+      ...accounts.filter((a) => a.name.toLowerCase() === name && !matches.includes(a)),
+    ];
+    if (candidates.length > 1) {
+      const list = candidates.map((a) => `${a.name} <${a.email}>`).join(", ");
+      throw new Error(
+        `Account "${account}" is ambiguous (${list}). Mail can address an account only by name, ` +
+          "so rename one of them in Mail first."
+      );
+    }
+    return matches[0].name;
   }
 
   /**
@@ -2740,6 +2778,11 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
       buildAppLevelScript(buildAccountSettingsWriteScript(name, changes)),
       { timeoutMs: 30000, maxRetries: 1 }
     );
+    // Even a failed or partial write may have changed `enabled`: the account list
+    // and the default account chosen from it must be read again, not served for up
+    // to CACHE_TTL_MS, or a send would go by the old state.
+    this.invalidateCache();
+    this.defaultAccount = null;
     if (!result.success) {
       throw new Error(`Could not change the settings of "${name}": ${result.error}`);
     }
@@ -2752,22 +2795,20 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * The address Mail must send from, for an `account` that names an enabled
    * account by its name or its email address.
    *
-   * Throws when `account` is missing or matches no enabled account, instead of
-   * letting Mail fall back to its default sending account: `set sender to
-   * "<account name>"` is not a valid sender, so Mail silently used the default
-   * account and a message asked to leave from one account left from another
-   * (2026-10-10). Nothing is composed or sent when this throws.
+   * With no `account`, the address of Mail's default sender (see
+   * mailDefaultSender), read from its configuration; undefined when Mail does not
+   * answer, and the message is then composed without a `set sender`, which Mail
+   * fills with that same default. An `account` that is given wins, and one that
+   * matches no enabled account throws instead of falling back to the default:
+   * `set sender to "<account name>"` is not a valid sender, so Mail silently used
+   * the default account and a message asked to leave from one account left from
+   * another (2026-10-10). Nothing is composed or sent when this throws.
    */
-  private resolveSendingAddress(account: string | undefined): string {
+  private resolveSendingAddress(account: string | undefined): string | undefined {
     const wanted = account?.trim().toLowerCase();
+    if (!wanted) return this.mailDefaultSender();
     const enabled = this.getCachedAccounts().filter((a) => a.enabled);
     const known = enabled.map((a) => `${a.name} <${a.email}>`).join(", ") || "none found";
-    if (!wanted) {
-      throw new Error(
-        "No sending account given, so nothing was sent. Pass `account` with the name or the " +
-          `email address of the account to send from. Enabled accounts: ${known}.`
-      );
-    }
     const match = enabled.find(
       (a) => a.name.toLowerCase() === wanted || a.email.toLowerCase() === wanted
     );
@@ -4144,8 +4185,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     account?: string,
     attachments?: AttachmentInput[]
   ): boolean {
-    // First, before anything is composed or written: no valid sending account,
-    // no send.
+    // First, before anything is composed or written: a named account that is
+    // not a valid sending account means no send. No account: Mail's default sender.
     const sender = this.resolveSendingAddress(account);
     const safeSubject = escapeForAppleScript(subject);
     const safeBody = escapeForAppleScriptBody(body);
@@ -4187,16 +4228,17 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     recipientCommands: string,
     safeSubject: string,
     safeBody: string,
-    sender: string,
+    sender: string | undefined,
     attachmentCommands: string
   ): boolean {
     // `sender` is the account's email address, validated by
-    // resolveSendingAddress: Mail does not accept an account name here.
+    // resolveSendingAddress: Mail does not accept an account name here. Without
+    // one, no `set sender`: Mail uses its default sender.
     const sendCommand = `
         set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:true}
         tell newMessage
           ${recipientCommands}
-          set sender to "${escapeForAppleScript(sender)}"
+          ${sender ? `set sender to "${escapeForAppleScript(sender)}"` : ""}
           ${attachmentCommands}
         end tell
         send newMessage
@@ -4238,8 +4280,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     account?: string,
     delayMs: number = 500
   ): SerialEmailResult[] {
-    // The whole batch is refused up front when the sending account is missing
-    // or unknown, rather than failing recipient by recipient.
+    // The whole batch is refused up front when the named sending account is
+    // unknown, rather than failing recipient by recipient.
     this.resolveSendingAddress(account);
     const effectiveDelay = Math.min(Math.max(delayMs, 0), 10000);
     const results: SerialEmailResult[] = [];
@@ -4308,8 +4350,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     account?: string,
     attachments?: AttachmentInput[]
   ): boolean {
-    // Same rule as sendEmail: no valid account, no draft. Mail's own default
-    // account is never used silently (2026-10-11).
+    // Same rule as sendEmail: a named account that is not valid means no draft;
+    // with none named, the draft is Mail's default sender's.
     const sender = this.resolveSendingAddress(account);
     const safeSubject = escapeForAppleScript(subject);
     const safeBody = escapeForAppleScriptBody(body);
@@ -4350,14 +4392,14 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     recipientCommands: string,
     safeSubject: string,
     safeBody: string,
-    sender: string,
+    sender: string | undefined,
     attachmentCommands: string
   ): boolean {
     const draftCommand = `
         set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:false}
         tell newMessage
           ${recipientCommands}
-          set sender to "${escapeForAppleScript(sender)}"
+          ${sender ? `set sender to "${escapeForAppleScript(sender)}"` : ""}
           ${attachmentCommands}
         end tell
         return "draft created"
@@ -5541,8 +5583,8 @@ ${this.errorEmit("              ")}
     // return its attachments, so a different message with the same id answered
     // "no attachments" for a message that had them (2026-10-10: the copy of an
     // email with two PDFs listed none, while saving them by name worked). The
-    // mailbox the id was listed from is used when known; otherwise the scan
-    // goes on past a hit that has no attachments.
+    // mailbox the id was listed from is used when known; otherwise the id must
+    // belong to exactly one mailbox, or the call is refused (see resolveById).
     // Each property is read inside its own `try`. `MIME type of att` throws
     // "AppleEvent handler failed" for attachments Apple Mail itself composed
     // (2026-10-14: a sent PDF), and one unguarded throw used to discard the
@@ -5571,44 +5613,25 @@ ${this.errorEmit("              ")}
                     set attCount to attCount + 1
                   end if
                 end repeat`;
-    const loc = this.locationFor(id);
-    const lookup = loc
-      ? `
-        ${this.resolveMailboxFragment(loc.account, loc.mailbox)}
-        if _tmb is missing value then return ""
-        set matchingMsgs to (messages of _tmb whose id is ${Number(id)})
-        if (count of matchingMsgs) > 0 then
-          set msg to item 1 of matchingMsgs
-          ${attachmentLoop}
-          return outputText
-        end if
-        return ""`
-      : `
-        repeat with acct in accounts
-          repeat with mb in mailboxes of acct
-            try
-              set matchingMsgs to (messages of mb whose id is ${Number(id)})
-              if (count of matchingMsgs) > 0 then
-                set msg to item 1 of matchingMsgs
-                ${attachmentLoop}
-                if outputText is not "" then return outputText
-              end if
-            end try
-          end repeat
-        end repeat
-        return ""`;
-    const script = buildAppLevelScript(`
-      try
-        ${lookup}
-      on error errMsg
-        return ""
-      end try
-    `);
+    // The same bounded by-id resolution as the other reads (resolveById): the
+    // mailbox the id was listed from when known, else the guarded scan, which
+    // skips huge mailboxes, stops at its time budget and refuses an id that
+    // several mailboxes hold instead of answering for whichever came first. The
+    // marker keeps a message with no attachments from reading as a miss.
+    this.lastMessageLookupError = undefined;
+    const output = this.resolveById(
+      id,
+      `${attachmentLoop}
+                return "${ATTACHMENTS_MARKER}" & outputText`,
+      undefined
+    );
+    if (output === null) {
+      const refusal = this.consumeLastMessageLookupError();
+      if (refusal) throw new Error(refusal);
+    }
 
-    const result = executeAppleScript(script, { timeoutMs: 60000 });
-
-    if (result.success && result.output.trim()) {
-      const items = result.output.split(RECORD_SEP);
+    if (output?.startsWith(ATTACHMENTS_MARKER) && output.length > ATTACHMENTS_MARKER.length) {
+      const items = output.slice(ATTACHMENTS_MARKER.length).split(RECORD_SEP);
       const attachments: Attachment[] = [];
 
       for (const item of items) {

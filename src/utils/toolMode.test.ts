@@ -50,6 +50,14 @@ describe("APPLE_MAIL_MCP_MODE tool gate", () => {
     expect(resolveToolMode({}, undefined)).toBe("full");
   });
 
+  it("stops when the config file exists but cannot be read, unless the mode is already set", () => {
+    expect(() => resolveToolMode({}, undefined, "EACCES")).toThrow(/could not be read \(EACCES\)/);
+    expect(resolveToolMode({ APPLE_MAIL_MCP_MODE: "read_only" }, undefined, "EACCES")).toBe(
+      "read_only"
+    );
+    expect(resolveToolMode({}, undefined, undefined)).toBe("full");
+  });
+
   it("no_send drops every sending tool, rule enabling included, and keeps drafts and organizing", () => {
     for (const name of SENDING_TOOLS) expect(isToolAllowed(name, "no_send")).toBe(false);
     expect(isToolAllowed("enable-rule", "no_send")).toBe(false);

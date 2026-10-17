@@ -23,6 +23,21 @@ vi.mock("@/utils/applescript.js", async (importOriginal) => {
   };
 });
 
+// getAttachmentBase64 stages under the fixed save root /private/tmp, which a sandboxed
+// run cannot write. Stage under the (throwaway) home instead, which is also a save root.
+vi.mock("fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("fs")>();
+  const { homedir } = await import("os");
+  return {
+    ...actual,
+    mkdtempSync: ((prefix: string, ...rest: unknown[]) =>
+      (actual.mkdtempSync as (...args: unknown[]) => string)(
+        prefix.replace(/^\/private\/tmp\//, `${homedir()}/`),
+        ...rest
+      )) as typeof actual.mkdtempSync,
+  };
+});
+
 import { AppleMailManager } from "@/services/appleMailManager.js";
 
 const cleanup: string[] = [];

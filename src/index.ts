@@ -107,6 +107,7 @@ import {
 } from "@/tools/respond.js";
 import { unlistableStoreError } from "@/tools/mailboxListing.js";
 import { createCallStop, searchDeadlineMs, stoppedByDeadline } from "@/utils/callStop.js";
+import { describeAccountSettings, splitAppliedSettings } from "@/utils/accountSettings.js";
 import { hybridBatchCounts, batchResponse } from "@/tools/batchResults.js";
 import { runBatchDelete, runBatchMove } from "@/tools/batchMutations.js";
 import {
@@ -505,13 +506,18 @@ function registerTool<
 }
 
 /** Parsed once, after loadFileConfig() has filled the environment. */
-const toolMode = resolveToolMode(process.env, readConfigText());
+const toolMode = (() => {
+  const config = readConfigText();
+  return resolveToolMode(process.env, config.text, config.unreadable);
+})();
 
-function readConfigText(): string | undefined {
+/** The config file's text; a missing file is no config, any other failure is reported. */
+function readConfigText(): { text?: string; unreadable?: string } {
   try {
-    return readFileSync(fileConfigPath(), "utf8");
-  } catch {
-    return undefined;
+    return { text: readFileSync(fileConfigPath(), "utf8") };
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    return code === "ENOENT" ? {} : { unreadable: code ?? String(error) };
   }
 }
 
@@ -1496,13 +1502,22 @@ async function deleteDraftAfterSend(
  */
 async function cleanUpDraft(
   draftId: string,
-  sentCopy: boolean
+  hasSentCopy: () => boolean | Promise<boolean>
 ): Promise<{ draftDeleted: boolean; draftError?: string }> {
-  if (!sentCopy) {
-    return { draftDeleted: false, draftError: "No Sent copy found; the draft was kept." };
+  // The email has already left: nothing here may turn the send into an error, or
+  // the caller retries and the recipient gets it twice.
+  try {
+    if (!(await hasSentCopy())) {
+      return { draftDeleted: false, draftError: "No Sent copy found; the draft was kept." };
+    }
+    const d = await deleteDraftAfterSend(draftId);
+    return d.deleted ? { draftDeleted: true } : { draftDeleted: false, draftError: d.error };
+  } catch (error) {
+    return {
+      draftDeleted: false,
+      draftError: `Draft clean-up failed after the send: ${error instanceof Error ? error.message : String(error)}`,
+    };
   }
-  const d = await deleteDraftAfterSend(draftId);
-  return d.deleted ? { draftDeleted: true } : { draftDeleted: false, draftError: d.error };
 }
 
 // --- send-email ---
@@ -1521,11 +1536,7 @@ registerTool(
       account: z
         .string()
         .optional()
-        .describe(
-          "Account to send from: its name or its email address (see list-accounts). Required on " +
-            "the AppleScript transport; the send is refused when it is missing or matches no " +
-            "enabled account, rather than leaving from Mail's default account."
-        ),
+        .describe("Account to send from: its name or its email address (see list-accounts)."),
       attachments: ATTACHMENTS_SCHEMA,
       inReplyTo: IN_REPLY_TO_SCHEMA,
       references: REFERENCES_SCHEMA,
@@ -1633,7 +1644,7 @@ registerTool(
             : result.sentCopy === false
               ? ` (Sent-folder copy NOT filed: ${result.sentCopyError ?? "unknown error"})`
               : "";
-        const draft = draftId ? await cleanUpDraft(draftId, result.sentCopy === true) : {};
+        const draft = draftId ? await cleanUpDraft(draftId, () => result.sentCopy === true) : {};
         return successResponse(`Email sent via SMTP to ${to.join(", ")}${attachInfo}${copyNote}`, {
           ok: true,
           recipients: to,
@@ -1653,9 +1664,8 @@ registerTool(
       }
 
       const draft = draftId
-        ? await cleanUpDraft(
-            draftId,
-            await pollUntil(() =>
+        ? await cleanUpDraft(draftId, () =>
+            pollUntil(() =>
               hasSentCopy(
                 mailManager.searchMessages(
                   undefined,
@@ -1716,10 +1726,7 @@ registerTool(
       account: z
         .string()
         .optional()
-        .describe(
-          "Account to send from: its name or its email address (see list-accounts). The whole " +
-            "batch is refused when it is missing or matches no enabled account."
-        ),
+        .describe("Account to send from: its name or its email address (see list-accounts)."),
       delayMs: z
         .number()
         .min(0)
@@ -1748,8 +1755,12 @@ registerTool(
     // 2.5.0: prefer direct SMTP for mail-merge when configured (and not targeting
     // a bare Mail.app account label); Mail.app fallback when not configured.
     const smtpCfg = shouldUseSmtp(undefined, account) ? resolveSmtpOrFallback() : null;
+    // As in send-email: an `account` that is an address is the From override.
     const results = smtpCfg
-      ? await sendSerialViaSmtp(recipients, subject, body, smtpCfg, { delayMs })
+      ? await sendSerialViaSmtp(recipients, subject, body, smtpCfg, {
+          delayMs,
+          from: account?.includes("@") ? account : undefined,
+        })
       : mailManager.sendSerialEmail(recipients, subject, body, account, delayMs);
     const successCount = results.filter((r) => r.success).length;
     const failCount = results.length - successCount;
@@ -1796,8 +1807,7 @@ registerTool(
         .optional()
         .describe(
           "Account to create the draft from (name or email address of an enabled account). " +
-            "Required for a plain draft: without it nothing is created, so Mail's default " +
-            "sending account is never used silently. With inReplyTo/references this must name a " +
+            "With inReplyTo/references this must name a " +
             "configured IMAP account (label or login); when omitted, the IMAP account matching " +
             "the SMTP identity, else the only IMAP account, is used."
         ),
@@ -3214,10 +3224,10 @@ registerTool(
   },
   withErrorHandling(({ account }) => {
     const result = mailManager.getAccountSettings(account);
-    const lines = Object.entries(result.settings).map(
-      ([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(", ") : String(value)}`
+    return successResponse(
+      `Settings of "${result.account}":\n${describeAccountSettings(result.settings)}`,
+      result
     );
-    return successResponse(`Settings of "${result.account}":\n${lines.join("\n")}`, result);
   }, "Error reading account settings")
 );
 
@@ -3252,8 +3262,16 @@ registerTool(
   withErrorHandling(({ account, ...changes }) => {
     const result = mailManager.setAccountSettings(account, changes);
     if (result.refused.length > 0) {
+      // The rest of the change stands: say which settings, and show what Mail
+      // reads back, so the caller does not have to guess or re-read.
+      const { applied } = splitAppliedSettings(changes, result.refused);
       return errorResponse(
-        `Mail refused part of the change on "${result.account}": ${result.refused.join("; ")}`
+        `Mail refused part of the change on "${result.account}": ${result.refused.join("; ")}. ` +
+          (applied.length > 0
+            ? `Applied: ${applied.join(", ")}.`
+            : "None of the requested settings was applied.") +
+          `\nSettings now:\n${describeAccountSettings(result.settings)}`,
+        { ...result, applied }
       );
     }
     return successResponse(`Settings of "${result.account}" updated.`, result);
@@ -3630,9 +3648,9 @@ registerTool(
       body: z.string().optional().describe("Override body"),
       account: z
         .string()
+        .optional()
         .describe(
-          "Account to create the draft from (name or email address of an enabled account). " +
-            "Required: without it Mail would use its default sending account."
+          "Account to create the draft from (name or email address of an enabled account)."
         ),
     },
     outputSchema: {

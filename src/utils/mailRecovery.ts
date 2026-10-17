@@ -26,6 +26,13 @@ import { spawnSync } from "child_process";
 
 export const AUTO_RECOVER_ENV = "APPLE_MAIL_MCP_AUTO_RECOVER";
 
+/**
+ * The test a script runs first when it must not launch Mail (`application "Mail"
+ * is running` does not start the app). Such a script is not given a Mail that
+ * the recovery opens for it (see `ensureMailReady`).
+ */
+export const MAIL_RUNNING_GUARD = 'if application "Mail" is running then';
+
 /** Outer limit for the probe; the in-script `with timeout` fires 4 s earlier. */
 const PROBE_TIMEOUT_MS = 12_000;
 /** A probe that succeeded is trusted for this long. */
@@ -37,12 +44,16 @@ const READY_WAIT_MS = 45_000;
 /** How long Mail gets to quit or die before the next step. */
 const STOP_WAIT_MS = 6_000;
 const POLL_MS = 1_500;
+/** Gap before the second probe that confirms a stalled one. */
+const CONFIRM_WAIT_MS = 5_000;
 
 // Same refusals as PERMISSION_DENIED_PATTERN in applescript.ts, repeated here
 // because applescript.ts imports this module.
 const PERMISSION_DENIED = /\(-1743\)|not author(?:i[sz])ed|not permitted/i;
 
 let healthyUntil = 0;
+/** After a verdict that recovery cannot act on, calls go straight through until then. */
+let skipUntil = 0;
 let lastRestartAt = 0;
 let busy = false;
 
@@ -126,6 +137,7 @@ export function restartMail(): RecoveryReport {
   const steps: string[] = [];
   lastRestartAt = Date.now();
   healthyUntil = 0;
+  skipUntil = 0;
 
   const running = mailPids();
   if (running.length === 0) {
@@ -172,21 +184,41 @@ export function restartMail(): RecoveryReport {
 /**
  * Called before an AppleScript call. Returns nothing: it only makes the next
  * call more likely to find Mail answering, and logs what it did to stderr.
+ * `launch: false` leaves a closed Mail closed; a running one is still checked.
  */
-export function ensureMailReady(): void {
-  if (busy || !autoRecoverEnabled() || Date.now() < healthyUntil) return;
+export function ensureMailReady(options: { launch?: boolean } = {}): void {
+  if (busy || !autoRecoverEnabled() || Date.now() < Math.max(healthyUntil, skipUntil)) return;
   busy = true;
   try {
     if (mailPids().length === 0) {
+      // A call that checks "Mail is running" first exists to NOT launch Mail (a
+      // by-id read launched it with no accounts loaded and answered "not found"):
+      // leave Mail closed and let the call say so.
+      if (options.launch === false) return;
+      // A Mail that cannot be launched costs READY_WAIT_MS per call: one try per cooldown.
+      if (Date.now() - lastRestartAt < RESTART_COOLDOWN_MS) {
+        console.error(
+          "mail-recovery: Mail.app is not running; last open failed under 10 minutes ago, not retrying"
+        );
+        skipUntil = Date.now() + HEALTHY_TTL_MS;
+        return;
+      }
       console.error("mail-recovery: Mail.app is not running; opening it");
       const ready = openMail() && waitUntilAnswering(READY_WAIT_MS);
       console.error(
         `mail-recovery: ${ready ? "Mail is answering" : "Mail did not answer in time"}`
       );
       if (ready) healthyUntil = Date.now() + HEALTHY_TTL_MS;
+      else lastRestartAt = Date.now();
       return;
     }
-    const state = probe();
+    let state = probe();
+    if (state === "wedged") {
+      // A busy Mail drains an abandoned Apple Event for a while; only a probe that
+      // stalls twice means it is wedged and worth quitting (a restart loses drafts).
+      sleepMs(CONFIRM_WAIT_MS);
+      state = probe();
+    }
     if (state === "ok") {
       healthyUntil = Date.now() + HEALTHY_TTL_MS;
       return;
@@ -196,11 +228,14 @@ export function ensureMailReady(): void {
       console.error(
         "mail-recovery: Mail.app is not answering; last restart was under 10 minutes ago, not restarting"
       );
+      // Not cached as healthy, but do not pay the probes again on every call.
+      skipUntil = Date.now() + HEALTHY_TTL_MS;
       return;
     }
     console.error("mail-recovery: Mail.app is not answering; restarting it");
     const report = restartMail();
     console.error(`mail-recovery: ${report.steps.join("; ")}`);
+    if (!report.ok) skipUntil = Date.now() + HEALTHY_TTL_MS;
   } finally {
     busy = false;
   }

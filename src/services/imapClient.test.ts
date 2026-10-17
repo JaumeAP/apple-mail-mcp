@@ -1643,7 +1643,19 @@ describe("attachments via BODYSTRUCTURE (I1)", () => {
     // The other half: a signature logo is inline, named AND carries a
     // Content-ID because the HTML references it as cid:. That one is genuinely
     // not an attachment, and widening the rule must not start listing it.
-    const client: ImapClientLike = {
+    const r = await imapListAttachments(MID, {
+      config: cfg,
+      connect: async () => relatedClient('<img src="cid:IMAGE001.png@01dc.4f2">'),
+    });
+    expect(r.success).toBe(true);
+    expect(r.attachments).toEqual([]);
+  });
+
+  // Apple Mail also gives the files it attaches a Content-ID (a draft, a related
+  // multipart), so the Content-ID alone cannot say "embedded": the HTML must
+  // point at it. Same structure as above, but nothing in the HTML refers to it.
+  function relatedClient(html: string | Error): ImapClientLike {
+    return {
       ...makeClient([], {}),
       fetchOne: async () => ({
         uid: 9,
@@ -1663,10 +1675,34 @@ describe("attachments via BODYSTRUCTURE (I1)", () => {
           ],
         },
       }),
+      download: async () => {
+        if (html instanceof Error) throw html;
+        return {
+          meta: {},
+          content: (async function* () {
+            yield Buffer.from(html);
+          })(),
+        };
+      },
     };
-    const r = await imapListAttachments(MID, { config: cfg, connect: async () => client });
+  }
+
+  it("lists an inline named part with a Content-ID that the HTML never references", async () => {
+    const r = await imapListAttachments(MID, {
+      config: cfg,
+      connect: async () => relatedClient("<p>See the attached picture</p>"),
+    });
     expect(r.success).toBe(true);
-    expect(r.attachments).toEqual([]);
+    expect(r.attachments?.map((a) => a.name)).toEqual(["image001.png"]);
+  });
+
+  it("lists the ambiguous part when the HTML cannot be read, never hiding a file", async () => {
+    const r = await imapListAttachments(MID, {
+      config: cfg,
+      connect: async () => relatedClient(new Error("connection reset")),
+    });
+    expect(r.success).toBe(true);
+    expect(r.attachments?.map((a) => a.name)).toEqual(["image001.png"]);
   });
 
   it("reports hasAttachments from BODYSTRUCTURE rather than assuming false", async () => {

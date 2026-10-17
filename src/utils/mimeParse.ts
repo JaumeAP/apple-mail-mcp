@@ -48,21 +48,136 @@ function getHeader(headers: string, name: string): string | null {
   return match[1].replace(/\r?\n[ \t]+/g, " ").trim();
 }
 
+/** Decodes bytes in `charset`, UTF-8 when the label is unknown. */
+function decodeBytes(bytes: Buffer, charset: string): string {
+  try {
+    return new TextDecoder(charset.trim().toLowerCase()).decode(bytes);
+  } catch {
+    return bytes.toString("utf8");
+  }
+}
+
+/** The parameters of a header value (after the first `;`), quotes removed, names lower-cased. */
+function parseParams(value: string): Map<string, string> {
+  const pieces: string[] = [];
+  let current = "";
+  let quoted = false;
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
+    if (ch === "\\" && quoted && i + 1 < value.length) {
+      current += ch + value[++i];
+      continue;
+    }
+    if (ch === '"') quoted = !quoted;
+    if (ch === ";" && !quoted) {
+      pieces.push(current);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  pieces.push(current);
+  const params = new Map<string, string>();
+  for (const piece of pieces.slice(1)) {
+    const eq = piece.indexOf("=");
+    if (eq < 0) continue;
+    let val = piece.slice(eq + 1).trim();
+    if (val.length >= 2 && val.startsWith('"') && val.endsWith('"')) {
+      val = val.slice(1, -1).replace(/\\(.)/g, "$1");
+    }
+    params.set(piece.slice(0, eq).trim().toLowerCase(), val);
+  }
+  return params;
+}
+
+/** RFC 2047 encoded words (`=?UTF-8?B?...?=`, `=?ISO-8859-1?Q?...?=`) decoded in place. */
+function decodeEncodedWords(text: string): string {
+  return text
+    .replace(/(\?=)\s+(?==\?)/g, "$1") // whitespace between adjacent encoded words is dropped
+    .replace(
+      /=\?([^?\s]+)\?([bq])\?([^?]*)\?=/gi,
+      (_all, charset: string, kind: string, body: string) => {
+        const bytes =
+          kind.toLowerCase() === "b"
+            ? Buffer.from(body, "base64")
+            : Buffer.from(
+                body
+                  .replace(/_/g, " ")
+                  .replace(/=([0-9a-f]{2})/gi, (_m, hex: string) =>
+                    String.fromCharCode(parseInt(hex, 16))
+                  ),
+                "latin1"
+              );
+        return decodeBytes(bytes, charset.split("*")[0]);
+      }
+    );
+}
+
 /**
- * Extract filename from Content-Disposition or Content-Type headers.
+ * RFC 2231 value: `charset'lang'%XX...` in the first segment, percent-encoded
+ * when the segment is flagged, plain otherwise, joined in order.
+ */
+function decodeExtendedValue(segments: Array<{ value: string; encoded: boolean }>): string {
+  let charset = "utf-8";
+  const chunks: Buffer[] = [];
+  segments.forEach((segment, index) => {
+    let value = segment.value;
+    if (!segment.encoded) {
+      chunks.push(Buffer.from(value, "utf8"));
+      return;
+    }
+    if (index === 0) {
+      const head = value.match(/^([^']*)'[^']*'([\s\S]*)$/);
+      if (head) {
+        charset = head[1] || charset;
+        value = head[2];
+      }
+    }
+    chunks.push(
+      Buffer.from(
+        value.replace(/%([0-9a-f]{2})/gi, (_m, hex: string) =>
+          String.fromCharCode(parseInt(hex, 16))
+        ),
+        "latin1"
+      )
+    );
+  });
+  return decodeBytes(Buffer.concat(chunks), charset);
+}
+
+/** A parameter's value: RFC 2231 (`name*=`, `name*0*=`), else plain with RFC 2047 words decoded. */
+function paramValue(params: Map<string, string>, name: string): string | null {
+  const extended = params.get(`${name}*`);
+  if (extended !== undefined) return decodeExtendedValue([{ value: extended, encoded: true }]);
+  const segments: Array<{ value: string; encoded: boolean }> = [];
+  for (let i = 0; ; i++) {
+    const encoded = params.get(`${name}*${i}*`);
+    const plain = params.get(`${name}*${i}`);
+    if (encoded !== undefined) segments.push({ value: encoded, encoded: true });
+    else if (plain !== undefined) segments.push({ value: plain, encoded: false });
+    else break;
+  }
+  if (segments.length > 0) return decodeExtendedValue(segments);
+  const value = params.get(name);
+  return value === undefined ? null : decodeEncodedWords(value);
+}
+
+/**
+ * Extract filename from Content-Disposition or Content-Type headers, decoding
+ * RFC 2231 parameters (`filename*=UTF-8''caf%C3%A9.pdf`) and RFC 2047 words.
  */
 function extractFilename(headers: string): string | null {
   // Try Content-Disposition filename first
   const dispHeader = getHeader(headers, "Content-Disposition");
   if (dispHeader) {
-    const fnMatch = dispHeader.match(/filename="?([^";\r\n]+)"?/i);
-    if (fnMatch) return fnMatch[1].trim();
+    const filename = paramValue(parseParams(dispHeader), "filename")?.trim();
+    if (filename) return filename;
   }
   // Fall back to Content-Type name parameter
   const ctHeader = getHeader(headers, "Content-Type");
   if (ctHeader) {
-    const nameMatch = ctHeader.match(/name="?([^";\r\n]+)"?/i);
-    if (nameMatch) return nameMatch[1].trim();
+    const name = paramValue(parseParams(ctHeader), "name")?.trim();
+    if (name) return name;
   }
   return null;
 }

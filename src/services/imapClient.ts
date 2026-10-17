@@ -3380,17 +3380,26 @@ export function decodedSizeWithoutBody(a: {
  * excluded by the old rule. Three were invoice PDFs (inline, no Content-ID) and
  * one was a signature logo (inline, `image/png`, **with** a Content-ID).
  *
- * So the discriminator is the **Content-ID**, not the disposition: a part the
- * HTML body references as `cid:` is embedded content, and anything else with a
- * filename is a file. An explicit `attachment` disposition always wins — real
- * mail carries `attachment` parts that also have a Content-ID, and letting the
- * Content-ID veto those would trade one silent omission for another.
+ * So the discriminator is whether the HTML body references the part as `cid:`,
+ * not the disposition: such a part is embedded content, and anything else with a
+ * filename is a file. A Content-ID alone does not tell them apart (Apple Mail
+ * adds one to the files it attaches in a draft or a related multipart), and
+ * BODYSTRUCTURE does not carry the HTML, so `embedded` holds the Content-IDs
+ * `embeddedContentIds` found referenced; left empty, an inline named part is a
+ * file. An explicit `attachment` disposition always wins — real mail carries
+ * `attachment` parts that also have a Content-ID, and letting the Content-ID
+ * veto those would trade one silent omission for another.
  */
-function collectAttachments(node: ImapBodyStructure, out: AttachmentPart[] = []): AttachmentPart[] {
+function collectAttachments(
+  node: ImapBodyStructure,
+  out: AttachmentPart[] = [],
+  embedded: ReadonlySet<string> = new Set()
+): AttachmentPart[] {
   if (!node) return out;
   const filename = node.dispositionParameters?.filename || node.parameters?.name;
   const disposition = node.disposition?.toLowerCase();
-  const isEmbeddedByReference = disposition === "inline" && !!node.id;
+  const cid = contentIdOf(node);
+  const isEmbeddedByReference = disposition === "inline" && !!cid && embedded.has(cid);
   const isAttachment =
     !!node.part && (disposition === "attachment" || (!!filename && !isEmbeddedByReference));
   if (isAttachment) {
@@ -3403,8 +3412,54 @@ function collectAttachments(node: ImapBodyStructure, out: AttachmentPart[] = [])
       declaredSize: dispositionSize(node.dispositionParameters),
     });
   }
-  for (const child of node.childNodes ?? []) collectAttachments(child, out);
+  for (const child of node.childNodes ?? []) collectAttachments(child, out, embedded);
   return out;
+}
+
+/** The part's Content-ID without angle brackets, lower-cased, or undefined. */
+function contentIdOf(node: ImapBodyStructure): string | undefined {
+  return node.id?.replace(/^<+/, "").replace(/>+$/, "").trim().toLowerCase() || undefined;
+}
+
+/** Upper bound for one HTML part read to look for `cid:` references. */
+const MAX_HTML_SCAN_BYTES = 2 * 1024 * 1024;
+
+/**
+ * The Content-IDs of the inline named parts that the message's HTML body points
+ * at with `cid:`. Only inline parts with both a filename and a Content-ID are
+ * ambiguous, so the HTML is downloaded only when there is one. A download that
+ * fails or is too large leaves the set empty: the part is then listed as a file,
+ * which costs a logo in the list and never hides a file.
+ */
+async function embeddedContentIds(
+  client: ImapClientLike,
+  uid: number,
+  root: ImapBodyStructure
+): Promise<Set<string>> {
+  const candidates: string[] = [];
+  const htmlParts: string[] = [];
+  const walk = (node: ImapBodyStructure): void => {
+    const cid = contentIdOf(node);
+    const named = node.dispositionParameters?.filename || node.parameters?.name;
+    if (node.disposition?.toLowerCase() === "inline" && cid && named) candidates.push(cid);
+    if (node.part && node.type?.toLowerCase() === "text/html") htmlParts.push(node.part);
+    for (const child of node.childNodes ?? []) walk(child);
+  };
+  walk(root);
+  const found = new Set<string>();
+  if (candidates.length === 0 || htmlParts.length === 0) return found;
+  try {
+    for (const part of htmlParts) {
+      const dl = await client.download(String(uid), part, { uid: true });
+      const html = (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES))
+        .toString("latin1")
+        .toLowerCase();
+      for (const cid of candidates) if (html.includes(`cid:${cid}`)) found.add(cid);
+    }
+  } catch {
+    return new Set();
+  }
+  return found;
 }
 
 /**
@@ -3512,7 +3567,11 @@ export async function imapListAttachments(
     if (!msg || !msg.bodyStructure) {
       return { success: false, error: `IMAP message UID ${ref.uid} not found in "${ref.path}".` };
     }
-    const atts = collectAttachments(msg.bodyStructure);
+    const atts = collectAttachments(
+      msg.bodyStructure,
+      [],
+      await embeddedContentIds(client, ref.uid, msg.bodyStructure)
+    );
     const sizes = await resolveDecodedSizes(client, ref.uid, atts);
     const attachments = atts.map((a, i): ImapAttachmentInfo => {
       const info: ImapAttachmentInfo = {
@@ -3547,7 +3606,11 @@ export async function imapFetchAttachment(
     if (!msg || !msg.bodyStructure) {
       return { success: false, error: `IMAP message UID ${ref.uid} not found in "${ref.path}".` };
     }
-    const atts = collectAttachments(msg.bodyStructure);
+    const atts = collectAttachments(
+      msg.bodyStructure,
+      [],
+      await embeddedContentIds(client, ref.uid, msg.bodyStructure)
+    );
     const match = atts.find((a) => a.filename === attachmentName);
     if (!match) {
       const names = atts.map((a) => a.filename).join(", ") || "none";

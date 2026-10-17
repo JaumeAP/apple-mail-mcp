@@ -13,6 +13,12 @@ interface World {
   opened: number;
   killed: number[];
   quits: number;
+  /** Probes that stall before Mail answers again (a busy, not wedged, Mail). */
+  wedgedProbes: number;
+  /** Whether `open -g -a Mail` brings up a Mail that answers. */
+  openWorks: boolean;
+  /** Probes run, to see whether a call paid for one. */
+  probes: number;
 }
 
 let world: World;
@@ -23,9 +29,10 @@ vi.mock("child_process", () => ({
       return { status: world.pids.length ? 0 : 1, stdout: world.pids.join("\n") };
     }
     if (cmd === "open") {
+      world.opened += 1;
+      if (!world.openWorks) return { status: 1 };
       world.pids = [999];
       world.probe = "ok";
-      world.opened += 1;
       return { status: 0 };
     }
     if (cmd === "osascript") {
@@ -34,6 +41,11 @@ vi.mock("child_process", () => ({
         world.quits += 1;
         if (world.quitWorks) world.pids = [];
         return { status: 0 };
+      }
+      world.probes += 1;
+      if (world.wedgedProbes > 0) {
+        world.wedgedProbes -= 1;
+        return { status: null, signal: "SIGKILL", stderr: "" };
       }
       if (world.probe === "ok") return { status: 0, stdout: "4" };
       if (world.probe === "wedged") return { status: null, signal: "SIGKILL", stderr: "" };
@@ -53,7 +65,17 @@ async function load() {
 describe("mailRecovery", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    world = { pids: [], probe: "ok", quitWorks: true, opened: 0, killed: [], quits: 0 };
+    world = {
+      pids: [],
+      probe: "ok",
+      quitWorks: true,
+      opened: 0,
+      killed: [],
+      quits: 0,
+      wedgedProbes: 0,
+      openWorks: true,
+      probes: 0,
+    };
     vi.spyOn(process, "kill").mockImplementation(((pid: number) => {
       world.killed.push(pid);
       world.pids = world.pids.filter((p) => p !== pid);
@@ -93,6 +115,20 @@ describe("mailRecovery", () => {
     expect(world.quits).toBe(0);
   });
 
+  it("does not open a closed Mail for a call that must not launch it", async () => {
+    const { ensureMailReady } = await load();
+    ensureMailReady({ launch: false });
+    expect(world.opened).toBe(0);
+  });
+
+  it("still restarts a wedged Mail for a call that must not launch it", async () => {
+    world.pids = [123];
+    world.probe = "wedged";
+    const { ensureMailReady } = await load();
+    ensureMailReady({ launch: false });
+    expect(world.opened).toBe(1);
+  });
+
   it("leaves a healthy Mail alone and trusts the probe for a while", async () => {
     world.pids = [123];
     const { ensureMailReady } = await load();
@@ -114,6 +150,16 @@ describe("mailRecovery", () => {
     expect(world.opened).toBe(1);
   });
 
+  it("does not restart a busy Mail that answers the confirming probe", async () => {
+    world.pids = [123];
+    world.wedgedProbes = 1;
+    const { ensureMailReady } = await load();
+    ensureMailReady();
+    expect(world.quits).toBe(0);
+    expect(world.killed).toEqual([]);
+    expect(world.opened).toBe(0);
+  });
+
   it("does not force-kill when Mail quits normally", async () => {
     world.pids = [123];
     world.probe = "wedged";
@@ -131,6 +177,29 @@ describe("mailRecovery", () => {
     expect(world.opened).toBe(1);
     world.probe = "wedged";
     markMailUnhealthy();
+    ensureMailReady();
+    expect(world.opened).toBe(1);
+  });
+
+  it("does not pay the probes again on every call once a restart was refused", async () => {
+    world.pids = [123];
+    world.probe = "wedged";
+    const { ensureMailReady, markMailUnhealthy } = await load();
+    ensureMailReady(); // restarts
+    world.probe = "wedged";
+    markMailUnhealthy();
+    ensureMailReady(); // cooldown: refused, probes paid once
+    const probes = world.probes;
+    markMailUnhealthy();
+    ensureMailReady(); // inside the same window: straight through
+    expect(world.probes).toBe(probes);
+    expect(world.opened).toBe(1);
+  });
+
+  it("tries to launch a Mail that will not start once per cooldown", async () => {
+    world.openWorks = false;
+    const { ensureMailReady } = await load();
+    ensureMailReady();
     ensureMailReady();
     expect(world.opened).toBe(1);
   });

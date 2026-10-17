@@ -64910,7 +64910,8 @@ function resolveAttachmentReadPath(filePath, env = process.env) {
     throw new Error(`Attachment file not found: "${filePath}"`);
   }
   const explicit = explicitRoots(env);
-  if (isProtectedPath(canonical, [...explicit, ...canonicalTmpdir()])) {
+  const exempt = [...explicit, ...canonicalTmpdir()];
+  if (isProtectedPath(canonical, exempt) || isProtectedPath(resolve3(filePath), exempt)) {
     throw new Error(
       `Attachment path is in a protected location: "${filePath}". Hidden files, credential locations and user Library folders (except iCloud Drive and CloudStorage) cannot be sent as attachments unless ${ATTACHMENT_READ_ROOTS_ENV} names a root for them.`
     );
@@ -65153,7 +65154,7 @@ async function sendSerialViaSmtp(recipients, subject, body, config2, opts = {}) 
           to: [r.email],
           subject: applyPlaceholders(subject, r.variables),
           body: applyPlaceholders(body, r.variables),
-          from: config2.from
+          from: opts.from ?? config2.from
         },
         config2
       );
@@ -65219,16 +65220,112 @@ function getHeader(headers, name2) {
   if (!match) return null;
   return match[1].replace(/\r?\n[ \t]+/g, " ").trim();
 }
+function decodeBytes(bytes, charset) {
+  try {
+    return new TextDecoder(charset.trim().toLowerCase()).decode(bytes);
+  } catch {
+    return bytes.toString("utf8");
+  }
+}
+function parseParams(value) {
+  const pieces = [];
+  let current = "";
+  let quoted = false;
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
+    if (ch === "\\" && quoted && i + 1 < value.length) {
+      current += ch + value[++i];
+      continue;
+    }
+    if (ch === '"') quoted = !quoted;
+    if (ch === ";" && !quoted) {
+      pieces.push(current);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  pieces.push(current);
+  const params = /* @__PURE__ */ new Map();
+  for (const piece of pieces.slice(1)) {
+    const eq = piece.indexOf("=");
+    if (eq < 0) continue;
+    let val = piece.slice(eq + 1).trim();
+    if (val.length >= 2 && val.startsWith('"') && val.endsWith('"')) {
+      val = val.slice(1, -1).replace(/\\(.)/g, "$1");
+    }
+    params.set(piece.slice(0, eq).trim().toLowerCase(), val);
+  }
+  return params;
+}
+function decodeEncodedWords(text) {
+  return text.replace(/(\?=)\s+(?==\?)/g, "$1").replace(
+    /=\?([^?\s]+)\?([bq])\?([^?]*)\?=/gi,
+    (_all, charset, kind, body) => {
+      const bytes = kind.toLowerCase() === "b" ? Buffer.from(body, "base64") : Buffer.from(
+        body.replace(/_/g, " ").replace(
+          /=([0-9a-f]{2})/gi,
+          (_m, hex) => String.fromCharCode(parseInt(hex, 16))
+        ),
+        "latin1"
+      );
+      return decodeBytes(bytes, charset.split("*")[0]);
+    }
+  );
+}
+function decodeExtendedValue(segments) {
+  let charset = "utf-8";
+  const chunks = [];
+  segments.forEach((segment, index) => {
+    let value = segment.value;
+    if (!segment.encoded) {
+      chunks.push(Buffer.from(value, "utf8"));
+      return;
+    }
+    if (index === 0) {
+      const head = value.match(/^([^']*)'[^']*'([\s\S]*)$/);
+      if (head) {
+        charset = head[1] || charset;
+        value = head[2];
+      }
+    }
+    chunks.push(
+      Buffer.from(
+        value.replace(
+          /%([0-9a-f]{2})/gi,
+          (_m, hex) => String.fromCharCode(parseInt(hex, 16))
+        ),
+        "latin1"
+      )
+    );
+  });
+  return decodeBytes(Buffer.concat(chunks), charset);
+}
+function paramValue(params, name2) {
+  const extended = params.get(`${name2}*`);
+  if (extended !== void 0) return decodeExtendedValue([{ value: extended, encoded: true }]);
+  const segments = [];
+  for (let i = 0; ; i++) {
+    const encoded = params.get(`${name2}*${i}*`);
+    const plain = params.get(`${name2}*${i}`);
+    if (encoded !== void 0) segments.push({ value: encoded, encoded: true });
+    else if (plain !== void 0) segments.push({ value: plain, encoded: false });
+    else break;
+  }
+  if (segments.length > 0) return decodeExtendedValue(segments);
+  const value = params.get(name2);
+  return value === void 0 ? null : decodeEncodedWords(value);
+}
 function extractFilename(headers) {
   const dispHeader = getHeader(headers, "Content-Disposition");
   if (dispHeader) {
-    const fnMatch = dispHeader.match(/filename="?([^";\r\n]+)"?/i);
-    if (fnMatch) return fnMatch[1].trim();
+    const filename = paramValue(parseParams(dispHeader), "filename")?.trim();
+    if (filename) return filename;
   }
   const ctHeader = getHeader(headers, "Content-Type");
   if (ctHeader) {
-    const nameMatch = ctHeader.match(/name="?([^";\r\n]+)"?/i);
-    if (nameMatch) return nameMatch[1].trim();
+    const name2 = paramValue(parseParams(ctHeader), "name")?.trim();
+    if (name2) return name2;
   }
   return null;
 }
@@ -65458,7 +65555,7 @@ var init_mimeParse = __esm({
 });
 
 // src/utils/headers.ts
-function decodeEncodedWords(value) {
+function decodeEncodedWords2(value) {
   if (!value.includes("=?")) return value;
   const joined = value.replace(/(\?=)\s+(=\?)/g, "$1$2");
   return joined.replace(
@@ -65548,7 +65645,7 @@ function parseHeaderBlock(input) {
   const all = (name2) => headers.filter((h) => h.name.toLowerCase() === name2.toLowerCase()).map((h) => h.value);
   const decoded = (name2) => {
     const v = first(name2);
-    return v === void 0 ? void 0 : decodeEncodedWords(v);
+    return v === void 0 ? void 0 : decodeEncodedWords2(v);
   };
   const dateHeader = first("Date") || void 0;
   let date3;
@@ -67435,11 +67532,12 @@ function decodedSizeWithoutBody(a) {
   if (a.encoding === "quoted-printable") return { size: a.encodedSize, exact: false };
   return { size: a.encodedSize, exact: true };
 }
-function collectAttachments(node, out = []) {
+function collectAttachments(node, out = [], embedded = /* @__PURE__ */ new Set()) {
   if (!node) return out;
   const filename = node.dispositionParameters?.filename || node.parameters?.name;
   const disposition = node.disposition?.toLowerCase();
-  const isEmbeddedByReference = disposition === "inline" && !!node.id;
+  const cid = contentIdOf(node);
+  const isEmbeddedByReference = disposition === "inline" && !!cid && embedded.has(cid);
   const isAttachment = !!node.part && (disposition === "attachment" || !!filename && !isEmbeddedByReference);
   if (isAttachment) {
     out.push({
@@ -67451,8 +67549,35 @@ function collectAttachments(node, out = []) {
       declaredSize: dispositionSize(node.dispositionParameters)
     });
   }
-  for (const child of node.childNodes ?? []) collectAttachments(child, out);
+  for (const child of node.childNodes ?? []) collectAttachments(child, out, embedded);
   return out;
+}
+function contentIdOf(node) {
+  return node.id?.replace(/^<+/, "").replace(/>+$/, "").trim().toLowerCase() || void 0;
+}
+async function embeddedContentIds(client, uid, root) {
+  const candidates = [];
+  const htmlParts = [];
+  const walk = (node) => {
+    const cid = contentIdOf(node);
+    const named = node.dispositionParameters?.filename || node.parameters?.name;
+    if (node.disposition?.toLowerCase() === "inline" && cid && named) candidates.push(cid);
+    if (node.part && node.type?.toLowerCase() === "text/html") htmlParts.push(node.part);
+    for (const child of node.childNodes ?? []) walk(child);
+  };
+  walk(root);
+  const found = /* @__PURE__ */ new Set();
+  if (candidates.length === 0 || htmlParts.length === 0) return found;
+  try {
+    for (const part of htmlParts) {
+      const dl = await client.download(String(uid), part, { uid: true });
+      const html = (await streamToBuffer(dl.content, MAX_HTML_SCAN_BYTES)).toString("latin1").toLowerCase();
+      for (const cid of candidates) if (html.includes(`cid:${cid}`)) found.add(cid);
+    }
+  } catch {
+    return /* @__PURE__ */ new Set();
+  }
+  return found;
 }
 function bodyStructureHasAttachments(node) {
   return !!node && collectAttachments(node).length > 0;
@@ -67523,7 +67648,11 @@ async function imapListAttachments(id, deps = {}) {
     if (!msg || !msg.bodyStructure) {
       return { success: false, error: `IMAP message UID ${ref.uid} not found in "${ref.path}".` };
     }
-    const atts = collectAttachments(msg.bodyStructure);
+    const atts = collectAttachments(
+      msg.bodyStructure,
+      [],
+      await embeddedContentIds(client, ref.uid, msg.bodyStructure)
+    );
     const sizes = await resolveDecodedSizes(client, ref.uid, atts);
     const attachments = atts.map((a, i) => {
       const info = {
@@ -67546,7 +67675,11 @@ async function imapFetchAttachment(id, attachmentName, deps = {}) {
     if (!msg || !msg.bodyStructure) {
       return { success: false, error: `IMAP message UID ${ref.uid} not found in "${ref.path}".` };
     }
-    const atts = collectAttachments(msg.bodyStructure);
+    const atts = collectAttachments(
+      msg.bodyStructure,
+      [],
+      await embeddedContentIds(client, ref.uid, msg.bodyStructure)
+    );
     const match = atts.find((a) => a.filename === attachmentName);
     if (!match) {
       const names = atts.map((a) => a.filename).join(", ") || "none";
@@ -67747,7 +67880,7 @@ async function imapThread(id, deps = {}, limit = 50) {
     true
   );
 }
-var import_imapflow, IMAP_ENV, defaultConnect, SPECIAL_USE_ALIASES, NOT_DELETED, LARGE_MAILBOX_MESSAGES, FIRST_SEARCH_WINDOW, MAX_WINDOW, MAX_UNSCOPED_SEARCH_DEPTH, ROW_QUERY, ROW_QUERY_NO_STRUCTURE, ROW_QUERY_HEADERS_ONLY, DELETED_MARGIN, poolConnect, pools, connecting, MAX_COMPOSE_SOURCE_BYTES, MAX_RFC822_INLINE_BYTES, MAX_RFC822_FILE_BYTES, HEADER_WINDOW_BYTES, MAIL_FLAG_BITS, FLAG_COLOR_NAMES, imapMarkRead, imapMarkUnread, FALLBACK_TRASH_PATH, BASE64_TAIL_WINDOW, QP_EXACT_MAX_BYTES, imapBatchMarkRead, imapBatchMarkUnread, imapBatchFlag, imapBatchUnflag, imapBatchDelete;
+var import_imapflow, IMAP_ENV, defaultConnect, SPECIAL_USE_ALIASES, NOT_DELETED, LARGE_MAILBOX_MESSAGES, FIRST_SEARCH_WINDOW, MAX_WINDOW, MAX_UNSCOPED_SEARCH_DEPTH, ROW_QUERY, ROW_QUERY_NO_STRUCTURE, ROW_QUERY_HEADERS_ONLY, DELETED_MARGIN, poolConnect, pools, connecting, MAX_COMPOSE_SOURCE_BYTES, MAX_RFC822_INLINE_BYTES, MAX_RFC822_FILE_BYTES, HEADER_WINDOW_BYTES, MAIL_FLAG_BITS, FLAG_COLOR_NAMES, imapMarkRead, imapMarkUnread, FALLBACK_TRASH_PATH, BASE64_TAIL_WINDOW, QP_EXACT_MAX_BYTES, MAX_HTML_SCAN_BYTES, imapBatchMarkRead, imapBatchMarkUnread, imapBatchFlag, imapBatchUnflag, imapBatchDelete;
 var init_imapClient = __esm({
   "src/services/imapClient.ts"() {
     "use strict";
@@ -67864,6 +67997,7 @@ var init_imapClient = __esm({
     FALLBACK_TRASH_PATH = "Trash";
     BASE64_TAIL_WINDOW = 1024;
     QP_EXACT_MAX_BYTES = 64 * 1024;
+    MAX_HTML_SCAN_BYTES = 2 * 1024 * 1024;
     imapBatchMarkRead = (ids, deps = {}) => imapBatch(ids, deps, async (c, uids) => {
       assertMutated(
         await c.messageFlagsAdd(uids, ["\\Seen"], { uid: true }),
@@ -82481,14 +82615,17 @@ import { execFileSync, spawnSync as spawnSync2 } from "child_process";
 // src/utils/mailRecovery.ts
 import { spawnSync } from "child_process";
 var AUTO_RECOVER_ENV = "APPLE_MAIL_MCP_AUTO_RECOVER";
+var MAIL_RUNNING_GUARD = 'if application "Mail" is running then';
 var PROBE_TIMEOUT_MS = 12e3;
 var HEALTHY_TTL_MS = 3e4;
 var RESTART_COOLDOWN_MS = 10 * 6e4;
 var READY_WAIT_MS = 45e3;
 var STOP_WAIT_MS = 6e3;
 var POLL_MS = 1500;
+var CONFIRM_WAIT_MS = 5e3;
 var PERMISSION_DENIED = /\(-1743\)|not author(?:i[sz])ed|not permitted/i;
 var healthyUntil = 0;
+var skipUntil = 0;
 var lastRestartAt = 0;
 var busy = false;
 function autoRecoverEnabled() {
@@ -82546,6 +82683,7 @@ function restartMail() {
   const steps = [];
   lastRestartAt = Date.now();
   healthyUntil = 0;
+  skipUntil = 0;
   const running = mailPids();
   if (running.length === 0) {
     steps.push("Mail was not running");
@@ -82583,20 +82721,33 @@ function restartMail() {
   if (ready) healthyUntil = Date.now() + HEALTHY_TTL_MS;
   return { ok: ready, steps };
 }
-function ensureMailReady() {
-  if (busy || !autoRecoverEnabled() || Date.now() < healthyUntil) return;
+function ensureMailReady(options = {}) {
+  if (busy || !autoRecoverEnabled() || Date.now() < Math.max(healthyUntil, skipUntil)) return;
   busy = true;
   try {
     if (mailPids().length === 0) {
+      if (options.launch === false) return;
+      if (Date.now() - lastRestartAt < RESTART_COOLDOWN_MS) {
+        console.error(
+          "mail-recovery: Mail.app is not running; last open failed under 10 minutes ago, not retrying"
+        );
+        skipUntil = Date.now() + HEALTHY_TTL_MS;
+        return;
+      }
       console.error("mail-recovery: Mail.app is not running; opening it");
       const ready = openMail() && waitUntilAnswering(READY_WAIT_MS);
       console.error(
         `mail-recovery: ${ready ? "Mail is answering" : "Mail did not answer in time"}`
       );
       if (ready) healthyUntil = Date.now() + HEALTHY_TTL_MS;
+      else lastRestartAt = Date.now();
       return;
     }
-    const state = probe();
+    let state = probe();
+    if (state === "wedged") {
+      sleepMs(CONFIRM_WAIT_MS);
+      state = probe();
+    }
     if (state === "ok") {
       healthyUntil = Date.now() + HEALTHY_TTL_MS;
       return;
@@ -82606,11 +82757,13 @@ function ensureMailReady() {
       console.error(
         "mail-recovery: Mail.app is not answering; last restart was under 10 minutes ago, not restarting"
       );
+      skipUntil = Date.now() + HEALTHY_TTL_MS;
       return;
     }
     console.error("mail-recovery: Mail.app is not answering; restarting it");
     const report = restartMail();
     console.error(`mail-recovery: ${report.steps.join("; ")}`);
+    if (!report.ok) skipUntil = Date.now() + HEALTHY_TTL_MS;
   } finally {
     busy = false;
   }
@@ -82782,7 +82935,7 @@ function executeAppleScript(script, options = {}) {
     timeout: timeoutMs,
     maxRetries
   });
-  ensureMailReady();
+  ensureMailReady({ launch: !script.includes(MAIL_RUNNING_GUARD) });
   let lastError = null;
   const startTime = Date.now();
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -83215,6 +83368,16 @@ function buildAccountSettingsWriteScript(accountName, changes) {
       return fails as text
     `;
 }
+function describeAccountSettings(settings) {
+  return Object.entries(settings).map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(", ") : String(value)}`).join("\n");
+}
+function splitAppliedSettings(changes, refused) {
+  const refusedKeys = refused.map((entry) => entry.split(":")[0].trim());
+  const applied = Object.keys(changes).filter(
+    (key) => changes[key] !== void 0 && !refusedKeys.includes(key)
+  );
+  return { applied, refusedKeys };
+}
 function validateAccountSettingsChanges(changes) {
   const keys = Object.keys(changes).filter((k) => changes[k] !== void 0);
   if (keys.length === 0) {
@@ -83451,6 +83614,7 @@ var CONTENT_MARKER = "CONTENT";
 var MSGID_MARKER = "MSGID";
 var DATES_MARKER = "DATES";
 var HTML_MARKER = "HTML";
+var ATTACHMENTS_MARKER = "ATT";
 var LOOKUP_ERROR_MARKER = "ERR";
 var BATCH_FATAL = "FATAL";
 var RECON_TAG = "RECON";
@@ -83562,6 +83726,7 @@ function describeMailboxOpError(op, raw) {
   return trimmed || `Failed to ${op} mailbox`;
 }
 var DEFAULT_ACCOUNT_ENV = "APPLE_MAIL_MCP_DEFAULT_ACCOUNT";
+var DEFAULT_SENDER_TTL_MS = 6e4;
 function chooseDefaultAccount(accounts, opts = {}) {
   const norm = (s) => s.trim().toLowerCase();
   const override = opts.override?.trim();
@@ -83825,7 +83990,7 @@ function buildAppLevelScriptIfRunning(command) {
 }
 function guardMailRunning(script) {
   return `
-    if application "Mail" is running then
+    ${MAIL_RUNNING_GUARD}
       ${script}
     else
       return "${MAIL_NOT_RUNNING_MARKER}"
@@ -83955,6 +84120,8 @@ var AppleMailManager = class {
    * Default account used when no account is specified.
    */
   defaultAccount = null;
+  /** The sender Mail's own settings choose, read for at most DEFAULT_SENDER_TTL_MS. */
+  defaultSender;
   /**
    * TTL cache for expensive AppleScript queries that rarely change.
    * Caches account list and per-account mailbox names to avoid
@@ -84822,8 +84989,26 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     if (account) return account;
     if (this.defaultAccount) return this.defaultAccount;
     const accounts = this.getCachedAccounts();
-    let defaultSendEmail;
-    const defaultResult = executeAppleScript(
+    const chosen = chooseDefaultAccount(accounts, {
+      override: process.env[DEFAULT_ACCOUNT_ENV],
+      defaultSendEmail: this.mailDefaultSender()
+    });
+    if (chosen) {
+      this.defaultAccount = chosen;
+      return chosen;
+    }
+    return accounts[0]?.name ?? "iCloud";
+  }
+  /**
+   * The address of Mail's default sender, the one its settings choose for a new
+   * message (Settings ▸ Composing ▸ "Send new messages from"), read from a
+   * throwaway outgoing message. Undefined when Mail does not answer. Kept for
+   * DEFAULT_SENDER_TTL_MS so a mail merge reads it once, not once per recipient.
+   */
+  mailDefaultSender() {
+    const now = Date.now();
+    if (this.defaultSender && now < this.defaultSender.until) return this.defaultSender.address;
+    const result = executeAppleScript(
       buildAppLevelScript(`
         set newMsg to make new outgoing message
         set fromAddr to sender of newMsg
@@ -84831,20 +85016,14 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
         return fromAddr
       `)
     );
-    if (defaultResult.success && defaultResult.output.trim()) {
-      const senderOutput = defaultResult.output.trim();
-      const emailMatch = senderOutput.match(/<([^>]+)>/);
-      defaultSendEmail = emailMatch ? emailMatch[1] : senderOutput;
+    let address;
+    if (result.success && result.output.trim()) {
+      const output = result.output.trim();
+      const emailMatch = output.match(/<([^>]+)>/);
+      address = emailMatch ? emailMatch[1] : output;
     }
-    const chosen = chooseDefaultAccount(accounts, {
-      override: process.env[DEFAULT_ACCOUNT_ENV],
-      defaultSendEmail
-    });
-    if (chosen) {
-      this.defaultAccount = chosen;
-      return chosen;
-    }
-    return accounts[0]?.name ?? "iCloud";
+    this.defaultSender = { address, until: now + DEFAULT_SENDER_TTL_MS };
+    return address;
   }
   /**
    * Asks Mail to fetch new mail now (`check for new mail`), for one account or
@@ -84873,18 +85052,36 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     }
     return { accounts: name2 ?? "all", synchronized: result.output.trim() === "true" };
   }
-  /** Mail's own name for an account given by its name or its email address. */
+  /**
+   * Mail's own name for an account given by its name or its email address.
+   *
+   * Refuses an ambiguous account: Mail's AppleScript addresses an account only by
+   * name (`account "Name"`) and takes the first one with that name, so a name
+   * shared by two accounts, or an input that matches two, could change the wrong one.
+   */
   resolveAccountName(account) {
     const wanted = account.trim().toLowerCase();
-    const match = this.getCachedAccounts().find(
+    const accounts = this.getCachedAccounts();
+    const matches = accounts.filter(
       (a) => a.name.toLowerCase() === wanted || a.email.toLowerCase() === wanted
     );
-    if (!match) {
+    if (matches.length === 0) {
       throw new Error(
         `Account "${account}" does not match any Mail account. Use list-accounts for the names.`
       );
     }
-    return match.name;
+    const name2 = matches[0].name.toLowerCase();
+    const candidates = [
+      ...matches,
+      ...accounts.filter((a) => a.name.toLowerCase() === name2 && !matches.includes(a))
+    ];
+    if (candidates.length > 1) {
+      const list = candidates.map((a) => `${a.name} <${a.email}>`).join(", ");
+      throw new Error(
+        `Account "${account}" is ambiguous (${list}). Mail can address an account only by name, so rename one of them in Mail first.`
+      );
+    }
+    return matches[0].name;
   }
   /**
    * The settings of one account: identity, fetch and trash behaviour, the
@@ -84912,6 +85109,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
       buildAppLevelScript(buildAccountSettingsWriteScript(name2, changes)),
       { timeoutMs: 3e4, maxRetries: 1 }
     );
+    this.invalidateCache();
+    this.defaultAccount = null;
     if (!result.success) {
       throw new Error(`Could not change the settings of "${name2}": ${result.error}`);
     }
@@ -84923,21 +85122,20 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * The address Mail must send from, for an `account` that names an enabled
    * account by its name or its email address.
    *
-   * Throws when `account` is missing or matches no enabled account, instead of
-   * letting Mail fall back to its default sending account: `set sender to
-   * "<account name>"` is not a valid sender, so Mail silently used the default
-   * account and a message asked to leave from one account left from another
-   * (2026-10-10). Nothing is composed or sent when this throws.
+   * With no `account`, the address of Mail's default sender (see
+   * mailDefaultSender), read from its configuration; undefined when Mail does not
+   * answer, and the message is then composed without a `set sender`, which Mail
+   * fills with that same default. An `account` that is given wins, and one that
+   * matches no enabled account throws instead of falling back to the default:
+   * `set sender to "<account name>"` is not a valid sender, so Mail silently used
+   * the default account and a message asked to leave from one account left from
+   * another (2026-10-10). Nothing is composed or sent when this throws.
    */
   resolveSendingAddress(account) {
     const wanted = account?.trim().toLowerCase();
+    if (!wanted) return this.mailDefaultSender();
     const enabled = this.getCachedAccounts().filter((a) => a.enabled);
     const known = enabled.map((a) => `${a.name} <${a.email}>`).join(", ") || "none found";
-    if (!wanted) {
-      throw new Error(
-        `No sending account given, so nothing was sent. Pass \`account\` with the name or the email address of the account to send from. Enabled accounts: ${known}.`
-      );
-    }
     const match = enabled.find(
       (a) => a.name.toLowerCase() === wanted || a.email.toLowerCase() === wanted
     );
@@ -86058,7 +86256,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
         set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:true}
         tell newMessage
           ${recipientCommands}
-          set sender to "${escapeForAppleScript(sender)}"
+          ${sender ? `set sender to "${escapeForAppleScript(sender)}"` : ""}
           ${attachmentCommands}
         end tell
         send newMessage
@@ -86177,7 +86375,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
         set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:false}
         tell newMessage
           ${recipientCommands}
-          set sender to "${escapeForAppleScript(sender)}"
+          ${sender ? `set sender to "${escapeForAppleScript(sender)}"` : ""}
           ${attachmentCommands}
         end tell
         return "draft created"
@@ -87078,40 +87276,19 @@ ${this.errorEmit("              ")}
                     set attCount to attCount + 1
                   end if
                 end repeat`;
-    const loc = this.locationFor(id);
-    const lookup = loc ? `
-        ${this.resolveMailboxFragment(loc.account, loc.mailbox)}
-        if _tmb is missing value then return ""
-        set matchingMsgs to (messages of _tmb whose id is ${Number(id)})
-        if (count of matchingMsgs) > 0 then
-          set msg to item 1 of matchingMsgs
-          ${attachmentLoop}
-          return outputText
-        end if
-        return ""` : `
-        repeat with acct in accounts
-          repeat with mb in mailboxes of acct
-            try
-              set matchingMsgs to (messages of mb whose id is ${Number(id)})
-              if (count of matchingMsgs) > 0 then
-                set msg to item 1 of matchingMsgs
-                ${attachmentLoop}
-                if outputText is not "" then return outputText
-              end if
-            end try
-          end repeat
-        end repeat
-        return ""`;
-    const script = buildAppLevelScript(`
-      try
-        ${lookup}
-      on error errMsg
-        return ""
-      end try
-    `);
-    const result = executeAppleScript(script, { timeoutMs: 6e4 });
-    if (result.success && result.output.trim()) {
-      const items = result.output.split(RECORD_SEP2);
+    this.lastMessageLookupError = void 0;
+    const output = this.resolveById(
+      id,
+      `${attachmentLoop}
+                return "${ATTACHMENTS_MARKER}" & outputText`,
+      void 0
+    );
+    if (output === null) {
+      const refusal = this.consumeLastMessageLookupError();
+      if (refusal) throw new Error(refusal);
+    }
+    if (output?.startsWith(ATTACHMENTS_MARKER) && output.length > ATTACHMENTS_MARKER.length) {
+      const items = output.slice(ATTACHMENTS_MARKER.length).split(RECORD_SEP2);
       const attachments = [];
       for (const item of items) {
         const parts = item.split(FIELD_SEP2);
@@ -89284,18 +89461,27 @@ async function routeMessage(id, opts) {
 var SEND_CLOCK_SLACK_MS = 6e4;
 var SENT_COPY_WAIT_MS = 3e4;
 var SENT_COPY_POLL_MS = 2e3;
-async function pollUntil(check2, timeoutMs = SENT_COPY_WAIT_MS, intervalMs = SENT_COPY_POLL_MS, sleep2 = (ms) => new Promise((r) => setTimeout(r, ms))) {
-  for (let waited = 0; ; waited += intervalMs) {
+async function pollUntil(check2, timeoutMs = SENT_COPY_WAIT_MS, intervalMs = SENT_COPY_POLL_MS, sleep2 = (ms) => new Promise((r) => setTimeout(r, ms)), now = Date.now) {
+  const deadline = now() + timeoutMs;
+  for (; ; ) {
     if (check2()) return true;
-    if (waited + intervalMs > timeoutMs) return false;
+    if (now() + intervalMs > deadline) return false;
     await sleep2(intervalMs);
   }
 }
+var word = (alternatives) => new RegExp(`(?<!\\p{L})(?:${alternatives})(?!\\p{L})`, "u");
+var DRAFTS = word(
+  "drafts?|borradore?s?|esborranys?|entwurfe?|brouillons?|bozze|bozza|rascunhos?|concepten|concept|utkast|kladder|kladde|luonnokset|luonnos|szkice|szkic"
+);
+var SENT = word(
+  "sent|enviados?|enviadas?|enviats?|gesendet\\p{L}*|envoyes?|inviat[ie]|verzonden|skickat\\p{L}*|sendte?|lahetetyt|wyslane"
+);
+var fold = (name2) => name2.normalize("NFD").replace(new RegExp("\\p{M}", "gu"), "").toLowerCase();
 function isDraftMailbox(mailbox) {
-  return /draft/i.test(mailbox);
+  return DRAFTS.test(fold(mailbox));
 }
 function isSentMailbox(mailbox) {
-  return /sent/i.test(mailbox);
+  return SENT.test(fold(mailbox));
 }
 function isDraftForSend(draft, subject) {
   return draft !== null && draft.subject === subject && isDraftMailbox(draft.mailbox);
@@ -89869,8 +90055,13 @@ function parseToolMode(raw) {
   if (TOOL_MODES.includes(value)) return value;
   throw new Error(`${TOOL_MODE_ENV} must be one of ${TOOL_MODES.join(", ")}; got "${raw}".`);
 }
-function resolveToolMode(env, configText) {
+function resolveToolMode(env, configText, unreadable) {
   const raw = env[TOOL_MODE_ENV];
+  if ((raw === void 0 || raw === "") && unreadable !== void 0) {
+    throw new Error(
+      `The config file could not be read (${unreadable}), so ${TOOL_MODE_ENV} may be set in it and not applied. Fix the file's permissions; the server will not fall back to "full".`
+    );
+  }
   if ((raw === void 0 || raw === "") && configText?.includes(TOOL_MODE_ENV)) {
     throw new Error(
       `The config file mentions ${TOOL_MODE_ENV} but it was not applied (invalid JSON, a nested block, or a non-string value). Fix the file; the server will not fall back to "full".`
@@ -90061,12 +90252,16 @@ function registerTool(name2, config2, cb) {
   if (!isToolAllowed(name2, toolMode)) tool.disable();
   return tool;
 }
-var toolMode = resolveToolMode(process.env, readConfigText());
+var toolMode = (() => {
+  const config2 = readConfigText();
+  return resolveToolMode(process.env, config2.text, config2.unreadable);
+})();
 function readConfigText() {
   try {
-    return readFileSync5(fileConfigPath(), "utf8");
-  } catch {
-    return void 0;
+    return { text: readFileSync5(fileConfigPath(), "utf8") };
+  } catch (error3) {
+    const code = error3.code;
+    return code === "ENOENT" ? {} : { unreadable: code ?? String(error3) };
   }
 }
 var mailManager = new AppleMailManager();
@@ -90749,12 +90944,19 @@ async function deleteDraftAfterSend(draftId) {
   const r = decodeImapId(draftId) ? await imapDeleteMessageById(draftId) : mailManager.deleteMessage(draftId);
   return r.success ? { deleted: true } : { deleted: false, error: r.error };
 }
-async function cleanUpDraft(draftId, sentCopy) {
-  if (!sentCopy) {
-    return { draftDeleted: false, draftError: "No Sent copy found; the draft was kept." };
+async function cleanUpDraft(draftId, hasSentCopy2) {
+  try {
+    if (!await hasSentCopy2()) {
+      return { draftDeleted: false, draftError: "No Sent copy found; the draft was kept." };
+    }
+    const d = await deleteDraftAfterSend(draftId);
+    return d.deleted ? { draftDeleted: true } : { draftDeleted: false, draftError: d.error };
+  } catch (error3) {
+    return {
+      draftDeleted: false,
+      draftError: `Draft clean-up failed after the send: ${error3 instanceof Error ? error3.message : String(error3)}`
+    };
   }
-  const d = await deleteDraftAfterSend(draftId);
-  return d.deleted ? { draftDeleted: true } : { draftDeleted: false, draftError: d.error };
 }
 registerTool(
   "send-email",
@@ -90766,9 +90968,7 @@ registerTool(
       body: external_exports.string().min(1, "Body is required"),
       cc: external_exports.array(external_exports.string()).optional().describe("CC recipients"),
       bcc: external_exports.array(external_exports.string()).optional().describe("BCC recipients"),
-      account: external_exports.string().optional().describe(
-        "Account to send from: its name or its email address (see list-accounts). Required on the AppleScript transport; the send is refused when it is missing or matches no enabled account, rather than leaving from Mail's default account."
-      ),
+      account: external_exports.string().optional().describe("Account to send from: its name or its email address (see list-accounts)."),
       attachments: ATTACHMENTS_SCHEMA,
       inReplyTo: IN_REPLY_TO_SCHEMA,
       references: REFERENCES_SCHEMA,
@@ -90836,7 +91036,7 @@ registerTool(
           return errorResponse(result.error ?? "Failed to send email via SMTP.");
         }
         const copyNote = result.sentCopy === true ? " (Sent-folder copy filed)" : result.sentCopy === false ? ` (Sent-folder copy NOT filed: ${result.sentCopyError ?? "unknown error"})` : "";
-        const draft2 = draftId ? await cleanUpDraft(draftId, result.sentCopy === true) : {};
+        const draft2 = draftId ? await cleanUpDraft(draftId, () => result.sentCopy === true) : {};
         return successResponse(`Email sent via SMTP to ${to.join(", ")}${attachInfo}${copyNote}`, {
           ok: true,
           recipients: to,
@@ -90854,7 +91054,7 @@ registerTool(
       }
       const draft = draftId ? await cleanUpDraft(
         draftId,
-        await pollUntil(
+        () => pollUntil(
           () => hasSentCopy(
             mailManager.searchMessages(
               void 0,
@@ -90895,9 +91095,7 @@ registerTool(
       ).min(1, "At least one recipient is required").max(100, "Cannot send to more than 100 recipients in a single batch").describe("List of recipients with personalization variables (max 100)"),
       subject: external_exports.string().min(1, "Subject is required").describe("Subject line \u2014 use {{Key}} for placeholders"),
       body: external_exports.string().min(1, "Body is required").describe("Email body \u2014 use {{Key}} for placeholders"),
-      account: external_exports.string().optional().describe(
-        "Account to send from: its name or its email address (see list-accounts). The whole batch is refused when it is missing or matches no enabled account."
-      ),
+      account: external_exports.string().optional().describe("Account to send from: its name or its email address (see list-accounts)."),
       delayMs: external_exports.number().min(0).max(1e4).optional().describe("Delay between sends in ms (default: 500, max: 10000)")
     },
     outputSchema: {
@@ -90915,7 +91113,10 @@ registerTool(
   },
   withErrorHandling(async ({ recipients, subject, body, account, delayMs }) => {
     const smtpCfg = shouldUseSmtp(void 0, account) ? resolveSmtpOrFallback() : null;
-    const results = smtpCfg ? await sendSerialViaSmtp(recipients, subject, body, smtpCfg, { delayMs }) : mailManager.sendSerialEmail(recipients, subject, body, account, delayMs);
+    const results = smtpCfg ? await sendSerialViaSmtp(recipients, subject, body, smtpCfg, {
+      delayMs,
+      from: account?.includes("@") ? account : void 0
+    }) : mailManager.sendSerialEmail(recipients, subject, body, account, delayMs);
     const successCount = results.filter((r) => r.success).length;
     const failCount = results.length - successCount;
     const details = results.map((r) => `  - ${r.email}: ${r.success ? "sent" : `FAILED (${r.error})`}`).join("\n");
@@ -90951,7 +91152,7 @@ registerTool(
       cc: external_exports.array(external_exports.string()).optional().describe("CC recipients"),
       bcc: external_exports.array(external_exports.string()).optional().describe("BCC recipients"),
       account: external_exports.string().optional().describe(
-        "Account to create the draft from (name or email address of an enabled account). Required for a plain draft: without it nothing is created, so Mail's default sending account is never used silently. With inReplyTo/references this must name a configured IMAP account (label or login); when omitted, the IMAP account matching the SMTP identity, else the only IMAP account, is used."
+        "Account to create the draft from (name or email address of an enabled account). With inReplyTo/references this must name a configured IMAP account (label or login); when omitted, the IMAP account matching the SMTP identity, else the only IMAP account, is used."
       ),
       attachments: ATTACHMENTS_SCHEMA,
       inReplyTo: IN_REPLY_TO_SCHEMA,
@@ -92044,11 +92245,11 @@ registerTool(
   },
   withErrorHandling(({ account }) => {
     const result = mailManager.getAccountSettings(account);
-    const lines = Object.entries(result.settings).map(
-      ([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(", ") : String(value)}`
+    return successResponse(
+      `Settings of "${result.account}":
+${describeAccountSettings(result.settings)}`,
+      result
     );
-    return successResponse(`Settings of "${result.account}":
-${lines.join("\n")}`, result);
   }, "Error reading account settings")
 );
 registerTool(
@@ -92079,8 +92280,12 @@ registerTool(
   withErrorHandling(({ account, ...changes }) => {
     const result = mailManager.setAccountSettings(account, changes);
     if (result.refused.length > 0) {
+      const { applied } = splitAppliedSettings(changes, result.refused);
       return errorResponse(
-        `Mail refused part of the change on "${result.account}": ${result.refused.join("; ")}`
+        `Mail refused part of the change on "${result.account}": ${result.refused.join("; ")}. ` + (applied.length > 0 ? `Applied: ${applied.join(", ")}.` : "None of the requested settings was applied.") + `
+Settings now:
+${describeAccountSettings(result.settings)}`,
+        { ...result, applied }
       );
     }
     return successResponse(`Settings of "${result.account}" updated.`, result);
@@ -92364,8 +92569,8 @@ registerTool(
       cc: external_exports.array(external_exports.string()).optional().describe("Override CC recipients"),
       subject: external_exports.string().optional().describe("Override subject"),
       body: external_exports.string().optional().describe("Override body"),
-      account: external_exports.string().describe(
-        "Account to create the draft from (name or email address of an enabled account). Required: without it Mail would use its default sending account."
+      account: external_exports.string().optional().describe(
+        "Account to create the draft from (name or email address of an enabled account)."
       )
     },
     outputSchema: {

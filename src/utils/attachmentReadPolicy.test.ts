@@ -131,8 +131,8 @@ describe("outbound attachment read policy", () => {
   });
 
   it("keeps a dot-named attachment's name only in a staging directory", () => {
-    // Same root as getAttachmentBase64's staging dir (tmpdir() is not a save root).
-    const dir = mkdtempSync("/private/tmp/amcp-stage-");
+    // Any visible save root will do; the home keeps the test inside a sandboxed run.
+    const dir = mkdtempSync(join(homedir(), "amcp-stage-"));
     try {
       expect(() => resolveAttachmentSaveTarget(dir, ".env")).toThrow(/outside allowed/);
       expect(resolveAttachmentSaveTarget(dir, ".env", { stagingDirectory: true }).savedPath).toBe(
@@ -152,6 +152,38 @@ describe("outbound attachment read policy", () => {
     expect(resolveAttachmentReadPath(file, { [ATTACHMENT_READ_ROOTS_ENV]: "/etc" })).toBe(
       realpathSync(file)
     );
+  });
+
+  it("refuses a hidden path that is a symlink to an ordinary file", () => {
+    // A dotfile manager's `~/.npmrc` -> `~/dotfiles/npmrc`: the target looks
+    // ordinary, the path asked for names a credential location.
+    const dir = mkdtempSync(join(homedir(), "amcp-dotfiles-"));
+    const hidden = join(homedir(), `.amcp-npmrc-${process.pid}`);
+    try {
+      const target = join(dir, "npmrc");
+      writeFileSync(target, "//registry.npmjs.org/:_authToken=secret");
+      symlinkSync(target, hidden);
+      expect(() => resolveAttachmentReadPath(hidden)).toThrow(/protected location/);
+      expect(resolveAttachmentReadPath(target)).toBe(realpathSync(target));
+    } finally {
+      rmSync(hidden, { force: true });
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a file reached through a hidden folder that is a symlink to a visible one", () => {
+    const dir = mkdtempSync(join(homedir(), "amcp-dotfiles-"));
+    const hidden = join(homedir(), `.amcp-dir-${process.pid}`);
+    try {
+      writeFileSync(join(dir, "notes.txt"), "notes");
+      symlinkSync(dir, hidden, "dir");
+      expect(() => resolveAttachmentReadPath(join(hidden, "notes.txt"))).toThrow(
+        /protected location/
+      );
+    } finally {
+      rmSync(hidden, { force: true });
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("rejects a symlink that resolves outside an allowed temporary root", () => {

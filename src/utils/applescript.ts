@@ -9,7 +9,7 @@
 
 import { execFileSync, spawnSync } from "child_process";
 import type { AppleScriptResult, AppleScriptOptions } from "@/types.js";
-import { ensureMailReady, markMailUnhealthy } from "@/utils/mailRecovery.js";
+import { ensureMailReady, markMailUnhealthy, MAIL_RUNNING_GUARD } from "@/utils/mailRecovery.js";
 
 /**
  * Default execution timeout for AppleScript commands in milliseconds.
@@ -434,7 +434,7 @@ export function executeAppleScript(
 
   // Open Mail if it is closed, restart it if it is wedged (utils/mailRecovery).
   // Before the call, never after a failure: a failed send is not retried.
-  ensureMailReady();
+  ensureMailReady({ launch: !script.includes(MAIL_RUNNING_GUARD) });
 
   let lastError: AppleScriptResult | null = null;
   const startTime = Date.now();

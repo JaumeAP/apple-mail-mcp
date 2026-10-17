@@ -13,6 +13,13 @@ import {
   PERMISSION_DENIED_MESSAGE,
   PERMISSION_DENIED_PATTERN,
 } from "./applescript.js";
+import { ensureMailReady, MAIL_RUNNING_GUARD } from "./mailRecovery.js";
+
+vi.mock("./mailRecovery.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./mailRecovery.js")>()),
+  ensureMailReady: vi.fn(),
+  markMailUnhealthy: vi.fn(),
+}));
 
 // Mock the child_process module
 vi.mock("child_process", () => ({
@@ -30,6 +37,22 @@ const optionsArg = (call = 0) => mockExecFileSync.mock.calls[call][2];
 describe("executeAppleScript", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe("Mail recovery", () => {
+    it("lets the recovery open Mail for an ordinary script", () => {
+      mockExecFileSync.mockReturnValue("ok");
+      executeAppleScript('tell application "Mail" to count accounts');
+      expect(ensureMailReady).toHaveBeenCalledWith({ launch: true });
+    });
+
+    it("does not let it open Mail for a script that checks Mail is running first", () => {
+      mockExecFileSync.mockReturnValue("ok");
+      executeAppleScript(
+        `${MAIL_RUNNING_GUARD}\n tell application "Mail" to count accounts\n end if`
+      );
+      expect(ensureMailReady).toHaveBeenCalledWith({ launch: false });
+    });
   });
 
   describe("successful execution", () => {

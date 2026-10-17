@@ -18,7 +18,9 @@ import {
   WRITABLE_ACCOUNT_SETTINGS,
   buildAccountSettingsReadScript,
   buildAccountSettingsWriteScript,
+  describeAccountSettings,
   parseAccountSettings,
+  splitAppliedSettings,
   validateAccountSettingsChanges,
 } from "@/utils/accountSettings.js";
 
@@ -82,6 +84,23 @@ describe("account settings scripts", () => {
   });
 });
 
+describe("describeAccountSettings and splitAppliedSettings", () => {
+  it("shows one line per setting, lists joined", () => {
+    expect(describeAccountSettings({ enabled: true, emailAddresses: ["a@x", "b@x"] })).toBe(
+      "  enabled: true\n  emailAddresses: a@x, b@x"
+    );
+  });
+
+  it("tells which requested settings Mail took and which it refused", () => {
+    const changes = { enabled: false, emptyTrashOnQuit: true, fullName: undefined };
+    expect(splitAppliedSettings(changes, ["emptyTrashOnQuit: not supported"])).toEqual({
+      applied: ["enabled"],
+      refusedKeys: ["emptyTrashOnQuit"],
+    });
+    expect(splitAppliedSettings({ enabled: true }, ["enabled: no"]).applied).toEqual([]);
+  });
+});
+
 describe("validateAccountSettingsChanges", () => {
   it("refuses an empty change", () => {
     expect(() => validateAccountSettingsChanges({})).toThrow(/Nothing to change/);
@@ -108,6 +127,36 @@ describe("AppleMailManager account settings", () => {
     expect(() => manager().getAccountSettings("Nope")).toThrow(/does not match any Mail account/);
     expect(() => manager().setAccountSettings("Nope", { enabled: true })).toThrow(/does not match/);
     expect(h.scripts).toHaveLength(0);
+  });
+
+  it("refuses a name that two accounts share, by name or by address", () => {
+    const mgr = new AppleMailManager();
+    vi.spyOn(
+      mgr as unknown as { getCachedAccounts: () => unknown },
+      "getCachedAccounts"
+    ).mockReturnValue([
+      { name: "Work", email: "a@work.example", enabled: true },
+      { name: "Work", email: "b@work.example", enabled: true },
+    ]);
+    for (const wanted of ["Work", "b@work.example"]) {
+      expect(() => mgr.getAccountSettings(wanted)).toThrow(/ambiguous/);
+      expect(() => mgr.setAccountSettings(wanted, { enabled: true })).toThrow(/ambiguous/);
+    }
+    expect(h.scripts).toHaveLength(0);
+  });
+
+  it("reads the account list again after a change, so a send sees the new state", () => {
+    const mgr = new AppleMailManager();
+    const accounts = [{ name: "Nopuedomas", email: "jap@nopuedomas.example", enabled: true }];
+    const fetch = vi
+      .spyOn(mgr as unknown as { fetchAccounts: () => unknown }, "fetchAccounts")
+      .mockReturnValue(accounts);
+    h.output = `enabled${FS}true`;
+    mgr.getAccountSettings("Nopuedomas");
+    expect(fetch).toHaveBeenCalledTimes(1);
+    mgr.setAccountSettings("Nopuedomas", { enabled: false });
+    // the read-back after the write needed a fresh list
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it("accepts the address and reads the settings", () => {
