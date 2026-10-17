@@ -88969,19 +88969,26 @@ function withErrorHandling(handler, errorPrefix) {
 
 // src/tools/compose.ts
 async function readOriginal(deps, id, cfg) {
+  const identities = [cfg.user, cfg.from, ...cfg.allowedFrom ?? []].map(
+    (s) => s.trim().toLowerCase()
+  );
+  const mismatch = new Error(
+    "The source IMAP account does not match the configured SMTP identity. Configure SMTP for that account or explicitly select transport=applescript."
+  );
   if (decodeImapId(id)) {
     const source = await deps.imapSource(id);
-    const identities = [cfg.user, cfg.from, ...cfg.allowedFrom ?? []].map(
-      (s) => s.trim().toLowerCase()
-    );
-    if (!identities.includes(source.accountUser.trim().toLowerCase())) {
-      throw new Error(
-        "The source IMAP account does not match the configured SMTP identity. Configure SMTP for that account or explicitly select transport=applescript."
-      );
-    }
+    if (!identities.includes(source.accountUser.trim().toLowerCase())) throw mismatch;
     const original = parseOriginalHeaders(source.raw);
     if (source.subject !== void 0) original.subject = source.subject;
     return { original, plainText: extractTextBody(source.raw) };
+  }
+  const holder = deps.mail.getMessageById?.(id)?.account;
+  const account = holder ? deps.mail.listAccounts?.().find((a) => a.name === holder) : void 0;
+  if (account?.email) {
+    const addresses = [account.email, ...account.aliases ?? []].map(
+      (s) => s.trim().toLowerCase()
+    );
+    if (!addresses.some((address) => identities.includes(address))) throw mismatch;
   }
   const raw = deps.mail.getRawSource(id);
   if (!raw) {

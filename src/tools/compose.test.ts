@@ -85,6 +85,41 @@ describe("reply and forward transport routing", () => {
     expectNoApple(d);
   });
 
+  it("refuses a numeric id held by an account the SMTP identity does not belong to", async () => {
+    const d = fixture();
+    const mail = {
+      ...d.mail,
+      getRawSource: vi.fn(() => raw),
+      getMessageById: vi.fn(() => ({ account: "Work" })),
+      listAccounts: vi.fn(() => [{ name: "Work", email: "work@other.example", enabled: true }]),
+    } as unknown as ComposeDeps["mail"];
+    const result = await runReply({ ...d, mail }, { ...args, id: "123" });
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result)).toMatch(/does not match the configured SMTP identity/);
+    expect(d.smtpSend).not.toHaveBeenCalled();
+  });
+
+  it("sends a numeric id's reply when its account has the SMTP identity as an alias", async () => {
+    const d = fixture();
+    const mail = {
+      ...d.mail,
+      getRawSource: vi.fn(() => raw),
+      getMessageContent: vi.fn(() => ({ plainText: "Original body." })),
+      getMessageById: vi.fn(() => ({ account: "Personal" })),
+      listAccounts: vi.fn(() => [
+        {
+          name: "Personal",
+          email: "primary@example.com",
+          aliases: ["ME@example.com"],
+          enabled: true,
+        },
+      ]),
+    } as unknown as ComposeDeps["mail"];
+    const result = await runReply({ ...d, mail }, { ...args, id: "123" });
+    expect(result.isError).toBeFalsy();
+    expect(d.smtpSend).toHaveBeenCalledTimes(1);
+  });
+
   it("passes through a successful Sent-copy result (issue #220)", async () => {
     const d = fixture();
     d.smtpSend.mockResolvedValue({
