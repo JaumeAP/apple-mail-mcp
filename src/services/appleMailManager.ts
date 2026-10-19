@@ -395,10 +395,9 @@ const CONTENT_MARKER = "\x1dCONTENT\x1d"; // subject/plain-text boundary
 const MSGID_MARKER = "\x1dMSGID\x1d"; // subject/RFC-Message-ID boundary (get-message content)
 const DATES_MARKER = "\x1dDATES\x1d"; // RFC-Message-ID/dates boundary (get-message content, #224)
 const HTML_MARKER = "\x1dHTML\x1d"; // plain-text/source boundary
-/** Leads a found message's attachment list, so a message with none still reads as found. */
-const ATTACHMENTS_MARKER = "\x1dATT\x1d";
 const LOOKUP_ERROR_MARKER = "\x1dERR\x1d"; // GS-wrapped — by-id lookup failure; must not be a bare text prefix because the success payload of the same script leads with the sender-controlled subject
 const BATCH_FATAL = "\x1dFATAL\x1d"; // prefix for a whole-batch failure (e.g. bad destination)
+const ATTACHMENTS_MARKER = "\x1dATT\x1d"; // leads a found message's attachment list, so an empty list is not a miss
 /**
  * Forensic record tags (#155). These ride in the SAME delimited stream as the
  * per-id outcome records, emitted by the SAME AppleScript, so the effect
@@ -5722,20 +5721,13 @@ ${this.errorEmit("              ")}
   listAttachments(id: string): Attachment[] {
     // Attempt 1: AppleScript mail attachments.
     //
-    // A numeric id is only meaningful inside the mailbox it was listed from:
-    // Mail numbers messages per mailbox, so the same number can exist in
-    // several. The scan used to stop at the FIRST mailbox holding the id and
-    // return its attachments, so a different message with the same id answered
-    // "no attachments" for a message that had them (2026-10-10: the copy of an
-    // email with two PDFs listed none, while saving them by name worked). The
-    // mailbox the id was listed from is used when known; otherwise the id must
-    // belong to exactly one mailbox, or the call is refused (see resolveById).
-    // Each property is read inside its own `try`. `MIME type of att` throws
-    // "AppleEvent handler failed" for attachments Apple Mail itself composed
-    // (2026-10-14: a sent PDF), and one unguarded throw used to discard the
-    // WHOLE list: the fallback MIME parser then answered "no attachments".
-    // An unreadable type or size now degrades to a default; only a missing
-    // name drops the entry, because the attachment cannot be addressed without it.
+    // A numeric id is only meaningful inside the mailbox it was listed from: Mail
+    // numbers messages per mailbox, so the same number can exist in several. The
+    // scan used to stop at the FIRST mailbox holding the id and answer for it, so
+    // another message with the same id could answer "no attachments" for a message
+    // that had them. The mailbox the id was listed from is used when known;
+    // otherwise the id must belong to exactly one mailbox, or the call is refused
+    // (see resolveById).
     const attachmentLoop = `
                 set outputText to ""
                 set attCount to 0
@@ -5764,10 +5756,10 @@ ${this.errorEmit("              ")}
                   end if
                 end repeat`;
     // The same bounded by-id resolution as the other reads (resolveById): the
-    // mailbox the id was listed from when known, else the guarded scan, which
-    // skips huge mailboxes, stops at its time budget and refuses an id that
-    // several mailboxes hold instead of answering for whichever came first. The
-    // marker keeps a message with no attachments from reading as a miss.
+    // mailbox the id was listed from when known, else the guarded scan, which skips
+    // huge mailboxes, stops at its time budget and refuses an id that several
+    // mailboxes hold. The marker keeps a message with no attachments from reading
+    // as a miss.
     this.lastMessageLookupError = undefined;
     const output = this.resolveById(
       id,
