@@ -52,6 +52,7 @@ describe("outbound attachment read policy", () => {
   });
 
   it("rejects application config files under the home Library", () => {
+    mkdirSync(join(homedir(), "Library", "Application Support"), { recursive: true });
     const dir = mkdtempSync(join(homedir(), "Library", "Application Support", "amcp-read-policy-"));
     try {
       const file = join(dir, "config.json");
@@ -63,6 +64,8 @@ describe("outbound attachment read policy", () => {
   });
 
   it("rejects app state under the home Library but allows iCloud Drive", () => {
+    // A CI runner's home has no ~/Library: mkdtemp needs its parent to exist.
+    mkdirSync(join(homedir(), "Library", "Caches"), { recursive: true });
     const appState = mkdtempSync(join(homedir(), "Library", "Caches", "amcp-read-policy-"));
     try {
       const file = join(appState, "chat.db");
