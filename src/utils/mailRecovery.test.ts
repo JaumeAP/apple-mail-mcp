@@ -177,6 +177,42 @@ describe("mailRecovery", () => {
     expect(world.opened).toBe(1);
   });
 
+  it("skips the probe when the call's timeout is shorter than a stalled probe", async () => {
+    world.pids = [123];
+    world.probe = "wedged";
+    const { ensureMailReady } = await load();
+    ensureMailReady({ budgetMs: 5_000 });
+    expect(world.probes).toBe(0);
+    expect(world.quits).toBe(0);
+  });
+
+  it("does not restart on one stalled probe it has no time to confirm", async () => {
+    world.pids = [123];
+    world.probe = "wedged";
+    const { ensureMailReady } = await load();
+    ensureMailReady({ budgetMs: 15_000 });
+    expect(world.probes).toBe(1);
+    expect(world.quits).toBe(0);
+    expect(world.opened).toBe(0);
+  });
+
+  it("runs a restart it decided on to the end, whatever the budget left", async () => {
+    world.pids = [123];
+    world.probe = "wedged";
+    const { ensureMailReady } = await load();
+    ensureMailReady({ budgetMs: 30_000 });
+    expect(world.quits).toBe(1);
+    expect(world.opened).toBe(1);
+  });
+
+  it("a wait cut short by the call's timeout does not start the open cooldown", async () => {
+    world.openWorks = false;
+    const { ensureMailReady } = await load();
+    ensureMailReady({ budgetMs: 1_000 });
+    ensureMailReady({ budgetMs: 1_000 });
+    expect(world.opened).toBe(2);
+  });
+
   it("restarts at most once per cooldown", async () => {
     world.pids = [123];
     world.probe = "wedged";

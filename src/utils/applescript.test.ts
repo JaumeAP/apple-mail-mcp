@@ -43,7 +43,13 @@ describe("executeAppleScript", () => {
     it("lets the recovery open Mail for an ordinary script", () => {
       mockExecFileSync.mockReturnValue("ok");
       executeAppleScript('tell application "Mail" to count accounts');
-      expect(ensureMailReady).toHaveBeenCalledWith({ launch: true });
+      expect(ensureMailReady).toHaveBeenCalledWith({ launch: true, budgetMs: 30000 });
+    });
+
+    it("bounds the recovery by the call's own timeout", () => {
+      mockExecFileSync.mockReturnValue("ok");
+      executeAppleScript('tell application "Mail" to count accounts', { timeoutMs: 90000 });
+      expect(ensureMailReady).toHaveBeenCalledWith({ launch: true, budgetMs: 90000 });
     });
 
     it("does not let it open Mail for a script that checks Mail is running first", () => {
@@ -51,7 +57,7 @@ describe("executeAppleScript", () => {
       executeAppleScript(
         `${MAIL_RUNNING_GUARD}\n tell application "Mail" to count accounts\n end if`
       );
-      expect(ensureMailReady).toHaveBeenCalledWith({ launch: false });
+      expect(ensureMailReady).toHaveBeenCalledWith({ launch: false, budgetMs: 30000 });
     });
   });
 

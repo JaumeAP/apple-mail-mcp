@@ -82750,6 +82750,8 @@ function restartMail() {
 }
 function ensureMailReady(options = {}) {
   if (busy || !autoRecoverEnabled() || Date.now() < Math.max(healthyUntil, skipUntil)) return;
+  const deadline = options.budgetMs === void 0 ? Infinity : Date.now() + options.budgetMs;
+  const left = () => deadline - Date.now();
   busy = true;
   try {
     if (mailPids().length === 0) {
@@ -82762,16 +82764,19 @@ function ensureMailReady(options = {}) {
         return;
       }
       console.error("mail-recovery: Mail.app is not running; opening it");
-      const ready = openMail() && waitUntilAnswering(READY_WAIT_MS);
+      const cut = left() < READY_WAIT_MS;
+      const ready = openMail() && waitUntilAnswering(Math.min(READY_WAIT_MS, left()));
       console.error(
-        `mail-recovery: ${ready ? "Mail is answering" : "Mail did not answer in time"}`
+        `mail-recovery: ${ready ? "Mail is answering" : cut ? "Mail is still starting; the call's timeout ended the wait" : "Mail did not answer in time"}`
       );
       if (ready) healthyUntil = Date.now() + HEALTHY_TTL_MS;
-      else lastRestartAt = Date.now();
+      else if (!cut) lastRestartAt = Date.now();
       return;
     }
+    if (left() < PROBE_TIMEOUT_MS) return;
     let state = probe();
     if (state === "wedged") {
+      if (left() < CONFIRM_WAIT_MS + PROBE_TIMEOUT_MS) return;
       sleepMs(CONFIRM_WAIT_MS);
       state = probe();
     }
@@ -82962,7 +82967,7 @@ function executeAppleScript(script, options = {}) {
     timeout: timeoutMs,
     maxRetries
   });
-  ensureMailReady({ launch: !script.includes(MAIL_RUNNING_GUARD) });
+  ensureMailReady({ launch: !script.includes(MAIL_RUNNING_GUARD), budgetMs: timeoutMs });
   let lastError = null;
   const startTime = Date.now();
   for (let attempt = 1; attempt <= maxRetries; attempt++) {

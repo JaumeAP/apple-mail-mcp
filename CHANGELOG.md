@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Fixed
+
+- **Mail recovery no longer holds a call longer than the call's own timeout.** The probe,
+  the confirming probe and the wait for a Mail the recovery just opened must fit in the
+  call's `timeoutMs`; a check that cannot fit is skipped (a probe needs 12 s, so a call
+  with a shorter timeout is not probed). A restart already decided on still runs to the
+  end, since half a restart is worse than a long one. A wait cut short by the timeout does
+  not start the 10-minute open cooldown.
+
 ## [2.20.16-jap.1] - 2026-10-19 (JaumeAP fork)
 
 Merges upstream 2.20.13 to 2.20.16. Where upstream and the fork fixed the same thing,
