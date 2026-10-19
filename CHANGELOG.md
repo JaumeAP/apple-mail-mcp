@@ -2,6 +2,10 @@
 
 ### Fixed
 
+- **`hasAttachments` was `false` on every row of `search-messages` and `list-messages` on the AppleScript route.** `list-messages` read `mail attachments` as one bulk property of the message list, which returns an empty list on current macOS (measured on 6 messages: 1, 4, 2, 2, 0, 2 attachments one by one, 0 in bulk), and the failed read was swallowed. `search-messages` never read attachments at all. Both now count `mail attachments` per message, for the rows they return only (one Apple event per row). Checked live on a sent message with a patch attached: it now reads `true`.
+
+### Fixed
+
 - **`send-email` with a stale `draftId` is no longer refused as "not a draft".** On a
   server-side account Mail re-saves a draft and gives it a new numeric id within seconds,
   so the id from an earlier listing could be gone (seen live: 538964 became 538965 in 8 s).
