@@ -387,6 +387,7 @@ export function extractFreshlyStalledMailboxes(raw: string): string[] {
 const GROUP_SEP = "\x1d"; // GS — opens/closes the tag markers built below
 const FIELD_SEP = "\x1f"; // US — between fields within a record
 const RECORD_SEP = "\x1e"; // RS — between records
+const ITEM_SEP = "\x1c"; // FS — between items of a list field (an account's addresses)
 const DIAG_MARKER = "\x1dDIAG\x1d"; // GS-wrapped — payload/diagnostics boundary
 const DIAG_FIELD_SEP = "\x1dF\x1d"; // between diagnostics fields
 const DIAG_ITEM_SEP = "\x1dM\x1d"; // between diagnostics list items
@@ -469,24 +470,51 @@ const AMBIGUOUS_ID_PREFIX = "Message id ";
 const AMBIGUOUS_ID_BATCH = "This message id is present in more than one mailbox ";
 
 /**
- * Fixes the sender of `theReply` to the address the original message was sent
- * to: the address of its recipients (to/cc) that belongs to the account the
- * message sits in, else that account's first address. Without it Mail answers
- * from its default sending account, so a reply left from another account than
- * the one that received the mail (2026-10-11). Runs inside `findMessageScript`,
- * where `msg` is the original and `compose` the reply or forward just created.
- * It fails loudly (the script's own `error:` path) instead of falling back to
- * Mail's default. Forwards use it too: `forward msg` has the same default.
+ * Fixes the sender of `compose` (the reply or forward just created) to the
+ * address the original message was sent to: the address of its recipients
+ * (to/cc) that belongs to the account the message sits in — or, for a message
+ * the user sent, its own From address — else that account's first address. Without it Mail answers from its default sending account, so
+ * a mail received in one account was answered from another. Runs inside
+ * `findMessageScript`, where `msg` is the original. It fails loudly (the
+ * script's own `error:` path) instead of falling back to Mail's default, and
+ * reads `sender` back, as the send-email guard does (2.20.13): Mail silently
+ * ignores a `set sender` it does not accept.
+ *
+ * A message in an "On My Mac" mailbox has no account (`account of` its mailbox
+ * raises). There the recipients are matched against every enabled account's
+ * addresses instead, and with no match the sender is left to Mail, as Mail's own
+ * Reply does: there is no receiving account to honour.
  */
 const senderFragment = (compose: "theReply" | "theForward", verb: "reply" | "forward"): string =>
-  `set _rsAddrs to email addresses of (account of (mailbox of msg))
-          if (count of _rsAddrs) is 0 then error "The account this message arrived in has no email address to ${verb} from."
-          set _rsFrom to (item 1 of _rsAddrs) as text
-          set _rsDone to false
+  `set _rsAddrs to {}
+          set _rsOwn to true
+          try
+            set _rsAddrs to email addresses of (account of (mailbox of msg))
+            set _rsN to count of _rsAddrs
+          on error
+            set _rsOwn to false
+            set _rsAddrs to {}
+            repeat with _rsAc in (every account whose enabled is true)
+              try
+                set _rsAddrs to _rsAddrs & (email addresses of _rsAc)
+              end try
+            end repeat
+          end try
+          if _rsOwn and (count of _rsAddrs) is 0 then error "The account this message arrived in has no email address to ${verb} from."
+          set _rsFrom to ""
+          if _rsOwn then set _rsFrom to (item 1 of _rsAddrs) as text
+          set _rsCands to {}
           repeat with _rsR in ((to recipients of msg) & (cc recipients of msg))
+            set end of _rsCands to (address of _rsR) as text
+          end repeat
+          try
+            set end of _rsCands to (extract address from (sender of msg)) as text
+          end try
+          set _rsDone to false
+          repeat with _rsC in _rsCands
             if not _rsDone then
               repeat with _rsA in _rsAddrs
-                if (address of _rsR) is (_rsA as text) then
+                if (_rsC as text) is (_rsA as text) then
                   set _rsFrom to (_rsA as text)
                   set _rsDone to true
                   exit repeat
@@ -494,7 +522,14 @@ const senderFragment = (compose: "theReply" | "theForward", verb: "reply" | "for
               end repeat
             end if
           end repeat
-          set sender of ${compose} to _rsFrom`;
+          if _rsFrom is not "" then
+            set sender of ${compose} to _rsFrom
+            set _rsGot to sender of ${compose} as text
+            if not (_rsGot is _rsFrom or _rsGot ends with "<" & _rsFrom & ">") then
+              delete ${compose}
+              error "Mail.app would ${verb} as " & _rsGot & " instead of " & _rsFrom & ", so nothing was sent or saved."
+            end if
+          end if`;
 
 /**
  * Normalize an RFC 5322 Message-ID for backend-independent matching: trim and
@@ -791,14 +826,57 @@ function buildAttachmentCommands(attachments?: string[]): string {
   return commands;
 }
 
+/** Upper bound on how long a compose script waits for attachments to load. */
+const ATTACHMENT_SETTLE_TIMEOUT_S = 15;
+/** Extra pause after the attachments are counted, while Mail reads their data. */
+const ATTACHMENT_SETTLE_GRACE_S = 1;
+
+/**
+ * AppleScript that waits for Mail.app to finish adding attachments to the
+ * compose object `msgVar` before it is saved or sent.
+ *
+ * `make new attachment` returns before Mail has loaded the file into the
+ * compose. A `save`/`send` issued straight after it races that load, and the
+ * draft (or sent message) silently loses some or all of its attachments while
+ * the tool reports success: observed on macOS against an Exchange account,
+ * where three requested files came out as two, then none, on identical calls.
+ * This polls the compose's attachment count until it reaches `expected` (or
+ * the timeout passes), then pauses briefly so the data itself can land.
+ * Empty string when there are no attachments, so attachment-free compose
+ * scripts are unchanged.
+ */
+function attachmentSettleBlock(msgVar: string, expected: number): string {
+  if (expected <= 0) return "";
+  return `
+        set attachDeadline to (current date) + ${ATTACHMENT_SETTLE_TIMEOUT_S}
+        repeat
+          set attachCount to 0
+          try
+            set attachCount to count of attachments of content of ${msgVar}
+          end try
+          if attachCount >= ${expected} then exit repeat
+          if (current date) > attachDeadline then exit repeat
+          delay 0.25
+        end repeat
+        delay ${ATTACHMENT_SETTLE_GRACE_S}`;
+}
+
+/** Number of files a `buildAttachmentCommands` string attaches. */
+function countAttachmentCommands(commands: string): number {
+  return (commands.match(/make new attachment/g) || []).length;
+}
+
 /**
  * `tell <msgVar> … end tell` block attaching each file to a reply/forward
  * compose object (#267). Must run after `set content of <msgVar>`, which would
- * otherwise discard the attachment paragraphs. Empty string when no files.
+ * otherwise discard the attachment paragraphs. Followed by a wait for the
+ * attachments to load (see attachmentSettleBlock). Empty string when no files.
  */
 function composeAttachmentBlock(msgVar: string, paths: string[]): string {
   const commands = buildAttachmentCommands(paths);
-  return commands ? `tell ${msgVar}\n${commands}end tell` : "";
+  return commands
+    ? `tell ${msgVar}\n${commands}end tell${attachmentSettleBlock(msgVar, paths.length)}`
+    : "";
 }
 
 /**
@@ -4192,8 +4270,9 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * @param body - Email body (plain text)
    * @param cc - CC recipients
    * @param bcc - BCC recipients
-   * @param account - Account to send from
-   * @returns true if sent successfully
+   * @param account - Account name or exact address to send from; resolved to one
+   *   address and verified before sending (see `utils/senderAccount.ts`)
+   * @returns `from` is the sender Mail.app actually used
    */
   // ───────────────────────────────────────────────────────────────────
   // KNOWN BUG: outgoing emails sent via AppleScript on macOS 15+ get wrapped
@@ -4253,7 +4332,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     // against the attachment read policy first.
     const mat = materializeAttachments(attachments);
     try {
-      return this.sendEmailWithPaths(
+      return this.composeWithCommands(
+        "send",
         recipientCommands,
         safeSubject,
         safeBody,
@@ -4265,7 +4345,15 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     }
   }
 
-  private sendEmailWithPaths(
+  /**
+   * Build and run the AppleScript compose for send-email (`send`) and
+   * create-draft (`draft`): pin the sender when `account` is given, wait for
+   * any attachments to load (attachmentSettleBlock), verify the sender before
+   * the message leaves, and report the sender Mail actually used. A draft is
+   * saved and closed explicitly rather than left to Mail's autosave (#293).
+   */
+  private composeWithCommands(
+    mode: "send" | "draft",
     recipientCommands: string,
     safeSubject: string,
     safeBody: string,
@@ -4275,30 +4363,33 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     // `sender` is the account's email address, validated by
     // resolveSendingAddress: Mail does not accept an account name here. Without
     // one, no `set sender`: Mail uses its default sender.
-    const sendCommand = `
-        set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:true}
+    const settle = attachmentSettleBlock("newMessage", countAttachmentCommands(attachmentCommands));
+    const done = mode === "send" ? "sent" : "draft created";
+    const script = buildAppLevelScript(`
+        set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:${mode === "send"}}
         tell newMessage
           ${recipientCommands}
           ${sender ? `set sender to "${escapeForAppleScript(sender)}"` : ""}
           ${attachmentCommands}
-        end tell
-        send newMessage
-        return "sent"
-      `;
-
-    const script = buildAppLevelScript(sendCommand);
+        end tell${settle}
+        ${mode === "send" ? "send newMessage" : "save newMessage\n        close newMessage saving yes"}
+        return "${done}"
+      `);
     // Exactly one attempt. `executeAppleScript` retries on a timeout, and a
     // `send` that timed out may already have been accepted by Mail — a retry
-    // would compose and submit a second copy. A send is not idempotent, so the
-    // caller gets the failure and inspects Sent/Outbox instead.
+    // would compose and submit a second copy (or leave a duplicate draft). A
+    // compose is not idempotent, so the caller gets the failure and inspects
+    // Sent/Outbox/Drafts instead.
     const result = executeAppleScript(script, { timeoutMs: 60000, maxRetries: 1 });
 
     if (!result.success) {
-      console.error(`Failed to send email: ${result.error}`);
+      console.error(
+        `Failed to ${mode === "send" ? "send email" : "create draft"}: ${result.error}`
+      );
       return false;
     }
 
-    return result.output.includes("sent");
+    return result.output.includes(done);
   }
 
   /**
@@ -4340,7 +4431,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
           personalizedBody = personalizedBody.replace(placeholder, value);
         }
 
-        const success = this.sendEmail(
+        const sent = this.sendEmail(
           [recipient.email],
           personalizedSubject,
           personalizedBody,
@@ -4351,8 +4442,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
 
         results.push({
           email: recipient.email,
-          success,
-          error: success ? undefined : "Failed to send email",
+          success: sent,
+          error: sent ? undefined : "Failed to send email",
         });
       } catch (error) {
         results.push({
@@ -4380,7 +4471,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * @param cc - CC recipients
    * @param bcc - BCC recipients
    * @param account - Account to create draft in
-   * @returns true if draft created successfully
+   * @returns true if the draft was created
    */
   createDraft(
     to: string[],
@@ -4417,7 +4508,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     const mat = materializeAttachments(attachments);
     const attachmentCommands = buildAttachmentCommands(mat.paths);
     try {
-      return this.createDraftWithCommands(
+      return this.composeWithCommands(
+        "draft",
         recipientCommands,
         safeSubject,
         safeBody,
@@ -4427,37 +4519,6 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     } finally {
       mat.cleanup();
     }
-  }
-
-  private createDraftWithCommands(
-    recipientCommands: string,
-    safeSubject: string,
-    safeBody: string,
-    sender: string | undefined,
-    attachmentCommands: string
-  ): boolean {
-    const draftCommand = `
-        set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:false}
-        tell newMessage
-          ${recipientCommands}
-          ${sender ? `set sender to "${escapeForAppleScript(sender)}"` : ""}
-          ${attachmentCommands}
-        end tell
-        return "draft created"
-      `;
-
-    const script = buildAppLevelScript(draftCommand);
-    // Exactly one attempt, for the same reason as sendEmailWithPaths: a
-    // compose that timed out may already have produced the draft, and a retry
-    // would leave a duplicate in Drafts.
-    const result = executeAppleScript(script, { timeoutMs: 60000, maxRetries: 1 });
-
-    if (!result.success) {
-      console.error(`Failed to create draft: ${result.error}`);
-      return false;
-    }
-
-    return result.output.includes("draft created");
   }
 
   /**
@@ -5635,6 +5696,11 @@ ${this.errorEmit("              ")}
     const attachmentLoop = `
                 set outputText to ""
                 set attCount to 0
+                -- Each property is read inside its own try: \`MIME type of att\` throws
+                -- "AppleEvent handler failed" for attachments Apple Mail itself composed,
+                -- and one unguarded throw discards the whole list, so the MIME fallback
+                -- answers "no attachments". An unreadable type or size degrades to a
+                -- default; only a missing name drops the entry (it cannot be addressed).
                 repeat with att in mail attachments of msg
                   set attName to ""
                   set attType to "application/octet-stream"
@@ -6810,17 +6876,10 @@ end tell`;
       set accountList to {}
       repeat with acct in accounts
         set acctName to name of acct
-        set acctEmail to email addresses of acct
         set acctEnabled to enabled of acct
-        set emailStr to ""
-        set aliasStr to ""
-        if (count of acctEmail) > 0 then
-          set emailStr to item 1 of acctEmail
-          repeat with i from 2 to (count of acctEmail)
-            set aliasStr to aliasStr & " " & (item i of acctEmail)
-          end repeat
-        end if
-        set end of accountList to acctName & "${FIELD_SEP}" & emailStr & "${FIELD_SEP}" & acctEnabled & "${FIELD_SEP}" & aliasStr
+        set AppleScript's text item delimiters to "${ITEM_SEP}"
+        set emailStr to (email addresses of acct) as text
+        set end of accountList to acctName & "${FIELD_SEP}" & emailStr & "${FIELD_SEP}" & acctEnabled
       end repeat
       set AppleScript's text item delimiters to "${RECORD_SEP}"
       return accountList as text
@@ -6850,12 +6909,13 @@ end tell`;
       const parts = item.split(FIELD_SEP);
       if (parts.length < 3) continue;
 
-      const aliases = (parts[3] ?? "").split(" ").filter(Boolean);
+      const addresses = parts[1].split(ITEM_SEP).filter(Boolean);
       accounts.push({
         name: parts[0],
-        email: parts[1],
+        email: addresses[0] ?? "",
+        addresses,
         enabled: parts[2] === "true",
-        ...(aliases.length > 0 ? { aliases } : {}),
+        ...(addresses.length > 1 ? { aliases: addresses.slice(1) } : {}),
       });
     }
 

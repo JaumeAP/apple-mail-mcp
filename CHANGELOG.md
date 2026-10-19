@@ -1,11 +1,22 @@
 ## [Unreleased]
 
+## [2.20.16-jap.1] - 2026-10-19 (JaumeAP fork)
+
+Merges upstream 2.20.13 to 2.20.16. Where upstream and the fork fixed the same thing,
+the fork's behaviour is kept (see "Net behaviour of the fork").
+
+### Added
+
+- **Attachment settle wait** (upstream 2.20.16, #293): compose scripts poll until Mail
+  has loaded every attachment (bounded at 15 s) before `save` or `send`; `create-draft`
+  saves and closes the draft explicitly.
+
 ### Fixed
 
 - **By-id lookup with `account` and no `mailbox`** walks only that account (and no
   local mailboxes) instead of every account; an unknown account is reported as such.
 
-## Net behaviour of the fork (2.20.9-jap.1 to 2.20.12-jap.3 and Unreleased)
+## Net behaviour of the fork (2.20.9-jap.1 to 2.20.16-jap.1)
 
 The entries below describe where the fork ended up. Where a later release replaced an
 earlier one, only the final behaviour is listed; the per-release entries keep the
@@ -310,8 +321,76 @@ Fixes from a review of the fork's own changes (`a98e669..origin/main`).
   longer refused, and a root in `APPLE_MAIL_MCP_ATTACHMENT_READ_ROOTS` lifts
   the Library rule beneath it.
 
+## [2.20.16] - 2026-10-17
+
+### Fixed
+
+- **AppleScript compose could silently drop attachments** (#293, @markitwecode).
+  `create-draft`, `send-email`, `reply-to-message` and `forward-message` issued
+  `save`/`send` straight after `make new attachment`, which returns before Mail.app
+  has loaded the file, so the message could lose some or all of its files while the
+  tool still reported success (seen against an Exchange account: 3 requested files
+  saved as 2, then 0, on identical calls). Compose scripts now poll the attachment
+  count until every file is present (bounded at 15 s), pause 1 s, and only then
+  save or send; scripts without attachments do not wait. `create-draft` now also
+  saves and closes the draft explicitly instead of leaving it to Mail's autosave,
+  so the draft is in Drafts when the tool returns.
+
+## [2.20.15] - 2026-10-17
+
+### Fixed
+
+- **`reply-to-message` / `forward-message` (AppleScript path) answered from Mail's
+  default sending account** (#294, @JaumeAP), not from the account the message
+  arrived in: neither `reply … without opening window` nor `forward … without
+opening window` sets a sender. The sender is now the address of the original's
+  to/cc recipients that belongs to the account the message sits in — or, for a
+  message you sent, its own From address — else that account's first address. It
+  is read back before the reply or forward is saved or sent, and a mismatch deletes
+  it and returns an error, as for `send-email` (2.20.13). An account with no
+  address is an error instead of a silent fallback to Mail's default. A message in
+  an "On My Mac" mailbox has no account: its recipients are matched against every
+  enabled account, and with no match the sender is left to Mail, as Mail's own
+  Reply does.
+
+## [2.20.14] - 2026-10-17
+
+### Fixed
+
+- **`list-attachments` returned nothing for a message Apple Mail composed itself**
+  (#295, @JaumeAP),
+  although the message carried its file and `save-attachment` by name worked. Two
+  defects stacked. (1) The AppleScript attempt read `name`, `MIME type` and
+  `file size` with no guard; `MIME type of att` throws "AppleEvent handler failed"
+  for those attachments and the one throw discarded the whole list. Each property
+  is now read in its own `try`; an unreadable type or size degrades to
+  `application/octet-stream` / `0`, and only a missing name drops the entry.
+  (2) The MIME fallback skipped every `Content-Disposition: inline` part, but Apple
+  Mail writes the files it attaches as `inline` (with a `filename`). A part is now
+  left out only when the HTML body embeds it with `cid:<its Content-Id>`; a logo the
+  HTML points at is still skipped, an attached PDF or photo is listed.
+
+## [2.20.13] - 2026-10-16
+
+### Fixed
+
+- **`send-email` / `send-serial-email` / `create-draft` (AppleScript path) could
+  send from the wrong account while reporting success.** `account` was passed
+  straight to `set sender to`, which Mail.app silently ignores for anything that
+  is not a configured address — an account _name_ like `me@gmail`, a typo — so
+  the message went out from Mail's default account. `account` is now resolved to
+  one address of an enabled account (name or exact address), the compose script
+  reads `sender` back before sending, and a mismatch deletes the message and
+  returns an error instead of sending. The sender actually used is returned as
+  `from`, with or without `account`. `list-accounts` structured output now also
+  carries every address of each account (`addresses`). Two enabled accounts that
+  share one address are not distinguished: the guard checks the address Mail
+  will put in `From:`, not which account's server sends it.
+
 ## [2.20.12] - 2026-10-14
+
 ### Changed
+
 - Dependency bump via Dependabot; committed bundle rebuilt. (automated)
 
 ## [2.20.11] - 2026-10-14
@@ -377,7 +456,7 @@ Fixes from a review of the fork's own changes (`a98e669..origin/main`).
   check itself can't run.** @j5pu retested 2.20.8's guard and found Mail
   closed still produced the plain `Message with ID "N" not found` — on
   macOS 27.2, `tell application "Mail" to get name of every account` fails
-  to *compile* (not merely execute) with `-2741` ("Expected class name but
+  to _compile_ (not merely execute) with `-2741` ("Expected class name but
   found identifier") when Mail.app isn't already running, because osascript
   can't resolve Mail's own classes until its dictionary is loaded. The
   `if application "Mail" is running then … end if` guard added in 2.20.8
