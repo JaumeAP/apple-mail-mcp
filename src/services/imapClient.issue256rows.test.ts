@@ -430,14 +430,15 @@ function fakeImapServer(): Promise<{ port: number; close: () => void }> {
       }
     });
   });
-  return new Promise((resolve) =>
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
     server.listen(0, "127.0.0.1", () =>
       resolve({
         port: (server.address() as net.AddressInfo).port,
         close: () => server.close(),
       })
-    )
-  );
+    );
+  });
 }
 
 describe("#256 follow-up: real imapflow against a too-deep BODYSTRUCTURE", () => {
@@ -445,8 +446,13 @@ describe("#256 follow-up: real imapflow against a too-deep BODYSTRUCTURE", () =>
     await __resetPool();
   });
 
-  it("recovers the row imapflow's parser drops, instead of returning a short page", async () => {
-    const srv = await fakeImapServer();
+  it("recovers the row imapflow's parser drops, instead of returning a short page", async (ctx) => {
+    // A sandbox that denies listen() on loopback (EPERM) cannot run this one.
+    const srv = await fakeImapServer().catch((e: NodeJS.ErrnoException) => {
+      if (e.code === "EPERM") return undefined;
+      throw e;
+    });
+    if (!srv) return ctx.skip();
     try {
       const res = await imapListMessages(
         { mailbox: "INBOX", limit: 3 },
