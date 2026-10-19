@@ -162,6 +162,22 @@ describe("outbound attachment read policy", () => {
     }
   });
 
+  it("refuses a relative path, a missing file, a directory and a relative extra root", () => {
+    expect(() => resolveAttachmentReadPath("relative/report.pdf")).toThrow(/must be absolute/);
+
+    const dir = mkdtempSync(join(tmpdir(), "amcp-read-policy-"));
+    try {
+      expect(() => resolveAttachmentReadPath(join(dir, "missing.pdf"))).toThrow(/not found/);
+      expect(() => resolveAttachmentReadPath(dir)).toThrow(/not a regular file/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+
+    expect(() =>
+      resolveAttachmentReadPath("/etc/hosts", { [ATTACHMENT_READ_ROOTS_ENV]: "relative/root" })
+    ).toThrow(/must be absolute/);
+  });
+
   it("rejects a symlink that resolves outside an allowed temporary root", () => {
     const allowed = mkdtempSync(join(tmpdir(), "amcp-read-policy-"));
     try {
