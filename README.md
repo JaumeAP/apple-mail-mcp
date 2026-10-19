@@ -227,21 +227,21 @@ This section documents all available tools. AI agents should use these tool name
 
 Search for messages matching criteria. Searches all accounts by default.
 
-| Parameter   | Type    | Required | Description                                                                                                                               |
-| ----------- | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `query`     | string  | No       | Text to search in subject/sender                                                                                                          |
-| `body`      | string  | No       | Text to search in the message body. IMAP backend only (server-side `BODY` search); AppleScript-only accounts are reported as not searched |
-| `from`      | string  | No       | Filter by sender email address                                                                                                            |
-| `subject`   | string  | No       | Filter by subject line                                                                                                                    |
-| `mailbox`   | string  | No       | Mailbox to search in (omit to search all mailboxes)                                                                                       |
-| `account`   | string  | No       | Account to search in (omit to search all accounts)                                                                                        |
-| `isRead`    | boolean | No       | Filter by read status                                                                                                                     |
-| `isFlagged` | boolean | No       | Filter by flagged status                                                                                                                  |
+| Parameter   | Type    | Required | Description                                                                                                                                                                                                                           |
+| ----------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `query`     | string  | No       | Text to search in subject/sender                                                                                                                                                                                                      |
+| `body`      | string  | No       | Text to search in the message body. IMAP backend only (server-side `BODY` search); AppleScript-only accounts are reported as not searched                                                                                             |
+| `from`      | string  | No       | Filter by sender email address                                                                                                                                                                                                        |
+| `subject`   | string  | No       | Filter by subject line                                                                                                                                                                                                                |
+| `mailbox`   | string  | No       | Mailbox to search in (omit to search all mailboxes)                                                                                                                                                                                   |
+| `account`   | string  | No       | Account to search in (omit to search all accounts)                                                                                                                                                                                    |
+| `isRead`    | boolean | No       | Filter by read status                                                                                                                                                                                                                 |
+| `isFlagged` | boolean | No       | Filter by flagged status                                                                                                                                                                                                              |
 | `flagColor` | string  | No       | Filter to messages flagged with exactly this color — see [`flag-message`](#flag-message--unflag-message) for the palette. Implies `isFlagged: true`; pairing this with `isFlagged: false` is rejected. See the flag-color note below. |
-| `dateFrom`  | string  | No       | Start date filter (e.g., "January 1, 2026")                                                                                               |
-| `dateTo`    | string  | No       | End date filter (e.g., "March 1, 2026")                                                                                                   |
-| `limit`     | number  | No       | Max results, 1–500 (default: 50)                                                                                                          |
-| `offset`    | number  | No       | Newest matches to skip, ≥ 0 (for pagination). IMAP accounts only; without a `mailbox`, `offset` + `limit` may not exceed 5,000            |
+| `dateFrom`  | string  | No       | Start date filter (e.g., "January 1, 2026")                                                                                                                                                                                           |
+| `dateTo`    | string  | No       | End date filter (e.g., "March 1, 2026")                                                                                                                                                                                               |
+| `limit`     | number  | No       | Max results, 1–500 (default: 50)                                                                                                                                                                                                      |
+| `offset`    | number  | No       | Newest matches to skip, ≥ 0 (for pagination). IMAP accounts only; without a `mailbox`, `offset` + `limit` may not exceed 5,000                                                                                                        |
 
 **Returns:** List of matching messages with ID, date, subject, sender, read state,
 and `flagColor` when flagged with an explicit color.
@@ -954,7 +954,10 @@ nodemailer path `send-email` uses, so the Sent-folder copy (`sentCopy`) carries 
 On the AppleScript transport they are added with `make new attachment` **after** the
 reply content is set and before `save`/`send` (inline items are written to `0600` temp
 files and removed afterwards), so a `send: false` draft contains both the attachments and
-the quoted original. Results report `attachmentCount`.
+the quoted original. `make new attachment` returns before Mail has loaded the file, so the
+script waits until Mail counts every file (bounded at 15 s) before saving or sending
+(the same wait applies to `send-email` and `create-draft`). Results report
+`attachmentCount`.
 
 **Delivery:** `imap:` IDs are read directly from their encoded account, mailbox, and UID. Numeric IDs are read through Mail.app. With SMTP configured, replies use clean MIME with the original `Message-ID` in `In-Reply-To` and the full `References` chain. Only the original plain-text body is quoted; the new text is not. Pass `transport: "smtp"` to require this path, or `transport: "applescript"` to use Mail.app explicitly.
 
@@ -1541,13 +1544,13 @@ Delete a template.
 
 Create a draft from a template, with optional overrides.
 
-| Parameter | Type     | Required | Description                                                                                                         |
-| --------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
-| `id`      | string   | Yes      | Template ID                                                                                                         |
-| `to`      | string[] | No       | Override recipients                                                                                                 |
-| `cc`      | string[] | No       | Override CC                                                                                                         |
-| `subject` | string   | No       | Override subject                                                                                                    |
-| `body`    | string   | No       | Override body                                                                                                       |
+| Parameter | Type     | Required | Description                                                                                                       |
+| --------- | -------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| `id`      | string   | Yes      | Template ID                                                                                                       |
+| `to`      | string[] | No       | Override recipients                                                                                               |
+| `cc`      | string[] | No       | Override CC                                                                                                       |
+| `subject` | string   | No       | Override subject                                                                                                  |
+| `body`    | string   | No       | Override body                                                                                                     |
 | `account` | string   | No       | Account to create the draft from (name or email of an enabled account); without it, Mail's default sender is used |
 
 ---
@@ -2011,10 +2014,10 @@ AI: [User opens Mail.app and sends manually, or AI calls send-email]
 prompt injection inside an email body can ignore it. `APPLE_MAIL_MCP_MODE`
 removes tools from the server instead, so they are neither listed nor callable:
 
-| Value            | Tools offered                                                                                                   |
-| ---------------- | --------------------------------------------------------------------------------------------------------------- |
-| `full` (default) | All of them                                                                                                     |
-| `no_send`        | All except `send-email`, `send-serial-email`, `reply-to-message`, `forward-message` and `enable-rule`           |
+| Value            | Tools offered                                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `full` (default) | All of them                                                                                                        |
+| `no_send`        | All except `send-email`, `send-serial-email`, `reply-to-message`, `forward-message` and `enable-rule`              |
 | `read_only`      | Only an explicit allow-list of reads (`src/utils/toolMode.ts`); `get-message-rfc822` is out, its `savePath` writes |
 
 An unknown value stops the server rather than falling back to `full`, and so
@@ -2139,7 +2142,7 @@ The entrypoint is written as:
 | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | macOS only                                                                   | Apple Mail and AppleScript are macOS-specific                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | MCP `send-email` is plain-text                                               | The `send-email` tool sends plain text (reading HTML content is supported). To send HTML, use the bundled `apple-mail-send` CLI with `--html-body-file` (sends `multipart/alternative` via SMTP)                                                                                                                                                                                                                                                                                                                                                                                                     |
-| Attachment read path restrictions                                            | Outbound file attachments must use full absolute paths inside the default home-directory, `/Volumes`, or temporary roots, except hidden files, credential locations and user Library folders other than iCloud Drive and CloudStorage. Set `APPLE_MAIL_MCP_ATTACHMENT_READ_ROOTS` to add an explicit absolute root for another deliberate location (it also lifts the Library rule beneath it); symlink escapes are rejected.                                                                                                                                                                                                                                                           |
+| Attachment read path restrictions                                            | Outbound file attachments must use full absolute paths inside the default home-directory, `/Volumes`, or temporary roots, except hidden files, credential locations and user Library folders other than iCloud Drive and CloudStorage. Set `APPLE_MAIL_MCP_ATTACHMENT_READ_ROOTS` to add an explicit absolute root for another deliberate location (it also lifts the Library rule beneath it); symlink escapes are rejected.                                                                                                                                                                        |
 | Smart mailboxes need Mail quit                                               | Smart mailboxes are supported (see [Smart Mailbox Operations](#smart-mailbox-operations-intelligente-postfächer)), but `create-`/`delete-smart-mailbox` edit `SyncedSmartMailboxes.plist` directly — a running Mail may not show a new one until relaunched, and can overwrite plist edits it didn't make. Quit Mail first. Reading them needs Full Disk Access for the Node runtime                                                                                                                                                                                                                 |
 | Very large mailboxes not searchable _via AppleScript_                        | Apple Mail's AppleScript bridge times out on mailboxes with tens of thousands of messages, so unscoped `search-messages` skips mailboxes above `APPLE_MAIL_MAX_SEARCH_MAILBOX` (default 5000) and reports them as a partial result. Scope with `mailbox` + a date window — or configure the [IMAP backend](#imap-backend--opt-in), which searches these server-side in well under a second. ([#24](https://github.com/sweetrb/apple-mail-mcp/issues/24))                                                                                                                                             |
 | Can't delete/rename server-side mailboxes or mutate drafts _via AppleScript_ | Mail.app's AppleScript bridge can only `delete`/`rename` **local "On My Mac"** mailboxes and cannot delete/move drafts — it throws `AppleEvent handler failed` for IMAP/Gmail/Workspace/iCloud/Exchange mailboxes (the GUI can do it). Without IMAP configured, `delete-mailbox`/`rename-mailbox`/`delete-message`/`move-message` return a clear "do it in Mail.app directly" error instead of a generic failure. With the [IMAP backend](#imap-backend--opt-in) configured for the account, these operations run via IMAP and succeed. ([#42](https://github.com/sweetrb/apple-mail-mcp/issues/42)) |

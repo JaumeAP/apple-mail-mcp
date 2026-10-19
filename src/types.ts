@@ -186,7 +186,10 @@ export interface Account {
   /** Primary email address for the account */
   email: string;
 
-  /** The account's other email addresses (aliases), when Mail lists any */
+  /** Every address of the account, in Mail's order (`email` is the first) */
+  addresses: string[];
+
+  /** The account's other email addresses (aliases): `addresses` without `email` */
   aliases?: string[];
 
   /** Account type (e.g., "iCloud", "Gmail", "Exchange") */
