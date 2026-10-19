@@ -83314,6 +83314,7 @@ var DATES_MARKER = "DATES";
 var HTML_MARKER = "HTML";
 var LOOKUP_ERROR_MARKER = "ERR";
 var BATCH_FATAL = "FATAL";
+var ATTACHMENTS_MARKER = "ATT";
 var RECON_TAG = "RECON";
 var SNAP_TAG = "SNAP";
 var SNAP_PAIR = "P";
@@ -86903,14 +86904,7 @@ ${this.errorEmit("              ")}
    * when AppleScript returns empty (known issue across all account types).
    */
   listAttachments(id) {
-    const script = buildAppLevelScript(`
-      try
-        repeat with acct in accounts
-          repeat with mb in mailboxes of acct
-            try
-              set matchingMsgs to (messages of mb whose id is ${Number(id)})
-              if (count of matchingMsgs) > 0 then
-                set msg to item 1 of matchingMsgs
+    const attachmentLoop = `
                 set outputText to ""
                 set attCount to 0
                 -- Each property is read inside its own try: \`MIME type of att\` throws
@@ -86936,20 +86930,20 @@ ${this.errorEmit("              ")}
                     set outputText to outputText & attName & "${FIELD_SEP}" & attType & "${FIELD_SEP}" & attSize
                     set attCount to attCount + 1
                   end if
-                end repeat
-                return outputText
-              end if
-            end try
-          end repeat
-        end repeat
-        return ""
-      on error errMsg
-        return ""
-      end try
-    `);
-    const result = executeAppleScript(script, { timeoutMs: 6e4 });
-    if (result.success && result.output.trim()) {
-      const items = result.output.split(RECORD_SEP);
+                end repeat`;
+    this.lastMessageLookupError = void 0;
+    const output = this.resolveById(
+      id,
+      `${attachmentLoop}
+                return "${ATTACHMENTS_MARKER}" & outputText`,
+      void 0
+    );
+    if (output === null) {
+      const refusal = this.consumeLastMessageLookupError();
+      if (refusal) throw new Error(refusal);
+    }
+    if (output?.startsWith(ATTACHMENTS_MARKER) && output.length > ATTACHMENTS_MARKER.length) {
+      const items = output.slice(ATTACHMENTS_MARKER.length).split(RECORD_SEP);
       const attachments = [];
       for (const item of items) {
         const parts = item.split(FIELD_SEP);
@@ -87007,14 +87001,28 @@ ${this.errorEmit("              ")}
       }
     };
     const numericId = Number(id);
-    const script = buildAppLevelScript(`
-      try
-        repeat with acct in accounts
-          repeat with mb in mailboxes of acct
-            try
-              set matchingMsgs to (messages of mb whose id is ${numericId})
-              if (count of matchingMsgs) > 0 then
-                set msg to item 1 of matchingMsgs
+    this.lastMessageLookupError = void 0;
+    const located = this.resolveById(
+      id,
+      `set _where to ""
+                try
+                  ${mailboxPathFragment("_hitMb", "_where")}
+                end try
+                return _hitAcct & "${FIELD_SEP}" & _where`,
+      void 0
+    );
+    if (located === null) {
+      const why = this.consumeLastMessageLookupError();
+      if (why) {
+        cleanupTemporaryDirectory();
+        console.error(`Failed to save attachment: ${why}`);
+        return false;
+      }
+    }
+    const [holderAccount, holderMailbox] = (located ?? "").split(FIELD_SEP);
+    if (holderAccount && holderMailbox)
+      this.rememberLocation(String(id), holderAccount, holderMailbox);
+    const saveAction = `
                 repeat with att in mail attachments of msg
                   if name of att is "${safeName}" then
                     set savePath to POSIX file "${safeTemporaryPath}"
@@ -87022,7 +87030,16 @@ ${this.errorEmit("              ")}
                     return "ok"
                   end if
                 end repeat
-                return "error:Attachment not found"
+                return "error:Attachment not found"`;
+    const script = holderAccount && holderMailbox ? this.scopedByIdScript(holderAccount, holderMailbox, id, saveAction) : buildAppLevelScript(`
+      try
+        repeat with acct in accounts
+          repeat with mb in mailboxes of acct
+            try
+              set matchingMsgs to (messages of mb whose id is ${numericId})
+              if (count of matchingMsgs) > 0 then
+                set msg to item 1 of matchingMsgs
+                ${saveAction}
               end if
             end try
           end repeat
