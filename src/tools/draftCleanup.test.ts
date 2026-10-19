@@ -10,6 +10,7 @@ import {
   isDraftForSend,
   isDraftMailbox,
   isSentMailbox,
+  pickCurrentDraft,
   pollUntil,
 } from "@/tools/draftCleanup.js";
 
@@ -40,6 +41,28 @@ describe("isDraftForSend", () => {
     for (const mailbox of ["Borradores", "Esborranys", "Entwürfe", "Brouillons", "Bozze"]) {
       expect(isDraftForSend({ subject: "Hola", mailbox }, "Hola")).toBe(true);
     }
+  });
+});
+
+describe("pickCurrentDraft", () => {
+  const draft = (id: string, subject = "Hola", mailbox = "Drafts") => ({ id, subject, mailbox });
+
+  it("stands in the one draft with the subject for a stale id", () => {
+    expect(pickCurrentDraft([draft("538965")], "Hola")).toEqual({ id: "538965" });
+  });
+
+  it("ignores other subjects and messages outside Drafts", () => {
+    const list = [draft("1", "Otro"), draft("2", "Hola", "INBOX"), draft("3")];
+    expect(pickCurrentDraft(list, "Hola")).toEqual({ id: "3" });
+  });
+
+  it("guesses nothing when no draft has the subject", () => {
+    expect(pickCurrentDraft([draft("1", "Otro")], "Hola")).toEqual({ none: true });
+    expect(pickCurrentDraft([], "Hola")).toEqual({ none: true });
+  });
+
+  it("guesses nothing when several drafts share the subject", () => {
+    expect(pickCurrentDraft([draft("1"), draft("2")], "Hola")).toEqual({ several: 2 });
   });
 });
 

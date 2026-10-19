@@ -19,6 +19,8 @@ interface World {
   openWorks: boolean;
   /** Probes run, to see whether a call paid for one. */
   probes: number;
+  /** Next `open` calls that fail before `open` starts working (a transient refusal). */
+  failOpens: number;
 }
 
 let world: World;
@@ -31,6 +33,10 @@ vi.mock("child_process", () => ({
     if (cmd === "open") {
       world.opened += 1;
       if (!world.openWorks) return { status: 1 };
+      if (world.failOpens > 0) {
+        world.failOpens -= 1;
+        return { status: 1 };
+      }
       world.pids = [999];
       world.probe = "ok";
       return { status: 0 };
@@ -75,6 +81,7 @@ describe("mailRecovery", () => {
       wedgedProbes: 0,
       openWorks: true,
       probes: 0,
+      failOpens: 0,
     };
     vi.spyOn(process, "kill").mockImplementation(((pid: number) => {
       world.killed.push(pid);
@@ -210,7 +217,7 @@ describe("mailRecovery", () => {
     const { ensureMailReady } = await load();
     ensureMailReady({ budgetMs: 1_000 });
     ensureMailReady({ budgetMs: 1_000 });
-    expect(world.opened).toBe(2);
+    expect(world.opened).toBe(4); // two calls, each `open` plus its retry
   });
 
   it("restarts at most once per cooldown", async () => {
@@ -245,7 +252,15 @@ describe("mailRecovery", () => {
     const { ensureMailReady } = await load();
     ensureMailReady();
     ensureMailReady();
-    expect(world.opened).toBe(1);
+    expect(world.opened).toBe(2); // one try is `open` plus its single retry
+  });
+
+  it("retries a failed open once, so a transient refusal does not leave Mail closed", async () => {
+    world.failOpens = 1;
+    const { ensureMailReady } = await load();
+    ensureMailReady();
+    expect(world.opened).toBe(2);
+    expect(world.pids).toEqual([999]);
   });
 
   it("does not restart for a permission refusal", async () => {

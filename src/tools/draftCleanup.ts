@@ -80,6 +80,22 @@ export function isDraftForSend(
   return draft !== null && draft.subject === subject && isDraftMailbox(draft.mailbox);
 }
 
+/**
+ * The one draft to use when the `draftId` the caller passed no longer exists.
+ * A server-side account re-saves a draft and gives it a new numeric id within
+ * seconds, so the id from an earlier listing can already be gone. Only an
+ * unambiguous match by subject in a Drafts mailbox stands in for it; with none
+ * or several, nothing is guessed and the caller says so.
+ */
+export function pickCurrentDraft(
+  drafts: readonly Pick<Message, "id" | "subject" | "mailbox">[],
+  subject: string
+): { id: string } | { none: true } | { several: number } {
+  const same = drafts.filter((d) => isDraftForSend(d, subject));
+  if (same.length === 1) return { id: same[0].id };
+  return same.length === 0 ? { none: true } : { several: same.length };
+}
+
 /** A message with this subject sits in a Sent mailbox, dated at or after `sentAfter`. */
 export function hasSentCopy(
   hits: readonly Pick<Message, "subject" | "mailbox" | "dateReceived" | "dateSent">[],

@@ -120,7 +120,7 @@ import {
 } from "@/services/imapMultiAccount.js";
 import type { Account, SearchDiagnostics, SearchResult } from "@/types.js";
 import { routeMessage } from "@/services/messageRouter.js";
-import { hasSentCopy, isDraftForSend, pollUntil } from "@/tools/draftCleanup.js";
+import { hasSentCopy, isDraftForSend, pickCurrentDraft, pollUntil } from "@/tools/draftCleanup.js";
 import { runDoctor, formatDoctorReport } from "@/tools/doctor.js";
 import { registerResourcesAndPrompts } from "@/tools/resourcesAndPrompts.js";
 import {
@@ -1471,20 +1471,41 @@ const SENT_COPY_ERROR_SCHEMA = z
 
 /**
  * Before sending: `draftId` must name a draft whose subject is the one being
- * sent. Returns the refusal text, or null when the draft checks out. Refusing
+ * sent. Returns the refusal text, or the id to clean up after the send. Refusing
  * here keeps a wrong id from sending anything.
+ *
+ * A numeric id that no longer exists is not a wrong id: Mail gives a server-side
+ * draft a new id each time it re-saves it. The single draft with the subject in
+ * the account's Drafts then stands in for it; with none or several, it refuses.
  */
-async function checkDraftForSend(draftId: string, subject: string): Promise<string | null> {
+async function checkDraftForSend(
+  draftId: string,
+  subject: string,
+  account?: string
+): Promise<{ refusal: string } | { draftId: string }> {
   const mismatch = `draftId "${draftId}" is not a draft with subject "${subject}"; nothing was sent.`;
   const ref = decodeImapId(draftId);
   if (ref) {
     // Only the header block: the subject is all the check needs, not the whole draft.
     const read = await imapGetMessageHeaders(draftId);
-    if (!read.success) return read.error ?? `Draft "${draftId}" could not be read.`;
+    if (!read.success) return { refusal: read.error ?? `Draft "${draftId}" could not be read.` };
     const draftSubject = parseHeaderBlock(read.info ?? "").subject ?? "";
-    return isDraftForSend({ subject: draftSubject, mailbox: ref.path }, subject) ? null : mismatch;
+    return isDraftForSend({ subject: draftSubject, mailbox: ref.path }, subject)
+      ? { draftId }
+      : { refusal: mismatch };
   }
-  return isDraftForSend(mailManager.getMessageById(draftId), subject) ? null : mismatch;
+  const found = mailManager.getMessageById(draftId);
+  if (found) return isDraftForSend(found, subject) ? { draftId } : { refusal: mismatch };
+
+  const stale = `draftId "${draftId}" no longer exists (Mail changes a draft's id when it re-saves it)`;
+  const current = pickCurrentDraft(mailManager.listMessages("Drafts", account, 50), subject);
+  if ("id" in current) return { draftId: current.id };
+  return {
+    refusal:
+      "none" in current
+        ? `${stale} and no draft with subject "${subject}" was found; nothing was sent. List Drafts again for the current id.`
+        : `${stale} and ${current.several} drafts have subject "${subject}"; nothing was sent. List Drafts again and pass the current id.`,
+  };
 }
 
 /** Deletes the draft: IMAP moves it to Trash, AppleScript deletes it by its bound id. */
@@ -1611,9 +1632,12 @@ registerTool(
 
       const attachmentCount = attachments?.length ?? 0;
 
+      // The id to clean up after the send: the caller's, or the current one when theirs went stale.
+      let draftToClean: string | undefined;
       if (draftId) {
-        const refusal = await checkDraftForSend(draftId, subject);
-        if (refusal) return errorResponse(refusal);
+        const checked = await checkDraftForSend(draftId, subject, account);
+        if ("refusal" in checked) return errorResponse(checked.refusal);
+        draftToClean = checked.draftId;
       }
       const sentAfter = new Date();
 
@@ -1652,7 +1676,9 @@ registerTool(
             : result.sentCopy === false
               ? ` (Sent-folder copy NOT filed: ${result.sentCopyError ?? "unknown error"})`
               : "";
-        const draft = draftId ? await cleanUpDraft(draftId, () => result.sentCopy === true) : {};
+        const draft = draftToClean
+          ? await cleanUpDraft(draftToClean, () => result.sentCopy === true)
+          : {};
         return successResponse(`Email sent via SMTP to ${to.join(", ")}${attachInfo}${copyNote}`, {
           ok: true,
           recipients: to,
@@ -1671,8 +1697,8 @@ registerTool(
         return errorResponse("Failed to send email. Check Mail.app configuration.");
       }
 
-      const draft = draftId
-        ? await cleanUpDraft(draftId, () =>
+      const draft = draftToClean
+        ? await cleanUpDraft(draftToClean, () =>
             pollUntil(() =>
               hasSentCopy(
                 mailManager.searchMessages(
