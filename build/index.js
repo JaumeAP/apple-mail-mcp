@@ -82649,6 +82649,7 @@ var RESTART_COOLDOWN_MS = 10 * 6e4;
 var READY_WAIT_MS = 45e3;
 var STOP_WAIT_MS = 6e3;
 var POLL_MS = 1500;
+var OPEN_RETRY_MS = 2e3;
 var CONFIRM_WAIT_MS = 5e3;
 var PERMISSION_DENIED = /\(-1743\)|not author(?:i[sz])ed|not permitted/i;
 var healthyUntil = 0;
@@ -82704,7 +82705,8 @@ function waitUntilAnswering(ms) {
   return false;
 }
 function openMail() {
-  return spawnSync("open", ["-g", "-a", "Mail"], { stdio: "ignore" }).status === 0;
+  const open = () => spawnSync("open", ["-g", "-a", "Mail"], { stdio: "ignore" }).status === 0;
+  return open() || (sleepMs(OPEN_RETRY_MS), open());
 }
 function restartMail() {
   const steps = [];
@@ -89631,6 +89633,11 @@ function isSentMailbox(mailbox) {
 function isDraftForSend(draft, subject) {
   return draft !== null && draft.subject === subject && isDraftMailbox(draft.mailbox);
 }
+function pickCurrentDraft(drafts, subject) {
+  const same = drafts.filter((d) => isDraftForSend(d, subject));
+  if (same.length === 1) return { id: same[0].id };
+  return same.length === 0 ? { none: true } : { several: same.length };
+}
 function hasSentCopy(hits, subject, sentAfter) {
   return hits.some((m) => {
     if (m.subject !== subject || !isSentMailbox(m.mailbox)) return false;
@@ -91077,16 +91084,23 @@ var SENT_COPY_SCHEMA = external_exports.boolean().optional().describe(
   "SMTP only: whether a best-effort copy was filed to the account's Sent mailbox over IMAP (issue #220). Absent when no configured IMAP account matches the SMTP identity \u2014 not a failure, the feature simply wasn't engaged."
 );
 var SENT_COPY_ERROR_SCHEMA = external_exports.string().optional().describe("Present only when sentCopy is false: why the Sent-folder copy failed.");
-async function checkDraftForSend(draftId, subject) {
+async function checkDraftForSend(draftId, subject, account) {
   const mismatch = `draftId "${draftId}" is not a draft with subject "${subject}"; nothing was sent.`;
   const ref = decodeImapId(draftId);
   if (ref) {
     const read = await imapGetMessageHeaders(draftId);
-    if (!read.success) return read.error ?? `Draft "${draftId}" could not be read.`;
+    if (!read.success) return { refusal: read.error ?? `Draft "${draftId}" could not be read.` };
     const draftSubject = parseHeaderBlock(read.info ?? "").subject ?? "";
-    return isDraftForSend({ subject: draftSubject, mailbox: ref.path }, subject) ? null : mismatch;
+    return isDraftForSend({ subject: draftSubject, mailbox: ref.path }, subject) ? { draftId } : { refusal: mismatch };
   }
-  return isDraftForSend(mailManager.getMessageById(draftId), subject) ? null : mismatch;
+  const found = mailManager.getMessageById(draftId);
+  if (found) return isDraftForSend(found, subject) ? { draftId } : { refusal: mismatch };
+  const stale = `draftId "${draftId}" no longer exists (Mail changes a draft's id when it re-saves it)`;
+  const current = pickCurrentDraft(mailManager.listMessages("Drafts", account, 50), subject);
+  if ("id" in current) return { draftId: current.id };
+  return {
+    refusal: "none" in current ? `${stale} and no draft with subject "${subject}" was found; nothing was sent. List Drafts again for the current id.` : `${stale} and ${current.several} drafts have subject "${subject}"; nothing was sent. List Drafts again and pass the current id.`
+  };
 }
 async function deleteDraftAfterSend(draftId) {
   let r;
@@ -91166,9 +91180,11 @@ registerTool(
     }) => {
       const attachInfo = attachments?.length ? ` with ${attachments.length} attachment(s)` : "";
       const attachmentCount = attachments?.length ?? 0;
+      let draftToClean;
       if (draftId) {
-        const refusal = await checkDraftForSend(draftId, subject);
-        if (refusal) return errorResponse(refusal);
+        const checked = await checkDraftForSend(draftId, subject, account);
+        if ("refusal" in checked) return errorResponse(checked.refusal);
+        draftToClean = checked.draftId;
       }
       const sentAfter = /* @__PURE__ */ new Date();
       const useSmtp = shouldUseSmtp(transport2, account);
@@ -91191,7 +91207,7 @@ registerTool(
           return errorResponse(result.error ?? "Failed to send email via SMTP.");
         }
         const copyNote = result.sentCopy === true ? " (Sent-folder copy filed)" : result.sentCopy === false ? ` (Sent-folder copy NOT filed: ${result.sentCopyError ?? "unknown error"})` : "";
-        const draft2 = draftId ? await cleanUpDraft(draftId, () => result.sentCopy === true) : {};
+        const draft2 = draftToClean ? await cleanUpDraft(draftToClean, () => result.sentCopy === true) : {};
         return successResponse(`Email sent via SMTP to ${to.join(", ")}${attachInfo}${copyNote}`, {
           ok: true,
           recipients: to,
@@ -91207,8 +91223,8 @@ registerTool(
       if (!success) {
         return errorResponse("Failed to send email. Check Mail.app configuration.");
       }
-      const draft = draftId ? await cleanUpDraft(
-        draftId,
+      const draft = draftToClean ? await cleanUpDraft(
+        draftToClean,
         () => pollUntil(
           () => hasSentCopy(
             mailManager.searchMessages(

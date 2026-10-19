@@ -44,6 +44,8 @@ const READY_WAIT_MS = 45_000;
 /** How long Mail gets to quit or die before the next step. */
 const STOP_WAIT_MS = 6_000;
 const POLL_MS = 1_500;
+/** Pause before the one retry of a failed `open`. */
+const OPEN_RETRY_MS = 2_000;
 /** Gap before the second probe that confirms a stalled one. */
 const CONFIRM_WAIT_MS = 5_000;
 
@@ -126,7 +128,10 @@ function waitUntilAnswering(ms: number): boolean {
 }
 
 function openMail(): boolean {
-  return spawnSync("open", ["-g", "-a", "Mail"], { stdio: "ignore" }).status === 0;
+  const open = () => spawnSync("open", ["-g", "-a", "Mail"], { stdio: "ignore" }).status === 0;
+  // Seen once right after a force-kill: `open` failed and Mail stayed closed. One retry
+  // after a pause; a Mail that really cannot start fails twice and is left to the cooldown.
+  return open() || (sleepMs(OPEN_RETRY_MS), open());
 }
 
 /**

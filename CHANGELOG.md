@@ -2,6 +2,18 @@
 
 ### Fixed
 
+- **`send-email` with a stale `draftId` is no longer refused as "not a draft".** On a
+  server-side account Mail re-saves a draft and gives it a new numeric id within seconds,
+  so the id from an earlier listing could be gone (seen live: 538964 became 538965 in 8 s).
+  When a numeric `draftId` no longer exists, the one draft with the subject being sent in
+  the account's Drafts stands in for it and is the one cleaned up after the send. With no
+  such draft, or several, nothing is sent and the refusal says the id may have changed.
+  A `draftId` that points at a real message with another subject is still refused.
+- **Mail recovery retries a failed `open -g -a Mail` once** after a 2 s pause. Seen once
+  right after a force-kill: `open` failed and Mail stayed closed.
+
+### Fixed
+
 - **Mail recovery no longer holds a call longer than the call's own timeout.** The probe,
   the confirming probe and the wait for a Mail the recovery just opened must fit in the
   call's `timeoutMs`; a check that cannot fit is skipped (a probe needs 12 s, so a call
