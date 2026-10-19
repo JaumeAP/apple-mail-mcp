@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [2.20.22-jap.1] - 2026-10-19 (JaumeAP fork)
+
+Merges upstream 2.20.17 to 2.20.22. Upstream took six changes first made in the fork
+(`hasAttachments` per message, MIME filenames and `cid:`, by-id account scope, flag search
+robustness, `list-attachments` and `save-attachment` by guarded lookup, mailbox lookup by
+cached position). The fork already had them, so the merge only reconciles comments and
+versions; where the two sides differed in wording, upstream's text is kept.
+
 ## [2.20.16-jap.3] - 2026-10-19 (JaumeAP fork)
 
 ### Fixed
@@ -347,6 +355,134 @@ Fixes from a review of the fork's own changes (`a98e669..origin/main`).
 - Inline base64 attachments staged under a `TMPDIR` inside `~/Library` are no
   longer refused, and a root in `APPLE_MAIL_MCP_ATTACHMENT_READ_ROOTS` lifts
   the Library rule beneath it.
+
+## [2.20.22] - 2026-10-19
+
+### Performance
+
+- **`list-messages`, `search-messages` and `get-unread-count` recomputed every
+  mailbox's path on every call** (#311, @JaumeAP), even though the mailbox list
+  itself is already cached for 60 s. Working out one mailbox's path walks
+  `container of` up the tree — several Apple events each — and
+  `mailboxLookupFragment` did that for every mailbox until one matched, so an
+  iCloud account with 119 mailboxes spent ~12 s per call just finding the
+  mailbox it had been asked for. `mailboxLookupFragment` now takes an optional
+  `hintIndex`: the position the target holds in the cached path list, which is
+  built by walking the account's `mailboxes` in order and so corresponds
+  directly to a position in that collection. The mailbox at that position is
+  checked first, by path, and the full walk runs only if the path does not match
+  — i.e. only when the list changed since it was cached. A stale or
+  out-of-range hint is harmless: the path check rejects it and the walk runs as
+  before, just no faster.
+
+  Measured on a read-only iCloud account with 119 mailboxes: `list` 10 rows
+  (2nd call) 12.9 s → 1.7 s; `list` 50 rows 19 s → 7.7 s; `list` 200 rows 42 s
+  → 30 s; first call of a process 24.7 s → 13.5 s. The remaining ~150 ms per row
+  is the row loop, not touched here. An account with few mailboxes gains little,
+  and the first call after the cache expires still pays the path listing.
+
+## [2.20.21] - 2026-10-19
+
+### Fixed
+
+- **`save-attachment` could write a different message's attachment** under the
+  name the caller asked for, and **`list-attachments` could answer for the wrong
+  message** — including reporting "no attachments" for a message that has them
+  (#310, @JaumeAP). Both walked every mailbox of every account and took the
+  **first** message whose numeric id matched. Mail.app numbers messages per
+  mailbox, and a label store (Gmail, iCloud) repeats one id across `INBOX`,
+  `Important` and `All Mail`, so the first hit could be a different message than
+  the one the caller listed. Both tools now resolve the message through the same
+  guarded `resolveById` path the read tools already use — the mailbox the id was
+  listed from when known, else the bounded scan that skips very large mailboxes
+  and stops at its time budget — and **refuse** an id that several mailboxes
+  hold instead of acting on an arbitrary copy. `save-attachment` then saves from
+  the resolved mailbox via `scopedByIdScript` and remembers the location; an
+  ambiguous id saves nothing. `list-attachments` leads a found message's list
+  with a marker, so a message with genuinely no attachments is not mistaken for
+  a lookup miss and still reaches the MIME fallback. An id the lookup cannot
+  locate, with no reason to report, still falls back to the previous
+  whole-account script, so behaviour for an unlocated id is unchanged.
+
+### Documentation
+
+- README: `list-attachments` and `save-attachment` now document the guarded
+  by-id resolution and the ambiguous-id refusal, which previously applied only
+  to the read tools.
+
+## [2.20.20] - 2026-10-19
+
+### Fixed
+
+- **A failing `flag index` getter dragged every other row property down the slow
+  per-message path** (#309, @JaumeAP). The flag colour added in #286/#289 was
+  bulk-read inside the same `try` as id/subject/sender/date/read/flagged, so on
+  an account type where `flag index of _msgs` throws, the whole bulk read was
+  abandoned and all six properties fell back to one Apple event each, per row.
+  `flag index` now gets its own `try` and `_flagBulkOK` flag — the same
+  individually-guarded pattern already used for `date sent` — and the colour
+  degrades on its own: bulk, then a per-message read, then `-1`.
+- **The IMAP colour filter could exceed the server's command-line limit**
+  (#309, @JaumeAP). `filterUidsByColor` put every FLAGGED-search candidate UID
+  into a single flags-only `FETCH`, and a few thousand UIDs pass the 8 KiB line
+  limit that Dovecot-style servers keep as a floor. The FETCH now goes in slices
+  of 500 UIDs; the caller's search-result ordering is still preserved.
+
+## [2.20.19] - 2026-10-19
+
+### Fixed
+
+- **A by-id lookup given an `account` but no `mailbox` still scanned every
+  account** (#308, @JaumeAP), plus the local "On My Mac" mailboxes, instead of
+  honouring the account the caller named. The unscoped AppleScript walk now
+  takes that account and skips the others — and skips the local store, which
+  belongs to no account — so `get-message` / `get-message-headers` with only an
+  `account` do a fraction of the work. An `account` that matches nothing now
+  fails with `Account "<name>" not found — check the name with list-accounts.`
+  instead of the misleading "message not found" that an exhaustive miss
+  produced. A lookup with no account, or with both an account and a mailbox, is
+  unchanged.
+
+## [2.20.18] - 2026-10-19
+
+### Fixed
+
+- **Encoded attachment filenames were returned as raw encoded text** on the MIME
+  fallback path (#307, @JaumeAP). `extractFilename` matched `filename=` /
+  `name=` with a regex that could not see RFC 2231 parameters (`filename*=`,
+  `filename*0*=` continuations, `charset'lang'%XX`) or RFC 2047 encoded words
+  (`=?UTF-8?B?...?=`, `=?ISO-8859-1?Q?...?=`), so a name like
+  `filename*=UTF-8''caf%C3%A9.pdf` surfaced verbatim instead of `café.pdf`.
+  Header parameters are now parsed quote-aware (a quoted `;` no longer splits a
+  value) and both encodings are decoded, with the charset honoured and a UTF-8
+  fallback for an unknown label.
+- **A `cid:` reference matched as a substring**, so an inline part was
+  misclassified as embedded rather than as a real attachment (#307, @JaumeAP).
+  The HTML was searched for the literal text `cid:<id>`, which meant `cid:logo`
+  matched inside `cid:logo2`, and a percent-encoded reference (`cid:logo%40x`
+  for Content-ID `logo@x`) was missed entirely. References are now parsed as
+  whole tokens — ending at a quote, whitespace, bracket or parenthesis — then
+  lower-cased and percent-decoded before being compared against the part's
+  Content-ID. An inline part nothing refers to is still treated as a file. The
+  HTML bodies are now also decoded lazily, only when a named inline part with a
+  Content-ID actually requires the reference set.
+
+## [2.20.17] - 2026-10-19
+
+### Fixed
+
+- **`hasAttachments` was `false` on every AppleScript row** of `search-messages`
+  and `list-messages` (#305, @JaumeAP), even for messages `list-attachments`
+  happily listed. Two causes: `buildMessageRowLoop` read `mail attachments` as a
+  bulk property of the message list (`mail attachments of _msgs`), which returns
+  an empty list on current macOS — measured against a real Mail.app, six messages
+  whose per-message counts were 1, 4, 2, 2, 0, 2 gave a bulk list of count 0 — so
+  the row loop errored inside its own swallowing `try` and left `false`; and
+  `search-messages` never passed `withAttachments` to any of its three row loops,
+  so it never read attachments at all. Both paths now count `mail attachments`
+  per message, and only for the rows actually returned (after the limit, offset,
+  date-range and dedup checks), so the cost is one Apple event per emitted row.
+  The IMAP route is unaffected — it reads BODYSTRUCTURE.
 
 ## [2.20.16] - 2026-10-17
 
