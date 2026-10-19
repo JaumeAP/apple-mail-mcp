@@ -185,9 +185,18 @@ export function restartMail(): RecoveryReport {
  * Called before an AppleScript call. Returns nothing: it only makes the next
  * call more likely to find Mail answering, and logs what it did to stderr.
  * `launch: false` leaves a closed Mail closed; a running one is still checked.
+ *
+ * `budgetMs` is the caller's own timeout. The checks (probe, confirming probe)
+ * and the wait for a Mail we just opened must fit in it, so a call with a 30 s
+ * timeout is not held for more than that before it even starts; a check that
+ * cannot fit is skipped. A restart already decided on is not cut short: half a
+ * restart (Mail quit, not reopened) is worse than a long one, and it happens at
+ * most once per RESTART_COOLDOWN_MS.
  */
-export function ensureMailReady(options: { launch?: boolean } = {}): void {
+export function ensureMailReady(options: { launch?: boolean; budgetMs?: number } = {}): void {
   if (busy || !autoRecoverEnabled() || Date.now() < Math.max(healthyUntil, skipUntil)) return;
+  const deadline = options.budgetMs === undefined ? Infinity : Date.now() + options.budgetMs;
+  const left = () => deadline - Date.now();
   busy = true;
   try {
     if (mailPids().length === 0) {
@@ -204,18 +213,22 @@ export function ensureMailReady(options: { launch?: boolean } = {}): void {
         return;
       }
       console.error("mail-recovery: Mail.app is not running; opening it");
-      const ready = openMail() && waitUntilAnswering(READY_WAIT_MS);
+      const cut = left() < READY_WAIT_MS;
+      const ready = openMail() && waitUntilAnswering(Math.min(READY_WAIT_MS, left()));
       console.error(
-        `mail-recovery: ${ready ? "Mail is answering" : "Mail did not answer in time"}`
+        `mail-recovery: ${ready ? "Mail is answering" : cut ? "Mail is still starting; the call's timeout ended the wait" : "Mail did not answer in time"}`
       );
       if (ready) healthyUntil = Date.now() + HEALTHY_TTL_MS;
-      else lastRestartAt = Date.now();
+      // A wait cut short by the caller's timeout says nothing about whether Mail can start.
+      else if (!cut) lastRestartAt = Date.now();
       return;
     }
+    if (left() < PROBE_TIMEOUT_MS) return; // a probe that stalls would outlast the call's timeout
     let state = probe();
     if (state === "wedged") {
       // A busy Mail drains an abandoned Apple Event for a while; only a probe that
       // stalls twice means it is wedged and worth quitting (a restart loses drafts).
+      if (left() < CONFIRM_WAIT_MS + PROBE_TIMEOUT_MS) return; // cannot confirm in time: leave it
       sleepMs(CONFIRM_WAIT_MS);
       state = probe();
     }
