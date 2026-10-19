@@ -97,6 +97,27 @@ describe("outbound attachment read policy", () => {
     expect(isProtectedPath("/Volumes/Clone/Users/someone/Documents/report.pdf")).toBe(false);
   });
 
+  it("recognises the Library of a home directory that is not under /Users", () => {
+    // `/Users/<name>/Library` is matched by its shape; a home elsewhere (a CI runner
+    // under /Users is matched that way, a Linux or relocated home is not) has to be
+    // matched against the home directory itself.
+    const original = process.env.HOME;
+    const home = mkdtempSync(join(tmpdir(), "amcp-home-"));
+    try {
+      process.env.HOME = home;
+      const canonicalHome = realpathSync.native(home);
+      expect(isProtectedPath(join(canonicalHome, "Library", "Messages", "chat.db"))).toBe(true);
+      expect(
+        isProtectedPath(join(canonicalHome, "Library", "CloudStorage", "Dropbox", "x.pdf"))
+      ).toBe(false);
+      expect(isProtectedPath(join(canonicalHome, "Documents", "report.pdf"))).toBe(false);
+    } finally {
+      if (original === undefined) delete process.env.HOME;
+      else process.env.HOME = original;
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   it("lets an explicit root, and the server's tmpdir, lift only the Library rule", () => {
     const mailDownloads = "/Users/someone/Library/Containers/com.apple.mail/Data/Downloads";
     expect(isProtectedPath(join(mailDownloads, "a.pdf"))).toBe(true);
