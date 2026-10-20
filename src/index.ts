@@ -3158,8 +3158,8 @@ registerTool(
     const result = mailManager.createNewsletterSmartMailboxes(!!dryRun, minCount, days);
     const lines = result.createdOrProposed
       .map(
-        (c: any) =>
-          `  - ${c.name || c.suggestedName || c.email} (score ${c.score ?? "?"}${c.wouldCreate ? ", dry-run" : c.alreadyExisted ? ", already existed" : c.error ? `, error: ${c.error}` : ""})`
+        (c) =>
+          `  - ${c.name || c.email} (score ${c.score ?? "?"}${c.wouldCreate ? ", dry-run" : c.alreadyExisted ? ", already existed" : c.error ? `, error: ${c.error}` : ""})`
       )
       .join("\n");
     const prefix = result.dryRun ? "DRY RUN - would create" : "Created";

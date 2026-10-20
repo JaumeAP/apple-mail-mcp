@@ -272,6 +272,32 @@ const SCOPED_MISS_MARKER = "\x1dSCOPED\x1d";
 /** Where a by-id lookup was scoped, and whether the caller named it. */
 type ByIdLocation = { account: string; mailbox: string; explicit: boolean };
 
+/** One SyncedSmartMailboxes.plist entry as `plutil -convert json` emits it. */
+type RawSmartMailbox = { MailboxName?: string; MailboxID?: string; MailboxCriteria?: unknown };
+/** One criterion inside a raw smart mailbox's `MailboxCriteria`. */
+type RawSmartCriterion = { Name?: string; Header?: string; Expression?: unknown };
+
+/** A sender that looks like a newsletter, as scored by groupAndScoreNewsletters(). */
+type NewsletterCandidate = {
+  email: string;
+  sender: string;
+  count: number;
+  score: number;
+  signals: string[];
+  suggestedName: string;
+};
+
+/** One row of createNewsletterSmartMailboxes(): proposed (dry run) or attempted. */
+type NewsletterSmartMailboxResult = {
+  name: string;
+  email: string;
+  score: number;
+  wouldCreate?: boolean;
+  success?: boolean;
+  alreadyExisted?: boolean;
+  error?: string;
+};
+
 /** User-facing error when a by-id read finds Mail.app not running (#270 follow-up). */
 export function mailNotRunningForId(id: string): string {
   return `Mail.app is not running, so message ${Number(id)} could not be looked up by its numeric Mail.app id (this server does not launch Mail.app by itself). Open Mail.app and retry, or use the message's imap: id from list-messages/search-messages, which reads over IMAP without Mail.app.`;
@@ -6397,7 +6423,7 @@ ${this.errorEmit("              ")}
       try {
         const data = JSON.parse(j.stdout);
         if (Array.isArray(data)) {
-          return data.map((m: any) => ({
+          return data.map((m: RawSmartMailbox | null) => ({
             name: m?.MailboxName ?? "",
             id: m?.MailboxID,
             criteriaSummary: this.summarizeCriteria(m?.MailboxCriteria),
@@ -6434,10 +6460,10 @@ ${this.errorEmit("              ")}
     return out;
   }
 
-  private summarizeCriteria(crits: any): string | undefined {
+  private summarizeCriteria(crits: unknown): string | undefined {
     if (!Array.isArray(crits)) return undefined;
     const summary = crits
-      .map((c: any) => {
+      .map((c: RawSmartCriterion | null) => {
         const n = c?.Name || c?.Header || "";
         return c?.Expression ? `${n}=${String(c.Expression).slice(0, 25)}` : n;
       })
@@ -6482,7 +6508,7 @@ ${this.errorEmit("              ")}
     fromContains = "",
     subjectContains = "",
     bodyContains = ""
-  ): any {
+  ): Record<string, unknown> {
     const newUuid = () => randomUUID().toUpperCase();
 
     const userExpr = fromContains || subjectContains || bodyContains || "";
@@ -6745,20 +6771,16 @@ end tell`;
   private groupAndScoreNewsletters(
     rows: Array<{ sender: string; subject: string; source: string }>,
     minCount: number
-  ): Array<{
-    email: string;
-    sender: string;
-    count: number;
-    score: number;
-    signals: string[];
-    suggestedName: string;
-  }> {
-    const groups: Record<string, any> = {};
+  ): NewsletterCandidate[] {
+    const groups: Record<
+      string,
+      { email: string; sender: string; count: number; subjects: string[]; sample: string }
+    > = {};
     for (const { sender: snd, subject: subj, source: src } of rows) {
       const email = this.extractEmail(snd);
       if (!email || !email.includes("@")) continue;
       if (!groups[email]) {
-        groups[email] = { email, sender: snd, count: 0, subjects: [] as string[], sample: "" };
+        groups[email] = { email, sender: snd, count: 0, subjects: [], sample: "" };
       }
       const g = groups[email];
       g.count++;
@@ -6766,8 +6788,8 @@ end tell`;
       if (!g.sample) g.sample = (src || "").slice(0, 3000);
     }
 
-    const out: any[] = [];
-    for (const g of Object.values(groups) as any[]) {
+    const out: NewsletterCandidate[] = [];
+    for (const g of Object.values(groups)) {
       if (g.count < minCount) continue;
       let score = Math.min(g.count / 3, 8);
       const blob = g.email + " " + (g.sample || "").toLowerCase();
@@ -6780,7 +6802,7 @@ end tell`;
         score += 3;
         signals.push("list_unsubscribe");
       }
-      const prefixes = g.subjects.slice(0, 5).map((s: string) => s.slice(0, 30));
+      const prefixes = g.subjects.slice(0, 5).map((s) => s.slice(0, 30));
       if (prefixes.length >= 2 && new Set(prefixes).size <= 2) {
         score += 2;
         signals.push("repetitive_subject");
@@ -6802,17 +6824,7 @@ end tell`;
   /**
    * Scan recent messages and return likely newsletter senders with scores.
    */
-  findNewsletterCandidates(
-    days = 90,
-    minCount = 3
-  ): Array<{
-    email: string;
-    sender: string;
-    count: number;
-    score: number;
-    signals: string[];
-    suggestedName: string;
-  }> {
+  findNewsletterCandidates(days = 90, minCount = 3): NewsletterCandidate[] {
     return this.groupAndScoreNewsletters(this.scanInboxRows(days), minCount);
   }
 
@@ -6825,11 +6837,11 @@ end tell`;
     days = 90
   ): {
     dryRun: boolean;
-    createdOrProposed: any[];
+    createdOrProposed: NewsletterSmartMailboxResult[];
     count: number;
   } {
     const cands = this.findNewsletterCandidates(days, minCount);
-    const results: any[] = [];
+    const results: NewsletterSmartMailboxResult[] = [];
     for (const c of cands) {
       const nm = c.suggestedName;
       if (dryRun) {
