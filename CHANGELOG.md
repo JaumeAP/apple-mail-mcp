@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [2.20.22-jap.2] - 2026-10-20 (JaumeAP fork)
+
+### Fixed
+
+- **Bytes 0x80–0x9F of 8-bit mail decoded as control characters on some Node releases.** Node 22.22.0 decodes `windows-1252` as plain ISO-8859-1, so `€`, curly quotes and dashes in Outlook / Entourage bodies and headers came back as U+0080–U+009F. Under WHATWG every `latin1` / `iso-8859-1` / `ascii` label resolves to `windows-1252`, so every 8-bit fallback path was affected. That encoding is now decoded with the WHATWG table (`src/utils/textDecode.ts`); every other charset still goes through `TextDecoder`. Node 22.23.3 (CI) was not affected.
+
+### Changed
+
+- Smart mailbox and newsletter code uses named types instead of `any`, clearing the 10 `@typescript-eslint/no-explicit-any` lint warnings. No behaviour change.
+
 ## [2.20.22-jap.1] - 2026-10-19 (JaumeAP fork)
 
 Merges upstream 2.20.17 to 2.20.22. Upstream took six changes first made in the fork
