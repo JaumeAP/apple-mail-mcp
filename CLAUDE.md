@@ -454,3 +454,18 @@ install an official LTS Node to a stable path (e.g. `~/mcp-runtime/node-current`
 repoint this server's `command` at it, and have the user grant the permission
 once — it then persists across Node updates. Do not repoint `npx`-launched
 servers that don't need Full Disk Access.
+
+## Verifying changes to this repo: tests run on macOS only
+
+The unit tests assume macOS (`plutil`, `PlistBuddy`, Mail.app). On Linux — including
+cloud agent containers — some fail for reasons that have nothing to do with the code.
+
+- **Never run `pnpm test` (or `test:all` / `test:coverage`) on Linux.** Typecheck, lint,
+  `format:check` and `build` are fine anywhere.
+- To verify a change, push the branch and read the CI result on `macos-latest`
+  (`test (22)`, `test (24)`). To re-check `main` without a new commit, dispatch `ci.yml`
+  (`workflow_dispatch`).
+- `.husky/pre-push` runs the tests only on Darwin; elsewhere it runs typecheck and leaves
+  the tests to CI.
+- Exception: the `imap-integration` CI job runs on `ubuntu-latest`, because it needs Docker
+  (GreenMail) and GitHub's macOS runners have none.
