@@ -1,1 +1,8 @@
-pnpm run typecheck && pnpm test
+pnpm run typecheck || exit 1
+# The unit tests run on macOS only (plutil / PlistBuddy and Mail.app assumptions).
+# On any other OS, leave them to CI (macos-latest) instead of failing the push.
+if [ "$(uname -s)" = "Darwin" ]; then
+  pnpm test
+else
+  echo "pre-push: not macOS, unit tests skipped here; CI runs them on macos-latest."
+fi
