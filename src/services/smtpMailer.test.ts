@@ -7,11 +7,13 @@
  */
 
 import { describe, it, expect, vi } from "vitest";
+import MailComposer from "nodemailer/lib/mail-composer/index.js";
 import {
   resolveSmtpConfig,
   sendViaSmtp,
   sendSerialViaSmtp,
   applyPlaceholders,
+  composeRawMime,
   isSmtpConfigured,
   shouldUseSmtp,
   SMTP_ENV,
@@ -323,7 +325,13 @@ describe("sendViaSmtp", () => {
   });
 
   it("returns a clean error (not a throw) when the transport fails", async () => {
-    const sendMail = vi.fn().mockRejectedValue(new Error("ECONNREFUSED"));
+    const sendMail = vi.fn().mockRejectedValue(
+      Object.assign(new Error("ECONNREFUSED"), {
+        code: "ESOCKET",
+        originalCode: "ECONNREFUSED",
+        command: "CONN",
+      })
+    );
     const close = vi.fn();
     const createTransport = vi.fn().mockReturnValue({ sendMail, close });
 
@@ -335,7 +343,71 @@ describe("sendViaSmtp", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/SMTP send failed: ECONNREFUSED/);
+    expect(result.deliveryUnknown).not.toBe(true);
     expect(close).toHaveBeenCalled(); // transporter closed even on failure
+  });
+
+  it.each([
+    { code: "ECONNECTION", command: "CONN" },
+    { code: "ETIMEDOUT", command: "CONN" },
+    { code: "ESTREAM", command: "API" },
+  ])(
+    "keeps an unclassified $code/$command send failure unknown without treating RCPT acceptance as delivery",
+    async (properties) => {
+      const sendMail = vi.fn().mockRejectedValue(
+        Object.assign(new Error("Lost final result"), {
+          ...properties,
+          accepted: ["bob@example.com"],
+          rejected: ["refused@example.com"],
+        })
+      );
+      const createTransport = vi.fn().mockReturnValue({ sendMail, close: vi.fn() });
+      const result = await sendViaSmtp(
+        { to: ["bob@example.com", "refused@example.com"], subject: "s", body: "b" },
+        testConfig,
+        createTransport as never
+      );
+      expect(result).toMatchObject({
+        success: false,
+        deliveryUnknown: true,
+        rejected: ["refused@example.com"],
+      });
+      expect(result.accepted).toBeUndefined();
+      expect(sendMail).toHaveBeenCalledOnce();
+    }
+  );
+
+  it("does not turn an acknowledged send into a failure when closing its transport throws", async () => {
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "<accepted@example.com>" });
+    const createTransport = vi.fn().mockReturnValue({
+      sendMail,
+      close: () => {
+        throw new Error("Cleanup failed");
+      },
+    });
+    const result = await sendViaSmtp(
+      { to: ["bob@example.com"], subject: "s", body: "b" },
+      testConfig,
+      createTransport as never,
+      async () => ({})
+    );
+    expect(result).toMatchObject({ success: true, messageId: "<accepted@example.com>" });
+    expect(result.deliveryUnknown).not.toBe(true);
+    expect(sendMail).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a preparation failure before sendMail a known unsent result", async () => {
+    const createTransport = vi.fn(() => {
+      throw new Error("Transport setup failed");
+    });
+    const result = await sendViaSmtp(
+      { to: ["bob@example.com"], subject: "s", body: "b" },
+      testConfig,
+      createTransport as never
+    );
+    expect(result.success).toBe(false);
+    expect(result.deliveryUnknown).not.toBe(true);
+    expect(result.error).toContain("Transport setup failed");
   });
 
   it("rejects a non-absolute attachment path before connecting", async () => {
@@ -348,6 +420,7 @@ describe("sendViaSmtp", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/must be absolute/);
+    expect(result.deliveryUnknown).not.toBe(true);
     expect(createTransport).not.toHaveBeenCalled();
   });
 
@@ -422,6 +495,53 @@ describe("sendViaSmtp Reply-To (2.18.0, issue #220)", () => {
 });
 
 describe("sendViaSmtp Sent-folder copy (2.18.0, issue #220)", () => {
+  it("keeps Bcc in the sender archive but excludes it from the delivered MIME", async () => {
+    let wire = "";
+    let envelope: { to?: string[] } = {};
+    const sendMail = vi.fn(async (mail: ConstructorParameters<typeof MailComposer>[0]) => {
+      const compiled = new MailComposer(mail).compile();
+      envelope = compiled.getEnvelope();
+      wire = (await compiled.build()).toString();
+      return { messageId: "<bcc-fixture@example.invalid>" };
+    });
+    const createTransport = vi.fn(() => ({ sendMail, close: vi.fn() })) as never;
+    const appendSentCopy = vi.fn().mockResolvedValue({ sentCopy: true });
+
+    const result = await sendViaSmtp(
+      {
+        to: ["recipient@example.invalid"],
+        bcc: ["hidden@example.invalid"],
+        subject: "Bcc preservation",
+        body: "Ordinary new text.",
+      },
+      testConfig,
+      createTransport,
+      appendSentCopy
+    );
+
+    expect(result.success).toBe(true);
+    expect(envelope.to).toEqual(["recipient@example.invalid", "hidden@example.invalid"]);
+    expect(wire).not.toMatch(/^Bcc:/im);
+    expect(wire).not.toContain("hidden@example.invalid");
+    expect(appendSentCopy.mock.calls[0][1].toString()).toMatch(
+      /^Bcc: hidden@example.invalid\r?$/im
+    );
+  });
+
+  it("preserves Bcc in raw MIME composed for an IMAP draft", async () => {
+    const raw = await composeRawMime(
+      {
+        to: ["recipient@example.invalid"],
+        bcc: ["hidden@example.invalid"],
+        subject: "Review this draft",
+        body: "Not sent.",
+      },
+      testConfig.from
+    );
+
+    expect(raw.toString()).toMatch(/^Bcc: hidden@example.invalid\r?$/im);
+  });
+
   it("reports a successful best-effort Sent-copy without affecting the send result", async () => {
     const sendMail = vi.fn().mockResolvedValue({ messageId: "<abc@example.com>" });
     const createTransport = vi.fn(() => ({ sendMail, close: vi.fn() })) as never;
@@ -469,6 +589,28 @@ describe("sendViaSmtp Sent-folder copy (2.18.0, issue #220)", () => {
     expect(archived).toBe(delivered);
     // Exactly one Message-ID header — not the delivered one plus a minted one.
     expect(raw.match(/^Message-ID:/gim)?.length).toBe(1);
+  });
+
+  it("passes the SMTP host to the hook, pins Date to the delivered one, and reports alreadyFiled", async () => {
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "<d@example.com>" });
+    const createTransport = vi.fn(() => ({ sendMail, close: vi.fn() })) as never;
+    const appendSentCopy = vi
+      .fn()
+      .mockResolvedValue({ sentCopy: true, sentCopyAlreadyFiled: true });
+
+    const result = await sendViaSmtp(
+      { to: ["bob@example.com"], subject: "s", body: "b" },
+      testConfig,
+      createTransport,
+      appendSentCopy
+    );
+
+    expect(result).toMatchObject({ success: true, sentCopy: true, sentCopyAlreadyFiled: true });
+    expect(appendSentCopy.mock.calls[0][2]).toBe(testConfig.host);
+    const wireDate = sendMail.mock.calls[0][0].date as Date;
+    expect(wireDate).toBeInstanceOf(Date);
+    const raw = appendSentCopy.mock.calls[0][1].toString();
+    expect(raw).toContain(`Date: ${wireDate.toUTCString().replace(/GMT/, "+0000")}`);
   });
 
   it("does not attempt a Sent-copy when none was configured (attempted:false)", async () => {
@@ -543,6 +685,12 @@ describe("sendViaSmtp Sent-folder copy (2.18.0, issue #220)", () => {
 });
 
 describe("applyPlaceholders", () => {
+  it.each(["$&", "$$", "$`", "$'"])("treats replacement value %s as literal text", (value) => {
+    expect(applyPlaceholders("prefix {{Name}} suffix {{Name}}", { Name: value })).toBe(
+      `prefix ${value} suffix ${value}`
+    );
+  });
+
   it("replaces {{Key}} tokens, escapes regex-special keys, leaves unknowns intact", () => {
     expect(applyPlaceholders("Hi {{Name}}", { Name: "Alice" })).toBe("Hi Alice");
     expect(applyPlaceholders("{{a.b}}", { "a.b": "X" })).toBe("X");
@@ -551,6 +699,123 @@ describe("applyPlaceholders", () => {
 });
 
 describe("sendSerialViaSmtp", () => {
+  it.each(["returned", "thrown"])(
+    "preserves a %s unknown outcome without resending that message",
+    async (mode) => {
+      const send = vi.fn();
+      if (mode === "returned")
+        send.mockResolvedValue({ success: false, deliveryUnknown: true, error: "Lost result" });
+      else send.mockRejectedValue(new Error("Lost result"));
+      const results = await sendSerialViaSmtp(
+        [{ email: "recipient@example.test", variables: {} }],
+        "s",
+        "b",
+        testConfig,
+        { delayMs: 0, send }
+      );
+      expect(results).toEqual([
+        expect.objectContaining({
+          email: "recipient@example.test",
+          success: false,
+          deliveryUnknown: true,
+        }),
+      ]);
+      expect(send).toHaveBeenCalledOnce();
+    }
+  );
+
+  it("preserves per-message recipient outcomes without resending accepted submissions", async () => {
+    const send = vi.fn(async () => ({
+      success: true,
+      partial: true,
+      accepted: ["accepted@example.test"],
+      rejected: ["refused@example.test"],
+    }));
+    const results = await sendSerialViaSmtp(
+      [{ email: "accepted@example.test", variables: {} }],
+      "Subject",
+      "Body",
+      testConfig,
+      { delayMs: 0, send }
+    );
+    expect(results).toEqual([
+      {
+        email: "accepted@example.test",
+        success: true,
+        error: undefined,
+        partial: true,
+        accepted: ["accepted@example.test"],
+        rejected: ["refused@example.test"],
+      },
+    ]);
+    expect(send).toHaveBeenCalledOnce();
+  });
+
+  it("passes literal replacement markers through to each personalized SMTP message", async () => {
+    const send = vi.fn(async () => ({ success: true }));
+
+    await sendSerialViaSmtp(
+      [{ email: "recipient@example.invalid", variables: { Name: "$& $$ $` $'" } }],
+      "Hello {{Name}}",
+      "prefix {{Name}} suffix",
+      testConfig,
+      { delayMs: 0, send }
+    );
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: "Hello $& $$ $` $'",
+        body: "prefix $& $$ $` $' suffix",
+      }),
+      testConfig
+    );
+  });
+
+  it("preserves an allowed alias through the real SMTP sender's message options", async () => {
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "<serial@host>" });
+    const createTransport = vi.fn(() => ({ sendMail, close: vi.fn() })) as never;
+    const config = Object.freeze({ ...testConfig });
+
+    const results = await sendSerialViaSmtp(
+      [{ email: "recipient@example.test", variables: { Name: "Recipient" } }],
+      "Hello {{Name}}",
+      "New unquoted text for {{Name}}",
+      config,
+      {
+        from: "team@example.com",
+        delayMs: 0,
+        send: (opts, cfg) => sendViaSmtp(opts, cfg, createTransport, async () => ({})),
+      }
+    );
+
+    expect(results).toEqual([{ email: "recipient@example.test", success: true, error: undefined }]);
+    expect(sendMail.mock.calls[0][0]).toMatchObject({
+      from: "team@example.com",
+      text: "New unquoted text for Recipient",
+    });
+    expect(config.from).toBe("alice@example.com");
+  });
+
+  it("validates a batch sender before invoking any send or delay", async () => {
+    const send = vi.fn(async () => ({ success: true }));
+    const sleep = vi.fn(async () => {});
+
+    await expect(
+      sendSerialViaSmtp(
+        [
+          { email: "first@example.test", variables: {} },
+          { email: "second@example.test", variables: {} },
+        ],
+        "Subject",
+        "Body",
+        testConfig,
+        { from: "unapproved@example.test", send, sleep }
+      )
+    ).rejects.toThrow("not a configured sender identity");
+    expect(send).not.toHaveBeenCalled();
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
   it("personalizes per recipient, reports each result, and a single failure never aborts", async () => {
     const calls: SmtpSendOptions[] = [];
     const send = vi.fn(async (opts: SmtpSendOptions) => {

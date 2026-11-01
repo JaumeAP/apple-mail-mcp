@@ -21,7 +21,7 @@ import nodemailer from "nodemailer";
 // sent through the Promise `sendMail` resolves to, so the only way to obtain
 // them for a Sent-folder copy (#220) is to independently compose the same
 // mail options with the same internal class nodemailer itself composes with.
-// `keepBcc` preserves the Bcc header in this copy on purpose: unlike the wire
+// The compiled node's `keepBcc` preserves the Bcc header in this copy on purpose: unlike the wire
 // copy the recipients see, the sender's own Sent-folder archive is exactly
 // where they need to see who was Bcc'd.
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
@@ -83,8 +83,20 @@ export interface SmtpConfig {
   allowedFrom?: string[];
 }
 
-/** Result of an SMTP send. */
-export interface SmtpSendResult {
+/** Recipient acceptance for an SMTP submission; this is not final inbox delivery. */
+export interface SmtpDeliveryStatus {
+  /** No final SMTP result was received; the provider may already have accepted it. */
+  deliveryUnknown?: boolean;
+  /** True when SMTP accepted the message for some recipients but rejected others. */
+  partial?: boolean;
+  /** Envelope recipients accepted for the successful submission. */
+  accepted?: string[];
+  /** Envelope recipients rejected by the SMTP server. */
+  rejected?: string[];
+}
+
+/** Result of an SMTP send. Partial submission remains successful: do not resend it. */
+export interface SmtpSendResult extends SmtpDeliveryStatus {
   success: boolean;
   messageId?: string;
   error?: string;
@@ -99,13 +111,114 @@ export interface SmtpSendResult {
    */
   sentCopy?: boolean;
   sentCopyError?: string;
+  /**
+   * True when `sentCopy` is true because the Sent mailbox already held this
+   * Message-ID (Gmail's SMTP files its own copy), so none was appended.
+   */
+  sentCopyAlreadyFiled?: boolean;
 }
 
 /** Fields {@link sendViaSmtp} merges into its result for the Sent-copy step. */
-type SentCopyFields = Pick<SmtpSendResult, "sentCopy" | "sentCopyError">;
+type SentCopyFields = Pick<SmtpSendResult, "sentCopy" | "sentCopyError" | "sentCopyAlreadyFiled">;
+
+/** Preserve recipient status consistently through public tools and serial results. */
+export function smtpDeliveryFields(result: SmtpDeliveryStatus): SmtpDeliveryStatus {
+  return {
+    ...(result.deliveryUnknown !== undefined ? { deliveryUnknown: result.deliveryUnknown } : {}),
+    ...(result.partial !== undefined ? { partial: result.partial } : {}),
+    ...(result.accepted !== undefined ? { accepted: result.accepted } : {}),
+    ...(result.rejected !== undefined ? { rejected: result.rejected } : {}),
+  };
+}
+
+/** A partial submission is actionable without inviting duplicate delivery. */
+export function smtpDeliveryNotice(result: SmtpDeliveryStatus & { error?: string }): string {
+  if (result.deliveryUnknown) {
+    return (
+      "SMTP submission outcome is unknown. The provider may already have accepted the message. " +
+      "Do not resend automatically; verify this submission with the provider or recipients before retrying." +
+      (result.error ? ` Details: ${result.error}` : "")
+    );
+  }
+  if (!result.partial) return "";
+  return (
+    `Partial SMTP submission. Accepted: ${result.accepted?.join(", ") || "not reported"}. ` +
+    `Rejected: ${result.rejected?.join(", ") || "not reported"}. ` +
+    "Do not resend to accepted recipients; reconsider only rejected recipients."
+  );
+}
+
+/** Nodemailer may represent a recipient as a bare address or an address object. */
+function recipientAddresses(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.flatMap((recipient: unknown) => {
+    if (typeof recipient === "string") return [recipient];
+    if (
+      recipient &&
+      typeof recipient === "object" &&
+      "address" in recipient &&
+      typeof recipient.address === "string"
+    ) {
+      return [recipient.address];
+    }
+    return [];
+  });
+}
 
 function errText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+/** An unclassified transport exception cannot establish that nothing was sent. */
+export function unknownSmtpResult(error: unknown): SmtpSendResult {
+  const rejected = recipientAddresses(
+    error && typeof error === "object" && "rejected" in error ? error.rejected : undefined
+  );
+  return {
+    success: false,
+    deliveryUnknown: true,
+    error: `SMTP submission outcome unknown: ${errText(error)}`,
+    ...(rejected !== undefined ? { rejected } : {}),
+  };
+}
+
+/**
+ * Only protocol phases or explicit negative DATA replies prove no submission.
+ * Nodemailer labels socket close/timeouts CONN even AFTER sending DATA, so a
+ * generic connection error must remain unknown. RCPT acceptance is not delivery.
+ */
+function definiteSmtpFailure(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const { code, originalCode, command, responseCode, timeoutType, syscall } = error as {
+    code?: string;
+    originalCode?: string;
+    command?: string;
+    responseCode?: number;
+    timeoutType?: string;
+    syscall?: string;
+  };
+  if (code === "EAUTH" || code === "EDNS") return true;
+  // Nodemailer reports both setup and post-DATA socket timeouts as CONN.
+  // Only the explicit setup phases, or an OS connect syscall, prove unsent.
+  if (
+    code === "ETIMEDOUT" &&
+    ["CONNECT_TIMEOUT", "GREETING_TIMEOUT", "UPGRADE_TIMEOUT"].includes(timeoutType ?? "")
+  )
+    return true;
+  if ((originalCode ?? code) === "ETIMEDOUT" && syscall === "connect") return true;
+  if (["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN"].includes(originalCode ?? code ?? "")) {
+    return true;
+  }
+  if (/^(?:AUTH(?: |$)|EHLO$|HELO$|STARTTLS$|MAIL FROM$|RCPT TO$)/.test(command ?? "")) {
+    return true;
+  }
+  if (command === "API" && (code === "EENVELOPE" || code === "EMESSAGE")) return true;
+  return (
+    command === "DATA" &&
+    typeof responseCode === "number" &&
+    responseCode >= 400 &&
+    responseCode < 600
+  );
 }
 
 /**
@@ -116,21 +229,26 @@ function errText(e: unknown): string {
  * their own hook via {@link sendViaSmtp}'s 4th parameter instead of exercising
  * this path.
  */
-async function defaultAppendSentCopy(smtpUser: string, raw: Buffer): Promise<SentCopyFields> {
+async function defaultAppendSentCopy(
+  smtpUser: string,
+  raw: Buffer,
+  smtpHost?: string
+): Promise<SentCopyFields> {
   const { imapAppendSentCopy } = await import("@/services/imapClient.js");
-  const result = await imapAppendSentCopy(smtpUser, raw);
+  const result = await imapAppendSentCopy(smtpUser, raw, {}, { smtpHost });
   if (!result.attempted) return {};
-  return result.success ? { sentCopy: true } : { sentCopy: false, sentCopyError: result.error };
+  if (!result.success) return { sentCopy: false, sentCopyError: result.error };
+  return result.alreadyFiled ? { sentCopy: true, sentCopyAlreadyFiled: true } : { sentCopy: true };
 }
 
-/** Independently composes the RFC822 bytes nodemailer would send for `mail`,
- *  for filing a Sent-folder copy (`keepBcc` keeps the Bcc header in that copy,
- *  unlike the wire message recipients see). `Record<string, unknown>` (not
- *  nodemailer's own `Mail.Options`) so `keepBcc` — a real nodemailer option the
- *  published types omit — can be passed without an unsafe cast at every call
- *  site. */
+/** Independently composes the RFC822 bytes for a sender-owned archive or draft.
+ *  `keepBcc` is applied to the compiled MimeNode: MailComposer does not forward
+ *  that option from its input. Recipient-bound SMTP MIME uses its own composer
+ *  and must continue to omit Bcc. */
 function buildRawMime(mail: Record<string, unknown>): Promise<Buffer> {
-  return new MailComposer(mail as never).compile().build();
+  const message = new MailComposer(mail as never).compile();
+  message.keepBcc = mail.keepBcc === true;
+  return message.build();
 }
 
 /**
@@ -344,6 +462,20 @@ export function composeRawMime(opts: SmtpSendOptions, from: string): Promise<Buf
   });
 }
 
+/** Resolve a requested sender without changing the configured identity allowlist. */
+export function resolveSmtpFrom(from: string | undefined, config: SmtpConfig): string {
+  const requestedFrom = from?.trim();
+  const allowedFrom = new Set(
+    [config.user, config.from, ...(config.allowedFrom ?? [])].map((value) =>
+      value.trim().toLowerCase()
+    )
+  );
+  if (requestedFrom && !allowedFrom.has(requestedFrom.toLowerCase())) {
+    throw new Error(`SMTP From "${requestedFrom}" is not a configured sender identity.`);
+  }
+  return requestedFrom || config.from;
+}
+
 /**
  * Sends an email over SMTP, producing clean MIME with no blockquote wrapping.
  *
@@ -355,24 +487,19 @@ export async function sendViaSmtp(
   opts: SmtpSendOptions,
   config?: SmtpConfig,
   createTransport: typeof nodemailer.createTransport = nodemailer.createTransport,
-  appendSentCopy: (smtpUser: string, raw: Buffer) => Promise<SentCopyFields> = defaultAppendSentCopy
+  appendSentCopy: (
+    smtpUser: string,
+    raw: Buffer,
+    smtpHost?: string
+  ) => Promise<SentCopyFields> = defaultAppendSentCopy
 ): Promise<SmtpSendResult> {
   let cfg: SmtpConfig;
+  let from: string;
   try {
     cfg = config ?? resolveSmtpConfig();
+    from = resolveSmtpFrom(opts.from, cfg);
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
-  }
-
-  const requestedFrom = opts.from?.trim();
-  const allowedFrom = new Set(
-    [cfg.user, cfg.from, ...(cfg.allowedFrom ?? [])].map((value) => value.trim().toLowerCase())
-  );
-  if (requestedFrom && !allowedFrom.has(requestedFrom.toLowerCase())) {
-    return {
-      success: false,
-      error: `SMTP From "${requestedFrom}" is not a configured sender identity.`,
-    };
   }
 
   let attachments;
@@ -388,20 +515,37 @@ export async function sendViaSmtp(
       `SMTP plaintext explicitly enabled via ${SMTP_ENV.allowPlaintext}; credentials and message content may be exposed.`
     );
   }
-  const transporter = createTransport({
-    host: cfg.host,
-    port: cfg.port,
-    secure: cfg.secure,
-    // Port 587/143-style configurations must not silently downgrade to
-    // plaintext when the server advertises no usable TLS upgrade.
-    requireTLS,
-    auth: { user: cfg.user, pass: cfg.pass },
-  });
-
-  const mailOptions = buildMailOptions(opts, requestedFrom || cfg.from, attachments);
+  let transporter: ReturnType<typeof createTransport> | undefined;
+  let submissionAttempted = false;
 
   try {
+    // Pin Date so the Sent-folder copy carries the delivered message's date.
+    // Preparation/factory failures before sendMail are known to be unsent.
+    const mailOptions = {
+      ...buildMailOptions(opts, from, attachments),
+      date: new Date(),
+    };
+    transporter = createTransport({
+      host: cfg.host,
+      port: cfg.port,
+      secure: cfg.secure,
+      // Port 587-style configurations must not silently downgrade to plaintext.
+      requireTLS,
+      auth: { user: cfg.user, pass: cfg.pass },
+    });
+    submissionAttempted = true;
     const info = await transporter.sendMail(mailOptions);
+    const accepted = recipientAddresses(info.accepted);
+    const rejected = recipientAddresses(info.rejected);
+    // Stream/other test transports have no SMTP acceptance result. Do not
+    // manufacture one from requested recipients or a generated envelope.
+    const delivery: SmtpDeliveryStatus = {
+      ...(accepted !== undefined ? { accepted } : {}),
+      ...(rejected !== undefined ? { rejected } : {}),
+      ...(accepted !== undefined && rejected !== undefined
+        ? { partial: accepted.length > 0 && rejected.length > 0 }
+        : {}),
+    };
 
     // Best-effort Sent-folder copy (2.18.0, issue #220): never lets a copy
     // failure affect the send that already succeeded above.
@@ -420,23 +564,33 @@ export async function sendViaSmtp(
         keepBcc: true,
         messageId: info.messageId,
       });
-      copyFields = await appendSentCopy(cfg.user, raw);
+      copyFields = await appendSentCopy(cfg.user, raw, cfg.host);
     } catch (copyError) {
       copyFields = { sentCopy: false, sentCopyError: errText(copyError) };
     }
 
-    return { success: true, messageId: info.messageId, ...copyFields };
+    return { success: true, messageId: info.messageId, ...delivery, ...copyFields };
   } catch (error) {
+    if (submissionAttempted && !definiteSmtpFailure(error)) return unknownSmtpResult(error);
     const detail = error instanceof Error ? error.message : String(error);
+    const rejected = recipientAddresses(
+      error && typeof error === "object" && "rejected" in error ? error.rejected : undefined
+    );
     const tlsHint = requireTLS
       ? ` STARTTLS is required for non-implicit TLS; to explicitly allow plaintext (not recommended), set ${SMTP_ENV.allowPlaintext}=1.`
       : "";
     return {
       success: false,
       error: `SMTP send failed: ${detail}.${tlsHint}`,
+      ...(rejected !== undefined ? { rejected } : {}),
     };
   } finally {
-    transporter.close();
+    try {
+      transporter?.close();
+    } catch (error) {
+      // Cleanup must not turn an acknowledged submission into a retryable failure.
+      console.error(`Failed to close SMTP transport: ${errText(error)}`);
+    }
   }
 }
 
@@ -447,7 +601,7 @@ export interface SerialSmtpRecipient {
 }
 
 /** Per-recipient outcome of a serial SMTP send. */
-export interface SerialSmtpResult {
+export interface SerialSmtpResult extends SmtpDeliveryStatus {
   email: string;
   success: boolean;
   error?: string;
@@ -463,7 +617,7 @@ export function applyPlaceholders(template: string, variables: Record<string, st
   let out = template;
   for (const [key, value] of Object.entries(variables)) {
     const safeKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    out = out.replace(new RegExp(`\\{\\{${safeKey}\\}\\}`, "g"), value);
+    out = out.replace(new RegExp(`\\{\\{${safeKey}\\}\\}`, "g"), () => value);
   }
   return out;
 }
@@ -484,12 +638,13 @@ export async function sendSerialViaSmtp(
   config: SmtpConfig,
   opts: {
     delayMs?: number;
-    /** From override for the whole batch; the configured identity when omitted. */
+    /** A configured sender identity; validated before the batch starts. */
     from?: string;
     send?: typeof sendViaSmtp;
     sleep?: (ms: number) => Promise<void>;
   } = {}
 ): Promise<SerialSmtpResult[]> {
+  const from = resolveSmtpFrom(opts.from, config);
   const send = opts.send ?? sendViaSmtp;
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const delay = Math.min(Math.max(opts.delayMs ?? 500, 0), 10000);
@@ -503,16 +658,20 @@ export async function sendSerialViaSmtp(
           to: [r.email],
           subject: applyPlaceholders(subject, r.variables),
           body: applyPlaceholders(body, r.variables),
-          from: opts.from ?? config.from,
+          from,
         },
         config
       );
-      results.push({ email: r.email, success: res.success, error: res.error });
+      results.push({
+        email: r.email,
+        success: res.success,
+        error: res.error,
+        ...smtpDeliveryFields(res),
+      });
     } catch (error) {
       results.push({
         email: r.email,
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
+        ...unknownSmtpResult(error),
       });
     }
     if (delay > 0 && i < recipients.length - 1) {

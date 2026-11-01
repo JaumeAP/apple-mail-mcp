@@ -106,6 +106,17 @@ describe("#270 (a) — an explicit account+mailbox hint never falls back to the 
     );
   });
 
+  it("reports a missing explicit account without claiming its mailbox is missing or scanning", () => {
+    h.router.fn = () => ({ success: true, output: `${ERR}${SCOPED}noaccount` });
+    expect(
+      mgr.getRawSource("7", { account: "Wrok", mailbox: "INBOX" }, { requireScopedLocation: true })
+    ).toBeNull();
+    expect(kinds()).toEqual(["scoped"]);
+    expect(mgr.consumeLastMessageLookupError()).toBe(
+      'Account "Wrok" not found — message 7 was not looked up. Check the name with list-accounts.'
+    );
+  });
+
   it("Mail's own error from the scoped read is surfaced, without a scan", () => {
     h.router.fn = () => ({
       success: true,
@@ -140,6 +151,7 @@ describe("#270 (a) — an explicit account+mailbox hint never falls back to the 
   it("the scoped script reports its misses instead of swallowing them", () => {
     mgr.getRawSource("7", { account: "Work", mailbox: "INBOX" });
     const s = byId()[0].script;
+    expect(s).toContain(`if (count of _scopeAccounts) is 0 then return "${ERR}${SCOPED}noaccount"`);
     expect(s).toContain(`return "${ERR}${SCOPED}nomailbox"`);
     expect(s).toContain(`return "${ERR}${SCOPED}nomessage"`);
     expect(s).toContain(`return "${ERR}${SCOPED}error:" & errMsg`);
@@ -181,6 +193,20 @@ describe("#270 (b) — a stale remembered location is evicted, then the bounded 
     expect(isUnscoped(byId()[1].script)).toBe(true);
   });
 
+  it("evicts a remembered location whose account no longer exists, then scans", () => {
+    mgr.noteMessageLocation("42", "Old Account", "INBOX");
+    h.router.fn = (s) => ({
+      success: true,
+      output: isScoped(s) ? `${ERR}${SCOPED}noaccount` : "raw source",
+    });
+    expect(mgr.getRawSource("42")).toBe("raw source");
+    expect(kinds()).toEqual(["scoped", "unscoped"]);
+
+    h.calls.length = 0;
+    expect(mgr.getRawSource("42")).toBe("raw source");
+    expect(kinds()).toEqual(["unscoped"]);
+  });
+
   it("a timeout on a remembered scope does NOT add a second 15s scan", () => {
     mgr.noteMessageLocation("42", "Work", "INBOX");
     h.router.fn = () => ({ success: false, output: "", error: "timed out", timedOut: true });
@@ -193,7 +219,7 @@ describe("#270 (b) — a stale remembered location is evicted, then the bounded 
     mgr.noteMessageLocation("42", "Work", "INBOX");
     h.router.fn = () => ({ success: true, output: CONTENT_OK });
     mgr.getMessageContent("42", false, { account: "Home", mailbox: "Receipts" });
-    expect(byId()[0].script).toContain('first account whose name is "Home"');
+    expect(byId()[0].script).toContain('if (name of _scopeAccount) is "Home"');
   });
 });
 
@@ -360,7 +386,7 @@ describe("#270 — getMessageById shares the resolver", () => {
     h.router.fn = () => ({ success: true, output: CONTENT_OK });
     mgr.getMessageContent("42");
     expect(byId()).toHaveLength(1);
-    expect(byId()[0].script).toContain('first account whose name is "Work"');
+    expect(byId()[0].script).toContain('if (name of _scopeAccount) is "Work"');
   });
 
   it("uses a remembered location first, and evicts it when stale", () => {
@@ -670,5 +696,43 @@ describe("an account hint without a mailbox narrows the unscoped scan to that ac
     h.router.fn = () => ({ success: true, output: CONTENT_OK });
     new AppleMailManager().getMessageContent("8", false);
     expect(byId()[0].script).toContain('set _scopeAcct to ""');
+  });
+});
+
+describe("#319 — an account-only hint is not satisfied by a remembered location in a different account", () => {
+  let mgr: AppleMailManager;
+  beforeEach(() => {
+    h.calls.length = 0;
+    mgr = new AppleMailManager();
+  });
+
+  it("ignores a remembered Work/INBOX location when the caller names a different account, and scopes the scan to it instead of scanning unscoped", () => {
+    mgr.noteMessageLocation("42", "Work", "INBOX");
+    h.router.fn = () => ({ success: true, output: CONTENT_OK });
+    mgr.getMessageContent("42", false, { account: "Home" });
+    // Never the scoped Work/INBOX script — the mismatched remembered entry
+    // must not be treated as usable.
+    expect(kinds()).toEqual(["unscoped"]);
+    expect(byId()[0].script).not.toContain('if (name of _scopeAccount) is "Work"');
+    expect(byId()[0].script).toContain('set _scopeAcct to "Home"');
+  });
+
+  it("a remembered location in the SAME named account is still used (the fast path keeps working)", () => {
+    mgr.noteMessageLocation("42", "Work", "Archive/2026");
+    h.router.fn = () => ({ success: true, output: CONTENT_OK });
+    mgr.getMessageContent("42", false, { account: "Work" });
+    expect(kinds()).toEqual(["scoped"]);
+    expect(byId()[0].script).toContain('if (name of _scopeAccount) is "Work"');
+  });
+
+  it("with no usable remembered entry, an account-only hint falls through to the scoped scan rather than being treated as a full explicit hint", () => {
+    h.router.fn = () => ({
+      success: true,
+      output: `${ERR}Message not found${COV}${F}false`,
+    });
+    expect(mgr.getMessageContent("42", false, { account: "Home" })).toBeNull();
+    expect(kinds()).toEqual(["unscoped"]);
+    // Scoped to the named account, not the unscoped-everywhere walk.
+    expect(byId()[0].script).toContain('set _scopeAcct to "Home"');
   });
 });

@@ -56,6 +56,7 @@ describe("outbound attachment read policy", () => {
   });
 
   it("rejects application config files under the home Library", () => {
+    mkdirSync(join(homedir(), "Library", "Application Support"), { recursive: true });
     const dir = mkdtempSync(join(homedir(), "Library", "Application Support", "amcp-read-policy-"));
     try {
       const file = join(dir, "config.json");
@@ -67,6 +68,8 @@ describe("outbound attachment read policy", () => {
   });
 
   it("rejects app state under the home Library but allows iCloud Drive", () => {
+    // A CI runner's home has no ~/Library: mkdtemp needs its parent to exist.
+    mkdirSync(join(homedir(), "Library", "Caches"), { recursive: true });
     const appState = mkdtempSync(join(homedir(), "Library", "Caches", "amcp-read-policy-"));
     try {
       const file = join(appState, "chat.db");
@@ -96,6 +99,27 @@ describe("outbound attachment read policy", () => {
       expect(isProtectedPath(path), path).toBe(true);
     }
     expect(isProtectedPath("/Volumes/Clone/Users/someone/Documents/report.pdf")).toBe(false);
+  });
+
+  it("recognises the Library of a home directory that is not under /Users", () => {
+    // `/Users/<name>/Library` is matched by its shape; a home elsewhere (a CI runner
+    // under /Users is matched that way, a Linux or relocated home is not) has to be
+    // matched against the home directory itself.
+    const original = process.env.HOME;
+    const home = mkdtempSync(join(tmpdir(), "amcp-home-"));
+    try {
+      process.env.HOME = home;
+      const canonicalHome = realpathSync.native(home);
+      expect(isProtectedPath(join(canonicalHome, "Library", "Messages", "chat.db"))).toBe(true);
+      expect(
+        isProtectedPath(join(canonicalHome, "Library", "CloudStorage", "Dropbox", "x.pdf"))
+      ).toBe(false);
+      expect(isProtectedPath(join(canonicalHome, "Documents", "report.pdf"))).toBe(false);
+    } finally {
+      if (original === undefined) delete process.env.HOME;
+      else process.env.HOME = original;
+      rmSync(home, { recursive: true, force: true });
+    }
   });
 
   it("lets an explicit root, and the server's tmpdir, lift only the Library rule", () => {
@@ -199,6 +223,22 @@ describe("outbound attachment read policy", () => {
       rmSync(hidden, { force: true });
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("refuses a relative path, a missing file, a directory and a relative extra root", () => {
+    expect(() => resolveAttachmentReadPath("relative/report.pdf")).toThrow(/must be absolute/);
+
+    const dir = mkdtempSync(join(tmpdir(), "amcp-read-policy-"));
+    try {
+      expect(() => resolveAttachmentReadPath(join(dir, "missing.pdf"))).toThrow(/not found/);
+      expect(() => resolveAttachmentReadPath(dir)).toThrow(/not a regular file/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+
+    expect(() =>
+      resolveAttachmentReadPath("/etc/hosts", { [ATTACHMENT_READ_ROOTS_ENV]: "relative/root" })
+    ).toThrow(/must be absolute/);
   });
 
   it("rejects a symlink that resolves outside an allowed temporary root", () => {

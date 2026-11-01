@@ -34,7 +34,7 @@ import { homedir } from "os";
 import { randomUUID } from "crypto";
 import { executeAppleScript, isPermissionDenied } from "@/utils/applescript.js";
 import { MAIL_RUNNING_GUARD } from "@/utils/mailRecovery.js";
-import { flagColorName } from "@/services/imapClient.js";
+import { flagColorName, isGmailHost } from "@/services/imapClient.js";
 import { SETUP_HINT } from "@/utils/docsUrls.js";
 import { parseMimeAttachments, extractMimeAttachment, extractHtmlBody } from "@/utils/mimeParse.js";
 import { plausibleDateSent } from "@/utils/headers.js";
@@ -54,6 +54,8 @@ import {
   type AccountSettings,
   type AccountSettingsChanges,
 } from "@/utils/accountSettings.js";
+import { extractAddress, pickSenderAddress, senderGuardScript } from "@/utils/senderAccount.js";
+import { nativeEditorPreflight, insertNativeAuthoredBody } from "@/services/nativeMailComposer.js";
 import {
   canonicalRoots,
   canonicalTmpdir,
@@ -61,6 +63,13 @@ import {
   resolveAttachmentReadPath,
 } from "@/utils/attachmentReadPolicy.js";
 import { searchContactsDb } from "@/utils/contactsDb.js";
+import {
+  isEnvelopeIndexEnabled,
+  readMessageFromStore,
+  searchEnvelopeIndex,
+} from "@/utils/envelopeIndex.js";
+import { prepareBodySearch } from "@/utils/bodyIndexSync.js";
+import { describeScopeGap, isScopeComplete } from "@/utils/bodyIndex.js";
 import {
   isAuditEnabled,
   auditSubjectsEnabled,
@@ -96,9 +105,11 @@ import type {
   EmailTemplate,
   SerialEmailRecipient,
   SerialEmailResult,
+  SearchBackend,
   SearchDiagnostics,
   SearchResult,
   SmartMailbox,
+  ComposeResult,
 } from "@/types.js";
 
 // =============================================================================
@@ -263,8 +274,8 @@ const UNREACHED_LIST_MAX = 15;
 
 /**
  * Prefix (after LOOKUP_ERROR_MARKER) of a scoped by-id lookup's own miss —
- * `nomailbox`, `nomessage` or `error:<Mail's text>` — so the caller can tell a
- * definite "not in that mailbox" from a hit, and decide whether falling back
+ * `noaccount`, `nomailbox`, `nomessage` or `error:<Mail's text>` — so the caller
+ * can tell a definite "not in that mailbox" from a hit, and decide whether falling back
  * to the cross-mailbox scan is appropriate (it is not for an explicit hint).
  */
 const SCOPED_MISS_MARKER = "\x1dSCOPED\x1d";
@@ -339,8 +350,19 @@ export function describeUnscopedMiss(id: string, raw: string): string {
   const unreached = list(unreachedRaw);
   const budgetHit = budgetRaw.trim() === "true";
   const probeStalled = stalledRaw.trim() === "true";
-  if (skipped.length === 0 && !budgetHit && !probeStalled) return base;
-  const parts = [`Message ${Number(id)} not found in the mailboxes scanned.`];
+  const incompleteSource = base === "Source lookup incomplete";
+  if (
+    skipped.length === 0 &&
+    !budgetHit &&
+    !probeStalled &&
+    !(incompleteSource && unreached.length)
+  )
+    return base;
+  const parts = [
+    incompleteSource
+      ? `Message ${Number(id)} could not be uniquely verified because the scan was incomplete.`
+      : `Message ${Number(id)} not found in the mailboxes scanned.`,
+  ];
   if (skipped.length > 0) {
     parts.push(
       `Not scanned — too large for a cross-mailbox id scan (over ${getByIdScanThreshold()} messages; APPLE_MAIL_MAX_BYID_SCAN_MAILBOX): ${skipped.join(", ")}.`
@@ -356,6 +378,10 @@ export function describeUnscopedMiss(id: string, raw: string): string {
     );
   } else if (budgetHit) {
     parts.push(`The scan also stopped after its ${BYID_SCAN_BUDGET_SECONDS}s budget ${reach}`);
+  } else if (incompleteSource && unreached.length) {
+    parts.push(
+      `The scan did not reach or could not search: ${summariseList(unreached, UNREACHED_LIST_MAX)}.`
+    );
   }
   parts.push(
     "If the message is in a mailbox that was not scanned, pass account + mailbox to read it from that mailbox directly, or use its imap: id from list-messages/search-messages."
@@ -414,6 +440,8 @@ const GROUP_SEP = "\x1d"; // GS — opens/closes the tag markers built below
 const FIELD_SEP = "\x1f"; // US — between fields within a record
 const RECORD_SEP = "\x1e"; // RS — between records
 const ITEM_SEP = "\x1c"; // FS — between items of a list field (an account's addresses)
+const SENT_PREFIX = "sent:"; // compose script success, followed by the sender Mail used
+const DRAFT_PREFIX = "draft created:"; // same, for create-draft
 const DIAG_MARKER = "\x1dDIAG\x1d"; // GS-wrapped — payload/diagnostics boundary
 const DIAG_FIELD_SEP = "\x1dF\x1d"; // between diagnostics fields
 const DIAG_ITEM_SEP = "\x1dM\x1d"; // between diagnostics list items
@@ -580,6 +608,71 @@ const senderFragment = (compose: "theReply" | "theForward", verb: "reply" | "for
             end if
           end if`;
 
+/** Native composition must resolve an identity before opening a compose. */
+const nativeParentSender = `set _nativeAddresses to {}
+  set _nativeOwningAccount to missing value
+  try
+    set _nativeOwningAccount to account of (mailbox of msg)
+  end try
+  if _nativeOwningAccount is missing value then
+    repeat with _nativeAccount in (every account whose enabled is true)
+      set _nativeAddresses to _nativeAddresses & (email addresses of _nativeAccount)
+    end repeat
+  else
+    if enabled of _nativeOwningAccount is false then error "The original message account is disabled; no compose was created."
+    set _nativeAddresses to email addresses of _nativeOwningAccount
+  end if
+  set _nativeMatches to {}
+  repeat with _nativeRecipient in ((to recipients of msg) & (cc recipients of msg))
+    set _nativeAddress to address of _nativeRecipient as text
+    if _nativeAddress is in _nativeAddresses and _nativeAddress is not in _nativeMatches then set end of _nativeMatches to _nativeAddress
+  end repeat
+  if (count of _nativeMatches) is 0 then
+    set _nativeAddress to extract address from (sender of msg)
+    if _nativeAddress is in _nativeAddresses then set end of _nativeMatches to _nativeAddress
+  end if
+  if (count of _nativeMatches) is 1 then
+    set _nativeSender to item 1 of _nativeMatches as text
+  else if (count of _nativeMatches) is 0 and (count of _nativeAddresses) is 1 then
+    set _nativeSender to item 1 of _nativeAddresses as text
+  else
+    error "Cannot uniquely resolve the native reply/forward sender; no compose was created."
+  end if`;
+
+/** Length-prefixed addresses detect any recipient edit without delimiter ambiguity. */
+function nativeRecipientFingerprint(message: string): string {
+  return `set _nativeRecipients to ""
+    repeat with _nativeKind in {"to", "cc", "bcc"}
+      set _nativeRecipients to _nativeRecipients & (_nativeKind as text) & ":"
+      if (_nativeKind as text) is "to" then
+        set _nativeList to to recipients of ${message}
+      else if (_nativeKind as text) is "cc" then
+        set _nativeList to cc recipients of ${message}
+      else
+        set _nativeList to bcc recipients of ${message}
+      end if
+      repeat with _nativeRecipient in _nativeList
+        set _nativeAddress to address of _nativeRecipient as text
+        set _nativeRecipients to _nativeRecipients & ((length of _nativeAddress) as text) & ":" & _nativeAddress
+      end repeat
+    end repeat`;
+}
+
+/** Preserve even control characters in Mail's original subject on restoration. */
+function nativeTextLiteral(text: string): string {
+  return (
+    text
+      // eslint-disable-next-line no-control-regex
+      .split(/([\x00-\x1f\x7f])/)
+      .map((part) =>
+        part.length === 1 && (part.charCodeAt(0) < 32 || part.charCodeAt(0) === 127)
+          ? `(character id ${part.charCodeAt(0)})`
+          : `"${escapeForAppleScript(part)}"`
+      )
+      .join(" & ")
+  );
+}
+
 /**
  * Normalize an RFC 5322 Message-ID for backend-independent matching: trim and
  * drop any surrounding angle brackets. Mail.app's AppleScript `message id`
@@ -592,6 +685,16 @@ function normalizeRfcMessageId(mid: string): string {
 }
 
 /**
+ * Record that the account list itself couldn't be read, so an unscoped search or
+ * list searched nothing for want of accounts — not because nothing matched (#346).
+ * Marks the diagnostics partial and names the failure for `partialCoverageBlock`.
+ */
+export function noteAccountListFailure(into: SearchDiagnostics, error?: string): void {
+  into.partial = true;
+  into.notSearchedMailboxes.push(`* / *: could not list accounts (${error ?? "unknown error"})`);
+}
+
+/**
  * Merge a per-account SearchDiagnostics into an aggregate (all-accounts) one.
  *
  * Exported for unit testing.
@@ -601,6 +704,22 @@ export function mergeSearchDiagnostics(into: SearchDiagnostics, from: SearchDiag
   into.skippedLargeMailboxes.push(...from.skippedLargeMailboxes);
   into.notSearchedMailboxes.push(...from.notSearchedMailboxes);
   if (from.partial) into.partial = true;
+  if (from.backendByAccount) {
+    into.backendByAccount = { ...into.backendByAccount, ...from.backendByAccount };
+  }
+}
+
+/**
+ * Record which backend answered `account` (#342). A no-op unless the opt-in
+ * Envelope Index is enabled, so default-off results are unchanged.
+ */
+function tagBackend(result: SearchResult, account: string, backend: SearchBackend): SearchResult {
+  if (!isEnvelopeIndexEnabled()) return result;
+  result.diagnostics.backendByAccount = {
+    ...result.diagnostics.backendByAccount,
+    [account]: backend,
+  };
+  return result;
 }
 
 /**
@@ -908,6 +1027,49 @@ function attachmentSettleBlock(msgVar: string, expected: number): string {
           delay 0.25
         end repeat
         delay ${ATTACHMENT_SETTLE_GRACE_S}`;
+}
+
+/** How long a draft save may take to show up in Drafts before create-draft gives up. */
+const DRAFT_SAVE_CONFIRM_TIMEOUT_S = 10;
+
+/**
+ * AppleScript that saves the compose `msgVar` as a draft and closes it only
+ * once the save has landed in Drafts (#312). Used by create-draft, and by
+ * reply/forward with `send: false`.
+ *
+ * `save` on a visible compose returns before the draft is committed, and a
+ * `close` issued straight after it discards the draft while the tool reports
+ * success. Live on macOS 27 / Mail 16: create-draft lost 2 of 5, reply 1 of 6
+ * and forward 3 of 6 that way (reply/forward compose objects are visible even
+ * `without opening window`), and 0 of 5 survived `close saving yes` with no
+ * `save` at all.
+ *
+ * "Landed" means a draft with this subject whose id was not in Drafts before
+ * the save. Counting drafts is not enough: once a reply's sender is set, Mail
+ * autosaves it before our `save`, and the save then REPLACES that draft under
+ * a new id, so the count never grows. A fresh id is the one signal both cases
+ * share. If it does not appear within the timeout, the compose is left open
+ * rather than closed, so the user still has the draft, and the call fails.
+ */
+function draftSaveBlock(msgVar: string): string {
+  const ids = "id of (messages of drafts mailbox whose subject is draftSubject)";
+  return `
+        set draftSubject to subject of ${msgVar}
+        set priorDraftIds to ${ids}
+        save ${msgVar}
+        set saveDeadline to (current date) + ${DRAFT_SAVE_CONFIRM_TIMEOUT_S}
+        set draftSaved to false
+        repeat until draftSaved
+          set nowDraftIds to ${ids}
+          repeat with draftId in nowDraftIds
+            if priorDraftIds does not contain (contents of draftId) then set draftSaved to true
+          end repeat
+          if not draftSaved then
+            if (current date) > saveDeadline then return "error:Mail did not confirm the draft in Drafts within ${DRAFT_SAVE_CONFIRM_TIMEOUT_S}s; its compose window was left open so the draft is not lost."
+            delay 0.1
+          end if
+        end repeat
+        close ${msgVar} saving yes`;
 }
 
 /** Number of files a `buildAttachmentCommands` string attaches. */
@@ -1470,6 +1632,18 @@ function looksLikeMailNotRunning(error: string | undefined): boolean {
 }
 
 /**
+ * Read the output of a compose script: `<prefix><actual sender>` on success,
+ * `error:<reason>` when the sender guard refused (nothing sent or saved).
+ */
+function parseComposeOutput(output: string, prefix: string): ComposeResult {
+  const out = output.trim();
+  if (out.startsWith(prefix)) return { success: true, from: out.slice(prefix.length) };
+  if (out.startsWith("error:")) return { success: false, error: out.slice("error:".length) };
+  console.error(`Unexpected compose output: ${out.slice(0, 200)}`);
+  return { success: false };
+}
+
+/**
  * AppleScript fragment that writes an account-relative mailbox path into
  * `outputVar` by walking the mailbox's container chain. Mail.app exposes an
  * account's `mailboxes` collection recursively, but `name of mailbox` is only
@@ -1586,11 +1760,20 @@ function mailboxLeaf(path: string): string {
  * mailbox even when Archive/Inbox also exists. Legacy leaf names remain valid
  * only when they identify one mailbox; otherwise the caller gets the candidate
  * paths rather than an arbitrary folder.
+ * Explicit compose sources set exactPathOnly: a disappeared canonical path
+ * must not resolve to a different mailbox through an alias or a unique leaf.
  */
-export function resolveAppleMailboxPath(mailbox: string, actualPaths: readonly string[]): string {
+export function resolveAppleMailboxPath(
+  mailbox: string,
+  actualPaths: readonly string[],
+  exactPathOnly = false
+): string {
   if (actualPaths.length === 0) return mailbox;
 
-  const candidates = [mailbox, ...(MAILBOX_ALIASES[mailbox.toLowerCase()] ?? [])];
+  const candidates = [
+    mailbox,
+    ...(exactPathOnly ? [] : (MAILBOX_ALIASES[mailbox.toLowerCase()] ?? [])),
+  ];
   const ambiguous = (matches: string[]): Error => {
     const sorted = [...new Set(matches)].sort();
     const paths = sorted.map((path) => `"${path}"`).join(" and ");
@@ -1612,6 +1795,8 @@ export function resolveAppleMailboxPath(mailbox: string, actualPaths: readonly s
     if (folded.length === 1) return folded[0];
     if (folded.length > 1) throw ambiguous(folded);
   }
+
+  if (exactPathOnly) return mailbox;
 
   for (const candidate of candidates) {
     const key = mailboxNameKey(candidate);
@@ -1648,13 +1833,16 @@ function isInboxScope(mailbox: string): boolean {
 }
 
 /**
- * Detect a Gmail-style account from its mailbox-name list: it exposes an
- * "All Mail" special mailbox. Returns the subset of GMAIL_INBOX_MAILBOXES that
- * actually exist on the account (so we only scan mailboxes that are present),
- * or `null` when the account is not Gmail-style (no "All Mail") — callers then
- * keep the ordinary single-INBOX behavior. Matching is case-insensitive.
+ * Apply the Gmail workaround only when Mail reports a Gmail receiving server.
+ * Other providers, including Proton, can also expose an "All Mail" mailbox;
+ * its mere presence does not make that mailbox an alias for their INBOX.
+ * If the host is unavailable, retain the explicitly requested INBOX scope.
  */
-function gmailReceivingMailboxes(mailboxNames: readonly string[]): string[] | null {
+function gmailReceivingMailboxes(
+  mailboxNames: readonly string[],
+  serverHost: string | undefined
+): string[] | null {
+  if (!isGmailHost(serverHost)) return null;
   const lower = mailboxNames.map((n) => mailboxLeaf(n).toLowerCase());
   if (!lower.includes("all mail")) return null;
   const present = GMAIL_INBOX_MAILBOXES.filter((want) => lower.includes(want.toLowerCase()));
@@ -1757,7 +1945,12 @@ export class AppleMailManager {
    */
   private cache = {
     accounts: null as { data: Account[]; expiry: number } | null,
-    mailboxNames: new Map<string, { data: string[]; expiry: number }>(),
+    mailboxNames: new Map<
+      string,
+      { data: string[]; expiry: number; receivingServerHost?: string }
+    >(),
+    /** Account name → Mail account id (the host part of its mailbox URLs). */
+    accountIds: null as { data: Map<string, string>; expiry: number } | null,
   };
 
   /** Cache TTL in milliseconds (60 seconds). */
@@ -1860,8 +2053,24 @@ export class AppleMailManager {
    * only, and a name matching more than one mailbox resolves to nothing rather
    * than guessing — the same rule the move destination already applies.
    */
-  private resolveMailboxFragment(account: string, mailbox: string): string {
-    const resolved = this.resolveMailbox(mailbox, account);
+  private resolveMailboxFragment(account: string, mailbox: string, exactPathOnly = false): string {
+    const resolved = this.resolveMailbox(mailbox, account, exactPathOnly);
+    if (isLocalStoreLabel(account)) {
+      // Local mailboxes live at the application level, not under an account.
+      // Count canonical-path matches so duplicate local names cannot silently
+      // select the wrong source message.
+      return `${localMailboxBindingFragment()}
+        set _tmb to missing value
+        set _mbM to {}
+        repeat with _m in _mbs
+          set _mPath to ""
+          ${mailboxPathFragment("_m", "_mPath")}
+          ignoring case
+            if _mPath is "${escapeForAppleScript(resolved)}" then set end of _mbM to _m
+          end ignoring
+        end repeat
+        if (count of _mbM) is 1 then set _tmb to item 1 of _mbM`;
+    }
     return `
         set _tmb to missing value
         set _acctM to {}
@@ -2657,6 +2866,33 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     return names;
   }
 
+  /** Gmail's inbox workaround requires a verified receiving server, not a folder name alone. */
+  private gmailReceivingMailboxesForAccount(account: string): string[] | null {
+    if (isLocalStoreLabel(account)) return null;
+    const mailboxNames = this.getCachedMailboxNames(account);
+    if (!mailboxNames.some((name) => mailboxLeaf(name).toLowerCase() === "all mail")) return null;
+    // Keep provider identity on the mailbox-name entry so expiry and structural
+    // invalidation discard both together. Failed/empty reads are retried rather
+    // than retaining an earlier Gmail identity or caching an unreadable host.
+    const cached = this.cache.mailboxNames.get(account);
+    if (cached?.receivingServerHost) {
+      return gmailReceivingMailboxes(mailboxNames, cached.receivingServerHost);
+    }
+    const safeAccount = escapeForAppleScript(account);
+    const result = executeAppleScript(
+      buildAppLevelScript(`
+        try
+          return server name of account "${safeAccount}"
+        on error
+          return ""
+        end try
+      `)
+    );
+    const host = result.success ? result.output.trim() : undefined;
+    if (host && cached) cached.receivingServerHost = host;
+    return gmailReceivingMailboxes(mailboxNames, host);
+  }
+
   /**
    * Invalidate all caches. Call after operations that change
    * mailbox structure (create/delete/rename mailbox).
@@ -2664,6 +2900,124 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
   private invalidateCache(): void {
     this.cache.accounts = null;
     this.cache.mailboxNames.clear();
+    this.cache.accountIds = null;
+  }
+
+  /**
+   * Mail's internal id for an account (`id of account`), which is the host part
+   * of every mailbox URL in the Envelope Index. Cached with the account list;
+   * null when Mail can't be asked or has no such account.
+   */
+  private getAccountId(account: string): string | null {
+    const now = Date.now();
+    if (!this.cache.accountIds || now >= this.cache.accountIds.expiry) {
+      const result = executeAppleScript(
+        buildAppLevelScript(`
+      set idList to {}
+      repeat with acct in accounts
+        set end of idList to (name of acct) & "${FIELD_SEP}" & (id of acct)
+      end repeat
+      set AppleScript's text item delimiters to "${RECORD_SEP}"
+      return idList as text
+    `)
+      );
+      if (!result.success) return null;
+      const ids = new Map<string, string>();
+      for (const item of result.output.split(RECORD_SEP)) {
+        const [name, id] = item.split(FIELD_SEP);
+        if (name && id) ids.set(name.trim(), id.trim());
+      }
+      this.cache.accountIds = { data: ids, expiry: now + this.CACHE_TTL_MS };
+    }
+    return this.cache.accountIds.data.get(account) ?? null;
+  }
+
+  /**
+   * Opt-in fast path for one account's header search (and, with the body index,
+   * body search): answer from Mail's Envelope Index instead of an AppleScript
+   * scan. Returns null whenever the index can't answer completely, so the caller
+   * falls back to AppleScript rather than reporting a false empty.
+   */
+  private searchViaEnvelopeIndex(
+    account: string,
+    filters: {
+      query?: string;
+      mailbox?: string;
+      limit: number;
+      dateFrom?: string;
+      dateTo?: string;
+      from?: string;
+      subject?: string;
+      isRead?: boolean;
+      isFlagged?: boolean;
+      flagColorIndex?: number;
+      body?: string;
+    }
+  ): SearchResult | null {
+    if (!isEnvelopeIndexEnabled()) return null;
+    const fallback = (reason: string): null => {
+      console.error(`[envelopeIndex] ${account}: falling back to AppleScript — ${reason}`);
+      return null;
+    };
+    // Flag colors live in Mail's flag bits, which the index layout doesn't
+    // document; leave those searches to AppleScript.
+    if (filters.flagColorIndex !== undefined) return fallback("flagColor filter");
+    const accountId = this.getAccountId(account);
+    if (!accountId) return fallback("account id unavailable");
+
+    // AppleScript can't search bodies, so from here on a body search that the
+    // index can't serve is reported as not searched (with the reason), never
+    // handed to the AppleScript scan and never reported as "no matches".
+    const scope = `${account} / ${filters.mailbox || "*"}`;
+    const notSearched = (reason: string): SearchResult => ({
+      messages: [],
+      diagnostics: {
+        partial: true,
+        timedOutAccounts: [],
+        skippedLargeMailboxes: [],
+        notSearchedMailboxes: [`${scope} (body search unavailable: ${reason})`],
+      },
+    });
+    let body: { text: string; indexFile: string } | undefined;
+    if (filters.body !== undefined) {
+      const ready = prepareBodySearch();
+      if (!ready.ok) return notSearched(ready.reason);
+      body = { text: filters.body, indexFile: ready.file };
+    }
+
+    const outcome = searchEnvelopeIndex({ accountId, ...filters, body });
+    if (!outcome.ok) return body ? notSearched(outcome.reason) : fallback(outcome.reason);
+
+    const diagnostics: SearchDiagnostics = {
+      partial: false,
+      timedOutAccounts: [],
+      skippedLargeMailboxes: [],
+      notSearchedMailboxes: [],
+    };
+    // #346: a result built from an incomplete index is never a confirmed
+    // empty. Every message in scope the body match couldn't read in full is
+    // counted and named, even when there are hits.
+    if (outcome.bodyCoverage && !isScopeComplete(outcome.bodyCoverage)) {
+      diagnostics.partial = true;
+      diagnostics.notSearchedMailboxes.push(`${scope} (${describeScopeGap(outcome.bodyCoverage)})`);
+    }
+    const messages: Message[] = outcome.rows.map((r) => ({
+      id: String(r.id),
+      subject: r.subject,
+      sender: r.sender,
+      ...(r.senderName ? { senderName: r.senderName } : {}),
+      recipients: [],
+      dateReceived: r.dateReceived,
+      ...(r.dateSent ? { dateSent: r.dateSent } : {}),
+      isRead: r.isRead,
+      isFlagged: r.isFlagged,
+      isJunk: false,
+      isDeleted: false,
+      mailbox: r.mailbox,
+      account,
+      hasAttachments: r.hasAttachments,
+    }));
+    return { messages, diagnostics };
   }
 
   /**
@@ -2963,51 +3317,6 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
   }
 
   /**
-   * The address Mail must send from, for an `account` that names an enabled
-   * account by its name or its email address.
-   *
-   * With no `account`, the address of Mail's default sender (see
-   * mailDefaultSender), read from its configuration; undefined when Mail does not
-   * answer, and the message is then composed without a `set sender`, which Mail
-   * fills with that same default. An `account` that is given wins, and one that
-   * matches no enabled account throws instead of falling back to the default:
-   * `set sender to "<account name>"` is not a valid sender, so Mail silently used
-   * the default account and a message asked to leave from one account left from
-   * another (2026-10-10). Nothing is composed or sent when this throws.
-   */
-  private resolveSendingAddress(account: string | undefined): string | undefined {
-    const wanted = account?.trim().toLowerCase();
-    if (!wanted) return this.mailDefaultSender();
-    const enabled = this.getCachedAccounts().filter((a) => a.enabled);
-    const known = enabled.map((a) => `${a.name} <${a.email}>`).join(", ") || "none found";
-    const match = enabled.find(
-      (a) =>
-        a.name.toLowerCase() === wanted ||
-        a.email.toLowerCase() === wanted ||
-        (a.aliases ?? []).some((alias) => alias.toLowerCase() === wanted)
-    );
-    if (!match) {
-      // A cold cache and a failed read leave no accounts to match: say that, not
-      // "no enabled account", which would send the caller off to enable one.
-      if (this.lastAccountsError) {
-        throw new Error(
-          `Could not read the Mail accounts (${this.lastAccountsError}), so nothing was sent.`
-        );
-      }
-      throw new Error(
-        `Account "${account}" does not match any enabled Mail account, so nothing was sent. ` +
-          `Enabled accounts: ${known}.`
-      );
-    }
-    if (!match.email) {
-      throw new Error(`Account "${match.name}" has no email address to send from.`);
-    }
-    // An alias asked for by address is the sender; any other spelling gets the primary address.
-    const alias = (match.aliases ?? []).find((a) => a.toLowerCase() === wanted);
-    return alias ?? match.email;
-  }
-
-  /**
    * Resolves a mailbox name to its actual name in the account.
    *
    * Different account types (IMAP, Exchange, iCloud) use different
@@ -3025,8 +3334,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * @param account - Account to search in
    * @returns Actual mailbox name, or original if not found
    */
-  private resolveMailbox(mailbox: string, account: string): string {
-    return resolveAppleMailboxPath(mailbox, this.getCachedMailboxNames(account));
+  private resolveMailbox(mailbox: string, account: string, exactPathOnly = false): string {
+    return resolveAppleMailboxPath(mailbox, this.getCachedMailboxNames(account), exactPathOnly);
   }
 
   /**
@@ -3127,11 +3436,12 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     subject?: string,
     isRead?: boolean,
     isFlagged?: boolean,
-    flagColorIndex?: number
+    flagColorIndex?: number,
+    body?: string
   ): SearchResult {
     // If no account specified, search across all accounts and merge diagnostics.
     if (!account) {
-      const accounts = this.listAccounts();
+      const { accounts, failed, error } = this.listAccountsChecked();
       const allMessages: Message[] = [];
       const diagnostics: SearchDiagnostics = {
         partial: false,
@@ -3139,6 +3449,9 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
         skippedLargeMailboxes: [],
         notSearchedMailboxes: [],
       };
+      // A failed account read (cold cache, Mail busy) must not look like "no
+      // accounts": nothing was searched, so say so instead of a confirmed empty (#346).
+      if (failed) noteAccountListFailure(diagnostics, error);
       for (const acct of accounts) {
         if (allMessages.length >= limit) break;
         const remaining = limit - allMessages.length;
@@ -3159,7 +3472,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
             subject,
             isRead,
             isFlagged,
-            flagColorIndex
+            flagColorIndex,
+            body
           );
           allMessages.push(...res.messages);
           mergeSearchDiagnostics(diagnostics, res.diagnostics);
@@ -3176,6 +3490,42 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     // an explicit label and has no `tell account` form.
     const local = isLocalStoreLabel(account);
     const targetAccount = local ? LOCAL_STORE_LABEL : this.resolveAccount(account);
+
+    // Opt-in Envelope Index fast path (and body index, when asked for a body
+    // match). It returns null whenever it can't answer completely, and the
+    // AppleScript scan below runs as before.
+    if (!local) {
+      const fast = this.searchViaEnvelopeIndex(targetAccount, {
+        query,
+        mailbox,
+        limit,
+        dateFrom,
+        dateTo,
+        from,
+        subject,
+        isRead,
+        isFlagged,
+        flagColorIndex,
+        body,
+      });
+      if (fast) return tagBackend(fast, targetAccount, "envelope-index");
+    }
+    // AppleScript can't search bodies (`content contains` pulls every body
+    // through the Apple Event bridge and times out), so a body search that the
+    // index couldn't serve is reported as not searched, never as "no matches".
+    if (body !== undefined) {
+      return {
+        messages: [],
+        diagnostics: {
+          partial: true,
+          timedOutAccounts: [],
+          skippedLargeMailboxes: [],
+          notSearchedMailboxes: [
+            `${targetAccount} (body search requires the IMAP backend or the body index)`,
+          ],
+        },
+      };
+    }
     // Inside `tell account` the bare `mailboxes` is the account's; at
     // application level the local branch iterates the ownership-filtered `_mbs`.
     const mbIter = local ? "_mbs" : "mailboxes";
@@ -3241,7 +3591,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
       // dedup, so scoped search/get-thread find the same messages the unscoped
       // call reports as inbox mail.
       const gmailInbox = isInboxScope(mailbox)
-        ? gmailReceivingMailboxes(this.getCachedMailboxNames(targetAccount))
+        ? this.gmailReceivingMailboxesForAccount(targetAccount)
         : null;
 
       if (gmailInbox) {
@@ -3349,18 +3699,26 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
       // SIGKILL on an unresponsive account). Surface it as a timeout rather than
       // a false empty result — that confusion is the heart of issue #24.
       console.error(`Failed to search messages in "${targetAccount}": ${result.error}`);
-      return {
-        messages: [],
-        diagnostics: {
-          partial: true,
-          timedOutAccounts: [targetAccount],
-          skippedLargeMailboxes: [],
-          notSearchedMailboxes: [],
+      return tagBackend(
+        {
+          messages: [],
+          diagnostics: {
+            partial: true,
+            timedOutAccounts: [targetAccount],
+            skippedLargeMailboxes: [],
+            notSearchedMailboxes: [],
+          },
         },
-      };
+        targetAccount,
+        "applescript"
+      );
     }
 
-    return this.parseSearchResult(result.output, resultMailbox, targetAccount, rowsIncludeMailbox);
+    return tagBackend(
+      this.parseSearchResult(result.output, resultMailbox, targetAccount, rowsIncludeMailbox),
+      targetAccount,
+      "applescript"
+    );
   }
 
   /**
@@ -3482,18 +3840,27 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     id: string,
     innerAction: string,
     hint: { account?: string; mailbox?: string } | undefined,
-    opts: { firstHit?: boolean } = {}
+    opts: {
+      firstHit?: boolean;
+      requireScopedLocation?: boolean;
+      requireCompleteCoverage?: boolean;
+    } = {}
   ): string | null {
     const remembered = this.idLocationIndex.get(String(id));
+    // An explicit account-only hint must not be satisfied by a remembered
+    // location in a DIFFERENT account — numeric ids are per-mailbox counters,
+    // so an unrelated message there can answer to the same number (#319).
+    const usable =
+      hint?.account && remembered && remembered.account !== hint.account ? undefined : remembered;
     const loc: ByIdLocation | undefined =
       hint?.account && hint?.mailbox
         ? { account: hint.account, mailbox: hint.mailbox, explicit: true }
-        : remembered
-          ? { ...remembered, explicit: false }
+        : usable
+          ? { ...usable, explicit: false }
           : undefined;
 
     if (loc) {
-      const scoped = this.resolveScopedById(id, loc, innerAction);
+      const scoped = this.resolveScopedById(id, loc, innerAction, opts.requireScopedLocation);
       if (scoped.kind === "hit") return scoped.output;
       if (scoped.kind === "done") return null;
       // kind === "fallback": stale index entry, already evicted.
@@ -3545,10 +3912,11 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
   private resolveScopedById(
     id: string,
     loc: ByIdLocation,
-    innerAction: string
+    innerAction: string,
+    exactPathOnly = false
   ): { kind: "hit"; output: string } | { kind: "done" } | { kind: "fallback" } {
     const result = executeAppleScript(
-      this.scopedByIdScript(loc.account, loc.mailbox, id, innerAction),
+      this.scopedByIdScript(loc.account, loc.mailbox, id, innerAction, exactPathOnly),
       { timeoutMs: READ_ONLY_BYID_TIMEOUT_MS }
     );
     const where = `${loc.account} / ${loc.mailbox}`;
@@ -3583,16 +3951,25 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
       return { kind: "hit", output: result.output };
     }
 
+    const reason = result.output.startsWith(scopedPrefix)
+      ? result.output.slice(scopedPrefix.length)
+      : "nomessage";
+    if (reason === "ambiguous" || reason === "ambiguousaccount") {
+      this.lastMessageLookupError =
+        reason === "ambiguousaccount"
+          ? `Account "${loc.account}" is ambiguous — message ${Number(id)} was not looked up.`
+          : `Mailbox "${loc.mailbox}" in "${loc.account}" is ambiguous — message ${Number(id)} was not looked up.`;
+      return { kind: "done" };
+    }
     if (!loc.explicit) {
       // Stale index entry: the message is no longer where it was last seen.
       this.forgetLocation(id);
       return { kind: "fallback" };
     }
 
-    const reason = result.output.startsWith(scopedPrefix)
-      ? result.output.slice(scopedPrefix.length)
-      : "nomessage";
-    if (reason === "nomailbox") {
+    if (reason === "noaccount") {
+      this.lastMessageLookupError = `Account "${loc.account}" not found — message ${Number(id)} was not looked up. Check the name with list-accounts.`;
+    } else if (reason === "nomailbox") {
       this.lastMessageLookupError = `Mailbox "${loc.mailbox}" not found in account "${loc.account}" — message ${Number(id)} was not looked up. Check the names with list-mailboxes, or omit account/mailbox to scan every mailbox.`;
     } else if (reason.startsWith("error:")) {
       this.lastMessageLookupError = `Could not read message ${Number(id)} from ${where}: ${reason.slice("error:".length)}`;
@@ -3648,7 +4025,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
   private unscopedByIdScript(
     id: string,
     innerAction: string,
-    opts: { firstHit?: boolean; account?: string } = {}
+    opts: { firstHit?: boolean; account?: string; requireCompleteCoverage?: boolean } = {}
   ): string {
     const threshold = getByIdScanThreshold();
     const scopeAcct = escapeForAppleScript(opts.account ?? "");
@@ -3711,6 +4088,10 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
             end if`;
     const hitFound = opts.firstHit ? "(count of _hits) > 0" : "false";
     const stopOnHit = opts.firstHit ? `if (count of _hits) > 0 then exit repeat` : "";
+    const scanError = (accountExpr: string) =>
+      opts.requireCompleteCoverage
+        ? `on error\n                  set _unreached to _unreached & ${accountExpr} & " / " & _mbName & " (message lookup failed)${DIAG_ITEM_SEP}"`
+        : "";
     return buildAppLevelScriptIfRunning(`
       try
         set _hits to {}
@@ -3775,6 +4156,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
                     set end of _hitAccts to _acctName
                     set _names to _names & _acctName & "/" & _mbName & ", "
                   end if
+                ${scanError("_acctName")}
                 end try
               end if
               ${stopOnHit}
@@ -3824,6 +4206,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
                   set end of _hitAccts to "${LOCAL_STORE_LABEL}"
                   set _names to _names & "${LOCAL_STORE_LABEL}/" & _mbName & ", "
                 end if
+              ${scanError(`"${LOCAL_STORE_LABEL}"`)}
               end try
             end if
             ${stopOnHit}
@@ -3832,8 +4215,9 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
             set _unreached to _unreached & "${LOCAL_STORE_LABEL} (" & ((length of _mbs) - _stopAt + 1) & " more local mailboxes)${DIAG_ITEM_SEP}"
           end if
         end if
-        if (count of _hits) is 0 then return "${LOOKUP_ERROR_MARKER}Message not found${BYID_COVERAGE_MARKER}" & _skipped & "${DIAG_FIELD_SEP}" & (_budgetHit as string) & "${DIAG_FIELD_SEP}" & (_probeStalled as string) & "${DIAG_FIELD_SEP}" & _unreached
         ${opts.firstHit ? "" : `if (count of _hits) > 1 then return "${LOOKUP_ERROR_MARKER}${AMBIGUOUS_ID_PREFIX}${Number(id)} is present in more than one mailbox (" & _names & "); list or search that mailbox first so the read targets the right copy"`}
+        ${opts.requireCompleteCoverage ? `if _skipped is not "" or _budgetHit or _probeStalled or _unreached is not "" then return "${LOOKUP_ERROR_MARKER}Source lookup incomplete${BYID_COVERAGE_MARKER}" & _skipped & "${DIAG_FIELD_SEP}" & (_budgetHit as string) & "${DIAG_FIELD_SEP}" & (_probeStalled as string) & "${DIAG_FIELD_SEP}" & _unreached` : ""}
+        if (count of _hits) is 0 then return "${LOOKUP_ERROR_MARKER}Message not found${BYID_COVERAGE_MARKER}" & _skipped & "${DIAG_FIELD_SEP}" & (_budgetHit as string) & "${DIAG_FIELD_SEP}" & (_probeStalled as string) & "${DIAG_FIELD_SEP}" & _unreached
         if (count of _hits) ${opts.firstHit ? "> 0" : "is 1"} then
           set msg to item 1 of _hits
           set _hitMb to item 1 of _hitMbs
@@ -3861,7 +4245,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * actually named "Inbox", which would silently drop us back to the slow scan.
    *
    * A miss is reported, not swallowed (#270): `{LOOKUP_ERROR_MARKER}
-   * {SCOPED_MISS_MARKER}` followed by `nomailbox`, `nomessage` or
+   * {SCOPED_MISS_MARKER}` followed by `noaccount`, `nomailbox`, `nomessage` or
    * `error:<Mail's text>`, so the caller can return a clean "not found in
    * <mailbox>" for an explicit hint instead of guessing.
    */
@@ -3869,9 +4253,11 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     account: string,
     mailbox: string,
     id: string,
-    innerAction: string
+    innerAction: string,
+    exactPathOnly = false
   ): string {
-    const resolved = this.resolveMailbox(mailbox, account);
+    const resolved = this.resolveMailbox(mailbox, account, exactPathOnly);
+    const miss = `${LOOKUP_ERROR_MARKER}${SCOPED_MISS_MARKER}`;
     // #183: a recorded location can now name the LOCAL store, which is not an
     // account — `first account whose name is "On My Mac"` would raise and drop
     // us to the slow full scan every time. Bind the mailbox at the application
@@ -3880,30 +4266,39 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
       ? `${localMailboxBindingFragment()}
         set _hitAcct to "${LOCAL_STORE_LABEL}"
         set targetMb to missing value
+        set _localMatches to {}
         ignoring case
           repeat with mb in _mbs
             set _mbPath to ""
             ${mailboxPathFragment("mb", "_mbPath")}
             if _mbPath is "${escapeForAppleScript(resolved)}" then
-              set targetMb to mb
-              exit repeat
+              set end of _localMatches to mb
             end if
           end repeat
-        end ignoring`
-      : `set acct to (first account whose name is "${escapeForAppleScript(account)}")
+        end ignoring
+        if (count of _localMatches) > 1 then return "${miss}ambiguous"
+        if (count of _localMatches) is 1 then set targetMb to item 1 of _localMatches`
+      : `set _scopeAccounts to {}
+        repeat with _scopeAccount in accounts
+          if (name of _scopeAccount) is "${escapeForAppleScript(account)}" then set end of _scopeAccounts to _scopeAccount
+        end repeat
+        if (count of _scopeAccounts) > 1 then return "${miss}ambiguousaccount"
+        if (count of _scopeAccounts) is 0 then return "${miss}noaccount"
+        set acct to item 1 of _scopeAccounts
         set _hitAcct to (name of acct)
         set targetMb to missing value
+        set _scopeMatches to {}
         ignoring case
           repeat with mb in mailboxes of acct
             set _mbPath to ""
             ${mailboxPathFragment("mb", "_mbPath")}
             if _mbPath is "${escapeForAppleScript(resolved)}" then
-              set targetMb to mb
-              exit repeat
+              set end of _scopeMatches to mb
             end if
           end repeat
-        end ignoring`;
-    const miss = `${LOOKUP_ERROR_MARKER}${SCOPED_MISS_MARKER}`;
+        end ignoring
+        if (count of _scopeMatches) > 1 then return "${miss}ambiguous"
+        if (count of _scopeMatches) is 1 then set targetMb to item 1 of _scopeMatches`;
     return buildAppLevelScriptIfRunning(`
       try
         ${bind}
@@ -3936,9 +4331,37 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
   getMessageContent(
     id: string,
     includeHtml = false,
-    hint?: { account?: string; mailbox?: string }
+    hint?: { account?: string; mailbox?: string },
+    options?: { requireScopedLocation?: boolean }
   ): MessageContent | null {
     this.lastMessageLookupError = undefined;
+    if (options?.requireScopedLocation && !(hint?.account && hint.mailbox)) {
+      this.lastMessageLookupError = "A source account and mailbox are required for this read.";
+      return null;
+    }
+    // Opt-in disk read (Envelope Index → .emlx): no `whose id is` lookup, which
+    // times out on very large mailboxes. Any miss falls through to AppleScript.
+    // Compose explicitly requires a scoped read: the local envelope index
+    // resolves by numeric id alone and cannot prove that it belongs there.
+    // Other reads retain the existing opt-in index behavior.
+    if (isEnvelopeIndexEnabled() && /^\d+$/.test(id) && !options?.requireScopedLocation) {
+      const stored = readMessageFromStore(Number(id), { includeHtml });
+      if ("reason" in stored) {
+        console.error(`[envelopeIndex] get ${id}: falling back to AppleScript — ${stored.reason}`);
+      } else {
+        return {
+          id,
+          subject: stored.subject,
+          plainText: stored.plainText,
+          ...(stored.htmlContent !== undefined ? { htmlContent: stored.htmlContent } : {}),
+          rfcMessageId: stored.rfcMessageId,
+          ...(stored.dateSent
+            ? { dateSent: plausibleDateSent(stored.dateSent, stored.dateReceived) }
+            : {}),
+          ...(stored.dateReceived ? { dateReceived: stored.dateReceived } : {}),
+        };
+      }
+    }
     // Only `source of msg` is fetched when HTML is requested. `content of msg`
     // is the plain-text body and is always cheap.
     const sourceFetch = includeHtml
@@ -3961,7 +4384,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
 
     // Scoped fast path (explicit hint, else the remembered location), then the
     // bounded cross-mailbox scan — see resolveById.
-    const output = this.resolveById(id, innerFetch, hint);
+    const output = this.resolveById(id, innerFetch, hint, options);
     return output === null ? null : this.parseMessageContent(id, output, includeHtml);
   }
 
@@ -4058,9 +4481,44 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * ceiling was buying a real result a shorter one would have missed.
    * Same resolution as getMessageContent (resolveById).
    */
-  getRawSource(id: string, hint?: { account?: string; mailbox?: string }): string | null {
+  getRawSource(
+    id: string,
+    hint?: { account?: string; mailbox?: string },
+    options?: { requireScopedLocation?: boolean }
+  ): string | null {
     this.lastMessageLookupError = undefined;
-    return this.resolveById(id, "return source of msg", hint);
+    if (options?.requireScopedLocation && !(hint?.account && hint.mailbox)) {
+      this.lastMessageLookupError = "A source account and mailbox are required for this read.";
+      return null;
+    }
+    return this.resolveById(id, "return source of msg", hint, options);
+  }
+
+  /** Read a numeric message's source and owning location in the same strict lookup. */
+  getRawSourceWithLocation(id: string): { raw: string; account: string; mailbox: string } | null {
+    this.lastMessageLookupError = undefined;
+    const output = this.resolveById(
+      id,
+      `set _sourceMailbox to ""
+       ${mailboxPathFragment("_hitMb", "_sourceMailbox")}
+       if _hitAcct contains "${FIELD_SEP}" or _sourceMailbox contains "${FIELD_SEP}" then return "invalid-source-scope"
+       return _hitAcct & "${FIELD_SEP}" & _sourceMailbox & "${FIELD_SEP}" & (source of msg)`,
+      undefined,
+      { requireCompleteCoverage: true }
+    );
+    if (output === null) return null;
+    const first = output.indexOf(FIELD_SEP);
+    const second = output.indexOf(FIELD_SEP, first + 1);
+    if (first < 1 || second <= first + 1 || !output.slice(second + 1).trim()) {
+      this.lastMessageLookupError =
+        "Mail could not return a readable source with its account and mailbox.";
+      return null;
+    }
+    return {
+      account: output.slice(0, first),
+      mailbox: output.slice(first + 1, second),
+      raw: output.slice(second + 1),
+    };
   }
 
   /**
@@ -4102,7 +4560,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
   ): SearchResult {
     // If no account specified, list across all accounts and merge diagnostics.
     if (!account) {
-      const accounts = this.listAccounts();
+      const { accounts, failed, error } = this.listAccountsChecked();
       const allMessages: Message[] = [];
       const diagnostics: SearchDiagnostics = {
         partial: false,
@@ -4110,6 +4568,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
         skippedLargeMailboxes: [],
         notSearchedMailboxes: [],
       };
+      if (failed) noteAccountListFailure(diagnostics, error); // #346
       for (const acct of accounts) {
         if (allMessages.length >= limit) break;
         const remaining = limit - allMessages.length;
@@ -4162,7 +4621,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
       // returns a small, shifting subset of the account's real inbox contents.
       // See BUG A / issue: Gmail virtual-INBOX handling.
       const gmailInbox = isInboxScope(mailbox)
-        ? gmailReceivingMailboxes(this.getCachedMailboxNames(targetAccount))
+        ? this.gmailReceivingMailboxesForAccount(targetAccount)
         : null;
 
       if (gmailInbox) {
@@ -4395,11 +4854,12 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     cc?: string[],
     bcc?: string[],
     account?: string,
-    attachments?: AttachmentInput[]
-  ): boolean {
-    // First, before anything is composed or written: a named account that is
-    // not a valid sending account means no send. No account: Mail's default sender.
-    const sender = this.resolveSendingAddress(account);
+    attachments?: AttachmentInput[],
+    nativeEditor = false
+  ): ComposeResult {
+    if (nativeEditor) {
+      return this.composeNative("send", body, attachments, { to, subject, cc, bcc, account });
+    }
     const safeSubject = escapeForAppleScript(subject);
     const safeBody = escapeForAppleScriptBody(body);
 
@@ -4429,9 +4889,167 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
         recipientCommands,
         safeSubject,
         safeBody,
-        sender,
+        account,
         buildAttachmentCommands(mat.paths)
       );
+    } finally {
+      mat.cleanup();
+    }
+  }
+
+  /**
+   * Native editor transaction: create once, paste only the authored HTML, then
+   * re-identify and finalize once. Any failure leaves the compose for inspection.
+   * Neither creation nor finalization assigns Mail's body/content property.
+   */
+  private composeNative(
+    mode: "send" | "draft",
+    body: string,
+    attachments: AttachmentInput[] | undefined,
+    options: {
+      to?: string[];
+      subject?: string;
+      cc?: string[];
+      bcc?: string[];
+      account?: string;
+      id?: string;
+      kind?: "reply" | "forward";
+      replyAll?: boolean;
+      source?: { account: string; mailbox: string; messageId?: string };
+    }
+  ): ComposeResult {
+    if (!options.kind && !options.account) {
+      return {
+        success: false,
+        error: "Native composition requires an explicit sender account or address.",
+      };
+    }
+    const preflight = nativeEditorPreflight();
+    if (!preflight.success) return preflight;
+
+    let pinnedAddress: string | undefined;
+    if (!options.kind) {
+      const sender = this.resolveSender(options.account);
+      if ("error" in sender) return { success: false, error: sender.error };
+      pinnedAddress = sender.address;
+      if (!pinnedAddress) return { success: false, error: "Could not resolve the native sender." };
+    }
+
+    // Materialize and policy-check every attachment before creating any compose.
+    const mat = materializeAttachments(attachments);
+    try {
+      const appendCommands = buildAttachmentCommands(mat.paths);
+      const attachmentCommands = mat.paths.length
+        ? `set _nativeExpectedAttachments to (count of attachments of content of _nativeMessage) + ${mat.paths.length}
+          tell _nativeMessage
+            ${appendCommands}
+          end tell
+          ${attachmentSettleBlock("_nativeMessage", mat.paths.length).replace(`attachCount >= ${mat.paths.length}`, "attachCount >= _nativeExpectedAttachments")}
+          if attachCount < _nativeExpectedAttachments then error "Native attachments did not finish loading; compose retained."`
+        : "";
+      const marker = `MCP Native ${randomUUID()}`;
+      const endMarker = `:native-end:${randomUUID()}`;
+      const safeMarker = escapeForAppleScript(marker);
+      let creation: string;
+      if (options.kind) {
+        creation = `${nativeParentSender}
+          set _nativeMessage to ${options.kind} msg with opening window${options.kind === "reply" && options.replyAll ? " with reply to all" : ""}
+          set sender of _nativeMessage to _nativeSender`;
+      } else {
+        creation = `set _nativeSender to "${escapeForAppleScript(pinnedAddress!)}"
+          set _nativeMessage to make new outgoing message with properties {subject:"${escapeForAppleScript(options.subject ?? "")}", visible:true}
+          set sender of _nativeMessage to _nativeSender`;
+      }
+      for (const kind of ["to", "cc", "bcc"] as const) {
+        for (const address of options[kind] ?? []) {
+          creation += `\nmake new ${kind} recipient at end of ${kind} recipients of _nativeMessage with properties {address:"${escapeForAppleScript(address)}"}`;
+        }
+      }
+      creation += `
+        set _nativeActualSender to sender of _nativeMessage as text
+        if not (_nativeActualSender is _nativeSender or _nativeActualSender ends with "<" & _nativeSender & ">") then error "Native compose sender verification failed; compose retained."
+        set _nativeSubject to subject of _nativeMessage as text
+        set subject of _nativeMessage to "${safeMarker}"
+        ${nativeRecipientFingerprint("_nativeMessage")}
+        return "native-compose:" & (id of _nativeMessage as text) & linefeed & _nativeSender & linefeed & _nativeRecipients & linefeed & _nativeSubject & "${endMarker}"`;
+      const creationScript = options.kind
+        ? this.findMessageScript(options.id!, creation, false, options.source)
+        : buildAppLevelScript(
+            `try\n${creation}\non error errMsg\nreturn "error:" & errMsg\nend try`
+          );
+      if (!options.kind) this.beginMutation();
+      const created = executeAppleScript(creationScript, { timeoutMs: 60000, maxRetries: 1 });
+      if (
+        !created.success ||
+        !created.output.startsWith("native-compose:") ||
+        !created.output.endsWith(endMarker)
+      ) {
+        return {
+          success: false,
+          error:
+            "Native compose creation or identity verification failed; inspect Mail drafts before retrying.",
+        };
+      }
+      const metadata = created.output.slice("native-compose:".length, -endMarker.length);
+      const first = metadata.indexOf("\n");
+      const second = metadata.indexOf("\n", first + 1);
+      const third = metadata.indexOf("\n", second + 1);
+      const messageId = Number(metadata.slice(0, first));
+      const expectedSender = metadata.slice(first + 1, second);
+      const recipients = metadata.slice(second + 1, third);
+      const originalSubject = metadata.slice(third + 1);
+      if (
+        first < 1 ||
+        second < first ||
+        third < second ||
+        !Number.isSafeInteger(messageId) ||
+        messageId < 0 ||
+        !expectedSender ||
+        extractAddress(expectedSender) !== expectedSender ||
+        (pinnedAddress && expectedSender.toLowerCase() !== pinnedAddress.toLowerCase())
+      ) {
+        return {
+          success: false,
+          error: "Native compose returned an invalid identity; compose retained for inspection.",
+        };
+      }
+      const inserted = insertNativeAuthoredBody({
+        messageId,
+        markerSubject: marker,
+        body,
+        expectedSender,
+      });
+      if (!inserted.success) return inserted;
+
+      const guard = `set _nativeMatches to (every outgoing message whose id is ${messageId})
+        if (count of _nativeMatches) is not 1 then error "Native compose identity changed; nothing finalized."
+        set _nativeMessage to item 1 of _nativeMatches
+        if (subject of _nativeMessage as text) is not "${safeMarker}" then error "Native compose subject changed; nothing finalized."
+        set _nativeActualSender to sender of _nativeMessage as text
+        if not (_nativeActualSender is "${escapeForAppleScript(expectedSender)}" or _nativeActualSender ends with "<${escapeForAppleScript(expectedSender)}>") then error "Native compose sender changed; nothing finalized."
+        ${nativeRecipientFingerprint("_nativeMessage")}
+        if _nativeRecipients is not (${nativeTextLiteral(recipients)}) then error "Native compose recipients changed; nothing finalized."`;
+      const finalized = executeAppleScript(
+        buildAppLevelScript(`try
+        ${guard}
+        ${attachmentCommands}
+        ${mat.paths.length ? guard : ""}
+        set subject of _nativeMessage to (${nativeTextLiteral(originalSubject)})
+        ${mode === "send" ? 'set _nativeSent to send _nativeMessage\nif _nativeSent is not true then error "Mail did not accept the native send; inspect the compose before retrying."' : draftSaveBlock("_nativeMessage")}
+        return "native-finalized"
+      on error errMsg
+        return "error:" & errMsg
+      end try`),
+        { timeoutMs: 60000, maxRetries: 1 }
+      );
+      if (!finalized.success || finalized.output !== "native-finalized") {
+        return {
+          success: false,
+          error:
+            "Native compose finalization failed or is uncertain; inspect Sent, Outbox, and Drafts before retrying.",
+        };
+      }
+      return { success: true, from: expectedSender };
     } finally {
       mat.cleanup();
     }
@@ -4443,29 +5061,38 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * any attachments to load (attachmentSettleBlock), verify the sender before
    * the message leaves, and report the sender Mail actually used. A draft is
    * saved and closed explicitly rather than left to Mail's autosave (#293).
+   *
+   * Both modes compose with `visible:true`. A `visible:false` outgoing message
+   * has no compose window, so neither `close` nor `delete` releases it: it
+   * stays in `outgoing messages` until Mail quits and autosaves into Drafts
+   * later, bringing back a draft the user already deleted (#312). A visible
+   * one is released by `close`/`delete` — the cost is a compose window that
+   * flashes for a fraction of a second, without taking focus — but must not be
+   * closed before its draft is committed (draftSaveBlock).
    */
   private composeWithCommands(
     mode: "send" | "draft",
     recipientCommands: string,
     safeSubject: string,
     safeBody: string,
-    sender: string | undefined,
+    account: string | undefined,
     attachmentCommands: string
-  ): boolean {
-    // `sender` is the account's email address, validated by
-    // resolveSendingAddress: Mail does not accept an account name here. Without
-    // one, no `set sender`: Mail uses its default sender.
+  ): ComposeResult {
+    const sender = this.resolveSender(account);
+    if ("error" in sender) return { success: false, error: sender.error };
     const settle = attachmentSettleBlock("newMessage", countAttachmentCommands(attachmentCommands));
-    const done = mode === "send" ? "sent" : "draft created";
+
+    const prefix = mode === "send" ? SENT_PREFIX : DRAFT_PREFIX;
     const script = buildAppLevelScript(`
-        set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:${mode === "send"}}
+        set newMessage to make new outgoing message with properties {subject:"${safeSubject}", content:"${safeBody}", visible:true}
         tell newMessage
           ${recipientCommands}
-          ${sender ? `set sender to "${escapeForAppleScript(sender)}"` : ""}
+          ${sender.setSender}
           ${attachmentCommands}
         end tell${settle}
-        ${mode === "send" ? "send newMessage" : "save newMessage\n        close newMessage saving yes"}
-        return "${done}"
+        ${sender.guard}
+        ${mode === "send" ? "send newMessage" : draftSaveBlock("newMessage")}
+        return "${prefix}" & actualSender
       `);
     // Exactly one attempt. `executeAppleScript` retries on a timeout, and a
     // `send` that timed out may already have been accepted by Mail — a retry
@@ -4478,10 +5105,37 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
       console.error(
         `Failed to ${mode === "send" ? "send email" : "create draft"}: ${result.error}`
       );
-      return false;
+      return { success: false };
     }
 
-    return result.output.includes(done);
+    return parseComposeOutput(result.output, prefix);
+  }
+
+  /**
+   * Turn the caller's `account` into the AppleScript pieces that pin the
+   * sender and verify it. No `account` → no pin, but the script still reports
+   * the sender Mail picked. Uses the cached account list: a stale list can only
+   * turn a valid account into a refusal, and the in-script guard re-checks the
+   * real sender before anything leaves.
+   */
+  private resolveSender(
+    account: string | undefined
+  ): { setSender: string; guard: string; address?: string } | { error: string } {
+    if (!account) return { setSender: "", guard: senderGuardScript(undefined) };
+
+    const { accounts, failed } = this.listAccountsChecked({ timeoutMs: 30000 });
+    if (failed) {
+      return { error: "Could not read Mail accounts to resolve the sender; nothing was sent." };
+    }
+    const picked = pickSenderAddress(account, accounts);
+    if ("error" in picked) return { error: picked.error };
+
+    const safeAddress = escapeForAppleScript(picked.address);
+    return {
+      address: picked.address,
+      setSender: `set sender to "${safeAddress}"`,
+      guard: senderGuardScript(safeAddress),
+    };
   }
 
   /**
@@ -4504,11 +5158,15 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     account?: string,
     delayMs: number = 500
   ): SerialEmailResult[] {
-    // The whole batch is refused up front when the named sending account is
-    // unknown, rather than failing recipient by recipient.
-    this.resolveSendingAddress(account);
     const effectiveDelay = Math.min(Math.max(delayMs, 0), 10000);
     const results: SerialEmailResult[] = [];
+
+    // An account that cannot be resolved fails the whole batch up front rather
+    // than once (and one delay) per recipient.
+    const sender = this.resolveSender(account);
+    if ("error" in sender) {
+      return recipients.map((r) => ({ email: r.email, success: false, error: sender.error }));
+    }
 
     for (let i = 0; i < recipients.length; i++) {
       const recipient = recipients[i];
@@ -4519,8 +5177,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
         for (const [key, value] of Object.entries(recipient.variables)) {
           const safeKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
           const placeholder = new RegExp(`\\{\\{${safeKey}\\}\\}`, "g");
-          personalizedSubject = personalizedSubject.replace(placeholder, value);
-          personalizedBody = personalizedBody.replace(placeholder, value);
+          personalizedSubject = personalizedSubject.replace(placeholder, () => value);
+          personalizedBody = personalizedBody.replace(placeholder, () => value);
         }
 
         const sent = this.sendEmail(
@@ -4534,8 +5192,8 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
 
         results.push({
           email: recipient.email,
-          success: sent,
-          error: sent ? undefined : "Failed to send email",
+          success: sent.success,
+          error: sent.success ? undefined : (sent.error ?? "Failed to send email"),
         });
       } catch (error) {
         results.push({
@@ -4563,7 +5221,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * @param cc - CC recipients
    * @param bcc - BCC recipients
    * @param account - Account to create draft in
-   * @returns true if the draft was created
+   * @returns `from` is the sender Mail.app actually used
    */
   createDraft(
     to: string[],
@@ -4572,11 +5230,12 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     cc?: string[],
     bcc?: string[],
     account?: string,
-    attachments?: AttachmentInput[]
-  ): boolean {
-    // Same rule as sendEmail: a named account that is not valid means no draft;
-    // with none named, the draft is Mail's default sender's.
-    const sender = this.resolveSendingAddress(account);
+    attachments?: AttachmentInput[],
+    nativeEditor = false
+  ): ComposeResult {
+    if (nativeEditor) {
+      return this.composeNative("draft", body, attachments, { to, subject, cc, bcc, account });
+    }
     const safeSubject = escapeForAppleScript(subject);
     const safeBody = escapeForAppleScriptBody(body);
 
@@ -4605,7 +5264,7 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
         recipientCommands,
         safeSubject,
         safeBody,
-        sender,
+        account,
         attachmentCommands
       );
     } finally {
@@ -4629,15 +5288,23 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     body: string,
     replyAll = false,
     send = true,
-    attachments?: AttachmentInput[]
+    attachments?: AttachmentInput[],
+    nativeEditor = false,
+    source?: { account: string; mailbox: string; messageId?: string }
   ): { success: boolean; error?: string } {
+    if (nativeEditor) {
+      return this.composeNative(send ? "send" : "draft", body, attachments, {
+        id,
+        replyAll,
+        kind: "reply",
+        source,
+      });
+    }
     const safeBody = escapeForAppleScriptBody(body);
     const replyAllClause = replyAll ? " with reply to all" : "";
-    // Mail can show a compose window even for `without opening window`.
-    // Save before closing so the draft remains available in Drafts.
-    const finalAction = send
-      ? "send theReply"
-      : "save theReply\n          close theReply saving yes";
+    // The reply is a visible compose even `without opening window`, so a draft
+    // is saved and closed only once Drafts has it (draftSaveBlock, #312).
+    const finalAction = send ? "send theReply" : draftSaveBlock("theReply");
 
     const mat = materializeAttachments(attachments);
     try {
@@ -4650,7 +5317,9 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
           ${senderFragment("theReply", "reply")}
           set content of theReply to "${safeBody}"
           ${composeAttachmentBlock("theReply", mat.paths)}
-          ${finalAction}`
+          ${finalAction}`,
+        false,
+        source
       );
       return this.runComposeScript(script, "reply to");
     } finally {
@@ -4673,13 +5342,21 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     to: string[],
     body?: string,
     send = true,
-    attachments?: AttachmentInput[]
+    attachments?: AttachmentInput[],
+    nativeEditor = false,
+    source?: { account: string; mailbox: string; messageId?: string }
   ): { success: boolean; error?: string } {
+    if (nativeEditor) {
+      return this.composeNative(send ? "send" : "draft", body ?? "", attachments, {
+        id,
+        to,
+        kind: "forward",
+        source,
+      });
+    }
     const safeBody = body ? escapeForAppleScriptBody(body) : "";
-    // See replyToMessage: save the draft and close any compose window Mail opens.
-    const finalAction = send
-      ? "send theForward"
-      : "save theForward\n          close theForward saving yes";
+    // See replyToMessage: a draft is closed only once Drafts has it.
+    const finalAction = send ? "send theForward" : draftSaveBlock("theForward");
 
     // Build recipient additions
     let recipientCommands = "";
@@ -4697,7 +5374,9 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
           ${recipientCommands}
           ${safeBody ? `set content of theForward to "${safeBody}"` : ""}
           ${composeAttachmentBlock("theForward", mat.paths)}
-          ${finalAction}`
+          ${finalAction}`,
+        false,
+        source
       );
       return this.runComposeScript(script, "forward");
     } finally {
@@ -4751,9 +5430,17 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
     return { success: true };
   }
 
-  private findMessageScript(id: string, operation: string, instrument = false): string {
+  private findMessageScript(
+    id: string,
+    operation: string,
+    instrument = false,
+    source?: { account: string; mailbox: string; messageId?: string }
+  ): string {
     this.beginMutation();
-    const loc = this.locationFor(id);
+    // Explicit caller scope wins over a remembered location for the same
+    // numeric id. A miss stays in this mailbox; it must never fall back to an
+    // unrelated copy or account.
+    const loc = source ?? this.locationFor(id);
     if (loc) {
       // Emitter-only literals: stripped of the stream's structural bytes so a
       // mailbox or account name containing one cannot shift the record it is
@@ -4762,11 +5449,15 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
       const mbLit = `"${escapeForAppleScript(stripStreamDelimiters(loc.mailbox))}"`;
       return buildAppLevelScript(`
       try
-        ${this.resolveMailboxFragment(loc.account, loc.mailbox)}
+        ${this.resolveMailboxFragment(loc.account, loc.mailbox, source !== undefined)}
         if _tmb is missing value then return "error:Message not found"
         set matchingMsgs to (messages of _tmb whose id is ${Number(id)})
         if (count of matchingMsgs) > 0 then
           set msg to item 1 of matchingMsgs${
+            source?.messageId
+              ? `\n          set _expectedMessageId to "${escapeForAppleScript(source.messageId)}"\n          set _actualMessageId to message id of msg as text\n          considering case\n            if _actualMessageId is not _expectedMessageId and _actualMessageId is not ("<" & _expectedMessageId & ">") then return "error:The source message changed after it was read; no reply or forward was created."\n          end considering`
+              : ""
+          }${
             instrument
               ? `
           set _out to ""
@@ -7303,7 +7994,7 @@ ${actionStmts.join("\n")}
 
     if (to.length === 0) return false;
 
-    return this.createDraft(to, subject, body, cc, undefined, overrides?.account);
+    return this.createDraft(to, subject, body, cc, undefined, overrides?.account).success;
   }
 
   // ===========================================================================
@@ -7463,11 +8154,9 @@ ${actionStmts.join("\n")}
 
     // Scan each account's receiving mailbox for performance — scanning every
     // mailbox is too slow. For an ordinary account that's the literal "INBOX".
-    // For a Gmail-style account (BUG A2) the literal "INBOX" is an empty shell,
-    // so counting only it reported near-zero recent mail; instead we detect the
-    // "All Mail" special mailbox (matched by `name of mb`, since it's nested in
-    // the [Gmail] container and doesn't resolve by a flat name) and count that
-    // superset of received mail.
+    // For a Gmail account (BUG A2) the literal "INBOX" can be an empty shell,
+    // so count its "All Mail" special mailbox instead. Other providers also
+    // expose an "All Mail" folder; check the receiving server before using it.
     //
     // A `whose date received >=` filter is O(n) over the whole mailbox with no
     // AppleScript index, so on a huge "All Mail" (tens of thousands of messages)
@@ -7508,22 +8197,32 @@ ${actionStmts.join("\n")}
 
       repeat with acct in accounts
         try
-          -- Detect a Gmail-style account (has an "All Mail" special mailbox);
-          -- if so, count its receiving superset instead of the empty "INBOX".
+          -- Only Gmail hosts may use the "All Mail" workaround. If the host
+          -- cannot be read, retain the ordinary INBOX rather than guessing.
           set _gmailInbox to missing value
-          set _wantNames to ${gmailNameList}
-          repeat with mb in mailboxes of acct
-            set mbName to ""
-            try
-              set mbName to name of mb
-            end try
-            ignoring case
-              if _wantNames contains mbName then
-                set _gmailInbox to mb
-                exit repeat
-              end if
-            end ignoring
-          end repeat
+          set _serverHost to ""
+          try
+            set _serverHost to (server name of acct) as text
+          end try
+          set _isGmailHost to false
+          ignoring case
+            if _serverHost is "gmail.com" or _serverHost ends with ".gmail.com" or _serverHost is "googlemail.com" or _serverHost ends with ".googlemail.com" then set _isGmailHost to true
+          end ignoring
+          if _isGmailHost then
+            set _wantNames to ${gmailNameList}
+            repeat with mb in mailboxes of acct
+              set mbName to ""
+              try
+                set mbName to name of mb
+              end try
+              ignoring case
+                if _wantNames contains mbName then
+                  set _gmailInbox to mb
+                  exit repeat
+                end if
+              end ignoring
+            end repeat
+          end if
 
           if _gmailInbox is not missing value then
             try

@@ -67,6 +67,10 @@ This method also installs a **skill** that teaches Claude when and how to use Ap
 
 ### Using the Codex Marketplace
 
+See [Apple Mail in Codex](docs/CODEX-SETUP.md) for setup and diagnostics, and the
+[guided setup and OAuth proposal](docs/CODEX-PLUGIN-AUTH-PROPOSAL.md) for proposed
+future authorization support.
+
 Install the same public marketplace in Codex:
 
 ```bash
@@ -74,7 +78,57 @@ codex plugin marketplace add sweetrb/apple-mail-mcp
 codex plugin add apple-mail@apple-mail-mcp
 ```
 
-The Codex package registers the same `apple-mail` MCP server through an exactly pinned runtime — `npx -y apple-mail-mcp@<plugin version>` — and includes the Apple Mail skill guidance. The pin in `codex/.mcp.json` is rewritten to match `package.json` by `scripts/sync-plugin-version.mjs` on every version bump, so the plugin manifest and the server it launches are always the same release; CI fails the PR if they drift.
+The Codex package includes a portable `codex/plugin.json`, typed stdio server
+configuration in `codex/mcp.json`, the Apple Mail skill, and the existing assets.
+It retains `codex/.codex-plugin/plugin.json` and `codex/.mcp.json` for compatible
+older hosts. Both layouts register the same `apple-mail` MCP identity through
+`npx -y apple-mail-mcp@<plugin version>`. Release synchronization updates both
+runtime pins and manifest metadata; tests and CI reject drift. An unreleased
+candidate can be discovered locally, but its exact npm version must be
+published before that pinned launcher can be installed from the registry.
+
+For ongoing upstream updates, keep the Git marketplace configured. After a new
+release is published, refresh its catalog:
+
+```bash
+codex plugin marketplace upgrade apple-mail-mcp
+```
+
+Install the published plugin version from the refreshed marketplace, then start
+a new Codex session. The refresh does not replace the runtime pin with `@latest`;
+the plugin and its pinned npm runtime must refer to the same available release.
+
+The standalone plugin archive bundles the server and requires only Node.js 20+
+on the Mac; it does not fetch a runtime from npm. Download it from the release
+assets, or use the candidate artifact attached to a successful CI run. See
+[Standalone plugin archive](docs/CODEX-SETUP.md#standalone-plugin-archive) for the
+distribution format and local build command.
+
+An imported archive or separately uploaded private account plugin is a snapshot,
+not a subscription to this repository's releases. Updating that copy requires a
+replacement package. When switching to the maintained marketplace distribution,
+preserve settings and approvals, verify Mail access and reply behavior, then
+remove the redundant installation. See [Updates and migration](docs/CODEX-SETUP.md#updates-and-migration).
+
+For a personal build, you may explicitly supply a local PNG:
+`node scripts/package-codex-plugin.mjs /path/apple-mail.tar.gz --icon /path/icon.png`.
+The optional image must be square, noninterlaced, 48–2,048 pixels per side, and
+at most 4 MiB. It is bundled inside the skill's assets directory and used for
+the generated portable and compatibility manifests' light/dark logo and composer
+icons. Source manifests, the runtime, and default artwork remain unchanged;
+omitting `--icon` preserves the standard archive. No image is fetched automatically.
+Supply only artwork you have permission to use and distribute; this option does
+not grant rights to Apple or other third-party artwork, or guarantee that a host
+will refresh an existing listing's cached presentation.
+
+The compose tools accept `composition: "native-editor"` to insert new prose
+through Mail's visible editor, leaving its signature and reply history intact.
+This opt-in path uses existing macOS Accessibility and Automation permissions;
+it does not require a separate computer-control plugin. It verifies the composer
+and sender, preserves the clipboard, and stops without sending if insertion
+cannot be verified. See [native composition](docs/NATIVE-COMPOSITION.md) for
+setup, examples, and verification limits. Existing SMTP and AppleScript behavior
+is unchanged when the option is omitted.
 
 ### Other Hosts (Hermes, Antigravity)
 
@@ -244,7 +298,12 @@ Search for messages matching criteria. Searches all accounts by default.
 | `offset`    | number  | No       | Newest matches to skip, ≥ 0 (for pagination). IMAP accounts only; without a `mailbox`, `offset` + `limit` may not exceed 5,000                                                                                                        |
 
 **Returns:** List of matching messages with ID, date, subject, sender, read state,
-and `flagColor` when flagged with an explicit color.
+mailbox and account, and `flagColor` when flagged with an explicit color. When
+the results can come from more than one mailbox or account, each text line ends
+with where that message is, e.g. `| in "Deleted Items" (Exchange)`: a sent
+message and the earlier drafts of it that Exchange keeps in Deleted Items share
+a subject, and the ids alone don't tell them apart. A search of one mailbox of
+one account leaves the lines as they were.
 
 **Flag color as a label (#286).** Every row from both backends carries
 `flagColor` (the palette name — `red`, `orange`, `yellow`, `green`, `blue`,
@@ -293,6 +352,79 @@ To search inside a large mailbox, scope the call with `mailbox` (and ideally a
 to disable the guard and attempt every mailbox regardless of size).
 ([#24](https://github.com/sweetrb/apple-mail-mcp/issues/24))
 
+**Envelope Index search (opt-in, read-only).** For accounts with no IMAP config,
+set `APPLE_MAIL_MCP_ENVELOPE_INDEX=1` to answer header searches (`query`, `from`,
+`subject`, read/flagged state, dates, mailbox) from Mail's own on-disk Envelope Index
+instead of an AppleScript scan, so large mailboxes are searched completely rather than
+skipped. It needs Full Disk Access for the server's Node runtime and opens the database
+read-only. Text filters ignore case the way Mail does, accented and non-Latin letters
+included (`über` finds `Über`). Anything the index can't answer completely (a
+`flagColor` filter, an unknown mailbox, no Full Disk Access, an unrecognised schema, a
+corrupt or locked database, or Mail not running — opening the index then would create
+files in the mail store) falls back to the AppleScript scan. (Mail not running is judged
+by its `-wal`/`-shm` files being gone; after a Mail crash leaves them behind, a search can
+still update `-shm`, which SQLite rebuilds when Mail next opens the index.) The `backend`
+field below reports which one answered.
+([#342](https://github.com/sweetrb/apple-mail-mcp/issues/342))
+
+**Body search for AppleScript-only accounts (opt-in local body index).** Without IMAP,
+`search-messages` can't search message bodies (AppleScript would have to pull every
+body through Mail), so a `body` query reports those accounts as not searched. Set
+`APPLE_MAIL_MCP_BODY_INDEX=1` **together with** `APPLE_MAIL_MCP_ENVELOPE_INDEX=1` to
+search them through a local full-text index of the `.emlx` files Mail already keeps
+on disk. ([#349](https://github.com/sweetrb/apple-mail-mcp/issues/349))
+
+- **What it reads, and what it needs.** Message files under `~/Library/Mail`, read
+  only; the mail store is never written. Like the Envelope Index backend, it needs
+  **Full Disk Access** for the app that runs the server (its Node runtime). `doctor`
+  reports when it can't read the store, with the same wording.
+- **Where the index lives.** `~/Library/Application Support/apple-mail-mcp/body-index.db`
+  (plus `-wal`, `-shm` and `.writer-lock` next to it); set
+  `APPLE_MAIL_MCP_BODY_INDEX_FILE` to move it. The directory is created `0700` and the
+  files `0600`. The index is _contentless_: it stores the search tokens, not a copy of
+  any message, but the tokens still reveal a lot about your mail — treat the file as
+  sensitive. Expect roughly 70 MB per 22,000 messages.
+- **Deleting it.** Turn the flag off (or stop the server), then delete the files:
+
+  ```bash
+  rm -f ~/Library/Application\ Support/apple-mail-mcp/body-index.db*
+  ```
+
+  It is only a cache; with the flag on it is rebuilt from scratch on the next start.
+
+- **First build and upkeep.** One server instance (the first to start) builds and
+  updates the index in the background in small slices; other instances — one per
+  conversation in some hosts — search it read-only and take over if that instance
+  exits. The walking and parsing run in a short-lived child process (the same
+  `build/index.js` on the same Node runtime, so the same Full Disk Access grant
+  applies), which exits as soon as it has caught up: the server stays responsive during
+  a build, and the memory parsing takes goes back to the system instead of staying with
+  the server. If that process can't start or can't read the store, the server builds
+  on its own main thread instead and `doctor` says why (and tries a build process again
+  an hour later). A build process that stops responding for a minute is stopped and
+  restarted. (A host that runs the server on Electron's Node gets the main-thread build:
+  a forked process there would start the app.) A message file that can't be read or
+  parsed is skipped, counted, and tried
+  again on the next full check; it never holds up the rest. New mail is picked up through
+  file-system events within seconds, with a full check every 10 minutes as a safety
+  net. A build of ~22,000 messages took about 40 s on an Apple-silicon Mac.
+- **What it matches.** Words and word beginnings, ignoring case and accents: `invoice`
+  finds `invoices` and `Invoice`, but not `reinvoice`, as the index stores words, not
+  text. Text with no letters or digits (`@`), and Chinese, Japanese or Thai text (written
+  without spaces between words), can't be matched that way, so a body search for it
+  reports the account as not searched rather than as no match.
+- **Coverage is always reported.** A body search never presents an incomplete index as
+  "no matches". Messages in the searched scope that it couldn't read in full are
+  counted, and the result is `partial: true` with a `notSearchedMailboxes` entry such as
+  `Google / * (1,234 messages not downloaded, 12 not indexed yet)`. _Not downloaded_
+  means Mail has only the headers (common for older mail on IMAP/Exchange accounts set
+  to download recent messages only); open those messages in Mail, or change the
+  account's download setting, to make them searchable. Messages over 25 MB are not read.
+  Until the first build has walked the whole store, messages it hasn't reached yet are
+  counted as _not indexed yet_.
+- **Requirements.** Node 22.5 or later (for `node:sqlite`); on older runtimes the
+  feature turns itself off and says why in the logs and `doctor`.
+
 **Coverage diagnostics (structured fields).** The warning above is prose for a
 human reader; the same information is also returned as structured fields on
 `search-messages` and `list-messages`, so a caller can tell _"nothing matched"_
@@ -309,6 +441,8 @@ apart from _"I did not look everywhere"_ without parsing the text:
 | `omittedMessages`       | object[] | IMAP messages that belong on the page but whose `FETCH` response could not be read even with a reduced item set — `{ id, mailbox, uid, reason }`. The page is short by exactly these; the `id` still works with `get-message` / `get-message-headers`. ([#256](https://github.com/sweetrb/apple-mail-mcp/issues/256))                                                                               |
 | `timedOutMailboxes`     | string[] | IMAP mailboxes the search did not finish because the call was **cancelled** (`notifications/cancelled`) or reached its **deadline** (`APPLE_MAIL_MCP_SEARCH_DEADLINE_MS`, default 45s), formatted `"Account / Mailbox"`; an account never reached is `"Account / *"`. Results from the mailboxes that did finish are still returned. ([#276](https://github.com/sweetrb/apple-mail-mcp/issues/276)) |
 | `stoppedBy`             | string   | `"deadline"` or `"cancelled"` — present only with `timedOutMailboxes`.                                                                                                                                                                                                                                                                                                                              |
+| `backend`               | string   | `search-messages` only: which backend answered the non-IMAP accounts — `"envelope-index"`, `"applescript"`, or `"mixed"` (see `backendByAccount`). Also shown on the summary line while `APPLE_MAIL_MCP_ENVELOPE_INDEX` is on. ([#342](https://github.com/sweetrb/apple-mail-mcp/issues/342))                                                                                                       |
+| `backendByAccount`      | object   | Present only when `backend` is `"mixed"`: account name → `"envelope-index"` or `"applescript"`.                                                                                                                                                                                                                                                                                                     |
 
 **Deadline and cancellation ([#276](https://github.com/sweetrb/apple-mail-mcp/issues/276)).** Tool
 calls run one at a time (so they cannot race into Mail.app), which means a long search holds every
@@ -348,7 +482,7 @@ Get the full content of a message.
 
 **Returns:** Subject line and message body (plain text by default, HTML if `preferHtml` is true and HTML content is available). `structuredContent` also carries `rfcMessageId` and, since 2.19.0, two dates: `dateSent` (the message's `Date:` header — Mail's `date sent`) and `dateReceived` (arrival in the mailbox — Mail's `date received` / IMAP `INTERNALDATE`). They differ legitimately by transit time; when they differ by **years**, the mailbox was migrated or re-imported and the arrival timestamp was reset — trust `dateSent` for chronology ([#224](https://github.com/sweetrb/apple-mail-mcp/issues/224)). Since 2.19.6 `dateSent` is **omitted** when it is more than 7 days later than `dateReceived`: a message cannot be sent after it arrived, and Mail.app substitutes a timestamp of its own for a `Date:` header it cannot parse ([#234](https://github.com/sweetrb/apple-mail-mcp/issues/234)). `isHtml` reports what was actually returned — a message with no `text/plain` part returns its HTML part with `isHtml: true`. Bodies are decoded by each part's declared `charset`, falling back to windows-1252 for bytes that are not valid UTF-8.
 
-**Numeric ids — how the message is found ([#270](https://github.com/sweetrb/apple-mail-mcp/issues/270)):** with `account` + `mailbox` the read opens that one mailbox and stops there. Otherwise it opens the mailbox the id was last listed or searched from (a remembered location that turns out stale — the message was moved, e.g. by another client — is forgotten), and only then scans every mailbox. That cross-mailbox scan skips any mailbox holding more than `APPLE_MAIL_MAX_BYID_SCAN_MAILBOX` messages (default `50000`; `0` disables the guard) and stops after ~9s, because Mail's `whose id is` probe costs seconds per hundred thousand messages; a miss then names the mailboxes it skipped and, if it stopped early, the ones it never reached. A mailbox whose size count does not answer within 3s is remembered — on disk, for 7 days, across restarts (`APPLE_MAIL_MCP_STALLED_MAILBOXES_FILE`, default `~/Library/Application Support/apple-mail-mcp/stalled-mailboxes.json`; delete it to forget) — and never counted again, since Mail.app keeps working on an abandoned count and everything after it would queue; the scan stops the moment such a count times out rather than queue behind it. If Mail.app is not running these reads say so instead of launching it. Pass `account` + `mailbox` to read from one of those, or use the message's `imap:` id, which never scans. The same resolution backs `get-message-headers`, `get-thread`'s seed lookup, and the original-message read of `reply-to-message` / `forward-message` and the attachment tools.
+**Numeric ids — how the message is found ([#270](https://github.com/sweetrb/apple-mail-mcp/issues/270)):** with `account` + `mailbox` the read opens that one mailbox and stops there. Otherwise it opens the mailbox the id was last listed or searched from. A stale remembered location is forgotten before a bounded scan, but an ambiguous remembered account or mailbox stops without a scan. That cross-mailbox scan skips any mailbox holding more than `APPLE_MAIL_MAX_BYID_SCAN_MAILBOX` messages (default `50000`; `0` disables the guard) and stops after ~9s, because Mail's `whose id is` probe costs seconds per hundred thousand messages; a miss then names the mailboxes it skipped and, if it stopped early, the ones it never reached. A mailbox whose size count does not answer within 3s is remembered — on disk, for 7 days, across restarts (`APPLE_MAIL_MCP_STALLED_MAILBOXES_FILE`, default `~/Library/Application Support/apple-mail-mcp/stalled-mailboxes.json`; delete it to forget) — and never counted again, since Mail.app keeps working on an abandoned count and everything after it would queue; the scan stops the moment such a count times out rather than queue behind it. If Mail.app is not running these reads say so instead of launching it. Pass `account` + `mailbox` to read from one of those, or use the message's `imap:` id, which never scans. The same resolution backs `get-message-headers`, `get-thread`'s seed lookup, and the original-message read of `reply-to-message` / `forward-message` and the attachment tools.
 
 > **Large messages / attachments:** reading a full message routes through
 > `osascript`, whose captured output buffer defaults to **64 MB**. Override it
@@ -409,9 +543,11 @@ List messages in a mailbox.
 | `from`       | string  | No       | Filter by sender email address or name           |
 | `unreadOnly` | boolean | No       | Only show unread messages                        |
 
-**Returns:** List of messages with ID, date, subject, sender, and `flagColor`
-when flagged with an explicit color (see the flag-color note under
-[`search-messages`](#search-messages), which also supports filtering by it).
+**Returns:** List of messages with ID, date, subject, sender, mailbox and
+account, and `flagColor` when flagged with an explicit color (see the flag-color
+note under [`search-messages`](#search-messages), which also supports filtering
+by it). As there, each text line names its mailbox and account when the listing
+can span more than one.
 
 ⚠️ **Row dates.** Since 2.19.7 every row — on both the **IMAP** and
 **AppleScript** backends — carries both `dateSent` (the message's `Date:`
@@ -436,19 +572,19 @@ Send a new email immediately.
 
 **⚠️ Safety:** Sends real mail immediately and cannot be unsent. Confirm the recipients, subject, and body with the user before calling.
 
-| Parameter     | Type                                    | Required | Description                                                                                                                                                                                                                                           |
-| ------------- | --------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `to`          | string[]                                | Yes      | Recipient addresses                                                                                                                                                                                                                                   |
-| `subject`     | string                                  | Yes      | Email subject                                                                                                                                                                                                                                         |
-| `body`        | string                                  | Yes      | Email body (plain text)                                                                                                                                                                                                                               |
-| `cc`          | string[]                                | No       | CC recipients                                                                                                                                                                                                                                         |
-| `bcc`         | string[]                                | No       | BCC recipients                                                                                                                                                                                                                                        |
-| `account`     | string                                  | No       | Mail.app account label, or an email-form SMTP From override. An SMTP override must match `APPLE_MAIL_MCP_SMTP_USER`, `APPLE_MAIL_MCP_SMTP_FROM`, or an address in `APPLE_MAIL_MCP_SMTP_ALLOWED_FROM`                                                  |
-| `attachments` | (string \| {filename, contentBase64})[] | No       | Up to 20 attachments: absolute file paths inside the configured read roots (e.g., `"/Users/me/Documents/report.pdf"`) and/or inline `{filename, contentBase64}` objects up to 25 MiB decoded each                                                     |
-| `transport`   | `"applescript"` \| `"smtp"`             | No       | Send transport. If omitted, **SMTP is used automatically when configured** (otherwise AppleScript). Pass `"smtp"` to require clean MIME, or `"applescript"` to force the Mail.app path — see [SMTP transport](#smtp-transport)                        |
-| `replyTo`     | string                                  | No       | SMTP only: `Reply-To` header, when replies should go somewhere other than the From address. Ignored on the AppleScript transport                                                                                                                      |
-| `inReplyTo`   | string                                  | No       | SMTP only (2.20.0): thread the message as a reply — the parent's `Message-ID` token with angle brackets, e.g. `"<abc@mail.example.com>"`. Emitted verbatim, never RFC 2047-encoded. See [Threading headers](#threading-headers-inreplyto--references) |
-| `references`  | string[]                                | No       | SMTP only (2.20.0): the `References` chain, oldest first (the parent's own `References` + its `Message-ID`). Defaults to `[inReplyTo]` when omitted                                                                                                   |
+| Parameter     | Type                                    | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------- | --------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `to`          | string[]                                | Yes      | Recipient addresses                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `subject`     | string                                  | Yes      | Email subject                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `body`        | string                                  | Yes      | Email body (plain text)                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `cc`          | string[]                                | No       | CC recipients                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `bcc`         | string[]                                | No       | BCC recipients                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `account`     | string                                  | No       | Mail.app account name or exact sender address (AppleScript path: resolved to one address of an enabled account and verified against Mail's `sender` before sending — no match, or Mail would use another sender, is an error and nothing is sent; the sender used is returned as `from`), or an email-form SMTP From override. An SMTP override must match `APPLE_MAIL_MCP_SMTP_USER`, `APPLE_MAIL_MCP_SMTP_FROM`, or an address in `APPLE_MAIL_MCP_SMTP_ALLOWED_FROM` |
+| `attachments` | (string \| {filename, contentBase64})[] | No       | Up to 20 attachments: absolute file paths inside the configured read roots (e.g., `"/Users/me/Documents/report.pdf"`) and/or inline `{filename, contentBase64}` objects up to 25 MiB decoded each                                                                                                                                                                                                                                                                      |
+| `transport`   | `"applescript"` \| `"smtp"`             | No       | Send transport. If omitted, **SMTP is used automatically when configured** (otherwise AppleScript), unless `account` is a Mail.app account label, which selects AppleScript. Pass `"smtp"` to require clean MIME (a bare account label is then rejected before sending rather than silently using the configured SMTP identity), or `"applescript"` to force the Mail.app path — see [SMTP transport](#smtp-transport)                                                 |
+| `replyTo`     | string                                  | No       | SMTP only: `Reply-To` header, when replies should go somewhere other than the From address. Ignored on the AppleScript transport                                                                                                                                                                                                                                                                                                                                       |
+| `inReplyTo`   | string                                  | No       | SMTP only (2.20.0): thread the message as a reply — the parent's `Message-ID` token with angle brackets, e.g. `"<abc@mail.example.com>"`. Emitted verbatim, never RFC 2047-encoded. See [Threading headers](#threading-headers-inreplyto--references)                                                                                                                                                                                                                  |
+| `references`  | string[]                                | No       | SMTP only (2.20.0): the `References` chain, oldest first (the parent's own `References` + its `Message-ID`). Defaults to `[inReplyTo]` when omitted                                                                                                                                                                                                                                                                                                                    |
 
 **Example:**
 
@@ -501,6 +637,10 @@ Two differences to know when SMTP is auto-preferred:
   or `sentCopy: false` with `sentCopyError`; the field is **absent** when no
   configured IMAP account matches the SMTP identity, which is a skip, not a
   failure. A copy that fails never fails the send — the mail has already gone.
+  Before appending, the Sent mailbox is searched for that `Message-ID`; if the
+  submission server already filed it (Gmail's SMTP always does — the server
+  waits up to ~3 s for it there), nothing is appended and the result adds
+  `sentCopyAlreadyFiled: true` alongside `sentCopy: true`.
   Use `transport: "applescript"` if you want Mail.app itself to file the copy.
 - **`account` is a From override, not account selection.** Over SMTP, `account`
   is used as the From address only when it is an email address; a Mail.app
@@ -515,6 +655,27 @@ Two differences to know when SMTP is auto-preferred:
 Both plain-text and HTML bodies are supported — over SMTP an HTML body (CLI
 `--html-body-file`) is sent as `multipart/alternative` with the plain-text
 fallback.
+
+###### SMTP submission outcomes
+
+SMTP acceptance is not confirmation that a message reached an inbox. The
+`send-email`, `reply-to-message`, and `forward-message` tools preserve the
+server's `accepted` and `rejected` recipient lists when available:
+
+| Outcome                                    | Result                                               | Retry guidance                                                                        |
+| ------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| All recipients accepted                    | `ok: true`, `sent: true`                             | The submission succeeded.                                                             |
+| Some recipients rejected                   | `ok: false`, `sent: true`, `partial: true`           | Do not resend to accepted recipients; reconsider only the rejected addresses.         |
+| Known refusal or failure before submission | Tool error, `ok: false`, `sent: false`               | Correct the reported problem before retrying.                                         |
+| Final acknowledgment lost                  | `ok: false`, `deliveryUnknown: true`; `sent` omitted | Verify the outcome before retrying; the server may already have accepted the message. |
+
+Partial and unknown outcomes are **non-error MCP responses** so callers do not
+automatically retry a submission that may have succeeded. Check `ok`, `partial`,
+and `deliveryUnknown`, not only `isError`. No automatic retry or transport fallback
+occurs. Serial sends retain recipient acceptance fields on each result and use
+numeric `sent`, `failed`, and optional `unknown` counts rather than a boolean
+`sent`. Unknown submissions are excluded from the other two counts. A best-effort
+Sent-folder copy remains a separate result, not proof of recipient delivery.
 
 Configure SMTP via environment variables on the MCP server. The password is
 read from the macOS **Keychain** by default, so no secret goes in config:
@@ -580,8 +741,11 @@ apple-mail-send \
 
 Repeatable `--to`/`--cc`/`--bcc`/`--attach`; an `--html-body-file` is sent as a
 `multipart/alternative` alongside the plain `--body-file`. Exit codes follow
-`sysexits.h`: `0` success, `64` usage error, `66` unreadable body file, `78`
-SMTP not configured.
+`sysexits.h` for usage/configuration failures: `64` usage error, `66` unreadable
+body file, `78` SMTP not configured. Submission exits are `0` for full acceptance,
+`1` for a known failure, `2` for partial acceptance, and `3` for an unknown
+outcome. Do not retry the complete command after exit `2` or `3`; follow the
+recipient details and verification guidance in its output.
 
 ##### IMAP backend — opt-in
 
@@ -792,13 +956,14 @@ Enable it in your MCP client config alongside the IMAP settings:
 
 Send individual personalized emails to a list of recipients (mail merge). Each recipient receives their own email — recipients don't see each other. Supports `{{placeholder}}` tokens in both subject and body.
 
-| Parameter    | Type     | Required | Description                                         |
-| ------------ | -------- | -------- | --------------------------------------------------- |
-| `recipients` | object[] | Yes      | List of recipients, max 100 (see below)             |
-| `subject`    | string   | Yes      | Email subject — use `{{Key}}` for placeholders      |
-| `body`       | string   | Yes      | Email body — use `{{Key}}` for placeholders         |
-| `account`    | string   | No       | Send from specific account                          |
-| `delayMs`    | number   | No       | Delay between sends in ms (default: 500, max 10000) |
+| Parameter    | Type     | Required | Description                                                                                                                                                                                                                                                                          |
+| ------------ | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `recipients` | object[] | Yes      | List of recipients, max 100 (see below)                                                                                                                                                                                                                                              |
+| `subject`    | string   | Yes      | Email subject — use `{{Key}}` for placeholders                                                                                                                                                                                                                                       |
+| `body`       | string   | Yes      | Email body — use `{{Key}}` for placeholders                                                                                                                                                                                                                                          |
+| `account`    | string   | No       | Mail.app account label (AppleScript), or an allowed email-form SMTP From override                                                                                                                                                                                                    |
+| `transport`  | string   | No       | `smtp` or `applescript` for the whole batch. If omitted, configured SMTP is used unless `account` is a Mail.app label. Explicit SMTP rejects a bare label, and a missing SMTP credential or unapproved sender stops the batch before anything is sent — never a fallback to Mail.app |
+| `delayMs`    | number   | No       | Delay between sends in ms (default: 500, max 10000)                                                                                                                                                                                                                                  |
 
 Each recipient object:
 
@@ -820,7 +985,7 @@ Each recipient object:
 }
 ```
 
-**Returns:** Per-recipient success/failure results with a summary count.
+**Returns:** Per-recipient success/failure results with a summary count, plus the `transport` used for the batch.
 
 **⚠️ Safety:** Sends real mail immediately to every recipient and cannot be unsent. Confirm the recipient list, subject, and body with the user before calling.
 
@@ -870,7 +1035,9 @@ Group a conversation by normalized subject (across the AppleScript or IMAP backe
 | `mailbox` | string | No       | Mailbox to search (omit to search all)                 |
 | `limit`   | number | No       | Max messages in the thread (default 50)                |
 
-**Returns:** The conversation's messages, oldest-first.
+**Returns:** The conversation's messages, oldest-first. A thread usually spans
+mailboxes (INBOX and Sent), so each text line ends with where that message is,
+unless the call named one mailbox of one account.
 
 #### `fetch-attachment`
 
@@ -906,10 +1073,13 @@ Reply to an existing message.
 | Parameter     | Type                                    | Required | Description                                                                                                                                                                        |
 | ------------- | --------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `id`          | string                                  | Yes      | Message ID to reply to                                                                                                                                                             |
+| `account`     | string                                  | No       | Source account for a numeric ID; provide together with `mailbox`                                                                                                                   |
+| `mailbox`     | string                                  | No       | Source mailbox path for a numeric ID; provide together with `account`                                                                                                              |
 | `body`        | string                                  | Yes      | Reply body (plain text; HTML tags such as `<br>` are not rendered)                                                                                                                 |
 | `replyAll`    | boolean                                 | No       | Reply to all recipients (default: false)                                                                                                                                           |
 | `send`        | boolean                                 | No       | Send immediately (default: true, false = save as draft)                                                                                                                            |
 | `transport`   | string                                  | No       | `smtp` or `applescript`; omitted prefers configured SMTP when sending. Drafts use AppleScript.                                                                                     |
+| `composition` | string                                  | No       | `native-editor` uses Mail's visible editor and preserves its native reply history                                                                                                  |
 | `attachments` | (string \| {filename, contentBase64})[] | No       | Up to 20 attachments, same rules as `send-email`: absolute file paths inside the configured read roots and/or inline `{filename, contentBase64}` objects up to 25 MiB decoded each |
 
 **Example - Reply to sender only:**
@@ -926,6 +1096,8 @@ Reply to an existing message.
 ```json
 {
   "id": "12345",
+  "account": "Work",
+  "mailbox": "INBOX",
   "body": "I'll review this and get back to everyone.",
   "replyAll": true,
   "send": false
@@ -961,9 +1133,36 @@ script waits until Mail counts every file (bounded at 15 s) before saving or sen
 
 **Delivery:** `imap:` IDs are read directly from their encoded account, mailbox, and UID. Numeric IDs are read through Mail.app. With SMTP configured, replies use clean MIME with the original `Message-ID` in `In-Reply-To` and the full `References` chain. Only the original plain-text body is quoted; the new text is not. Pass `transport: "smtp"` to require this path, or `transport: "applescript"` to use Mail.app explicitly.
 
+**Numeric source scope:** Pass `account` and `mailbox` together using the account
+and full mailbox path from the original search or listing. Both the original read
+and the Mail reply target use that scope; a missing or ambiguous account, mailbox,
+or message stops the operation instead of scanning elsewhere. For Mail.app
+composition, the original must have a usable `Message-ID`, which is checked again
+against the selected message before the composer is created. An `imap:` ID already
+encodes its source: omit both fields for that form. Supplying only one field, or
+supplying either with an `imap:` ID, returns an error. Without explicit scope,
+numeric IDs retain the remembered-location and bounded-scan strategy described
+under [numeric IDs](#get-message), but an ambiguous remembered account or mailbox
+now stops instead of falling back to a scan. For numeric SMTP replies and forwards,
+the configured From mailbox must belong to the source's enabled Mail account,
+whether the scope was supplied or resolved. A matching SMTP login or an entry in
+`APPLE_MAIL_MCP_SMTP_ALLOWED_FROM` does not authorize a different configured From.
+A display name around one valid From mailbox is supported. A local "On My Mac"
+source has no Mail account whose SMTP From can be verified, so SMTP stops rather
+than selecting an identity.
+
+Unscoped numeric SMTP requests read the MIME source and location together. The
+quotation comes from that same MIME source, not a second plaintext lookup. If a
+bounded scan cannot establish a unique source because it skipped or could not
+reach a mailbox, provide the original account and full mailbox path explicitly.
+An unreadable MIME body stops the request; no alternative sender or transport
+is chosen.
+
 **AppleScript transport quoting (v2.19.12):** every draft (`send: false`) and any send that falls back to AppleScript (SMTP not configured) also gets the original quoted — an "On \<date\>, \<sender\> wrote:" attribution line followed by the `> `-prefixed original body, built the same way as the SMTP path. Mail's own `reply`/`forward` AppleScript commands generate this quote internally but expose no way to read it back, so it's built here instead of relying on Mail's (unreadable) copy. Unlike SMTP, this path has no sending-identity restriction — it's read-only source lookup, not sending.
 
-**Failure behavior:** once SMTP is selected, a missing password, unreadable source, missing reply address or `Message-ID`, or SMTP failure returns an error. It does not silently switch to AppleScript or create an unthreaded new message. With SMTP unconfigured and transport omitted, AppleScript remains available. `send: false` saves a Mail.app draft; combining it with `transport: "smtp"` is rejected before composing.
+**Sender on the AppleScript transport (2.20.15, #294):** Mail's `reply`/`forward` commands set no sender, so Mail would answer from its default sending account. The reply or forward is now sent from the account the original sits in: the original's to/cc address that belongs to that account — or, for a message you sent, its own From address — else the account's first address. The sender is read back before saving or sending; a mismatch deletes the compose and returns an error. A message in an "On My Mac" mailbox has no account, so its recipients are matched against every enabled account and, with no match, the sender is left to Mail. The same applies to `forward-message`.
+
+**Failure behavior:** SMTP and AppleScript-content replies stop if the original source or plain-text body cannot be read, rather than silently dropping the quote. Numeric-message replies can recover text from raw MIME when Mail.app's decoded content is unavailable. A genuinely empty original body is allowed; an unreadable body is not. Native-editor mode preserves Mail's own reply history and requires the original source to be readable, but does not reconstruct its plain-text quote. Once SMTP is selected, a missing password, unreadable source, missing reply address or `Message-ID`, or known SMTP refusal returns an error. Partial acceptance and uncertain submission use the [structured SMTP outcomes](#smtp-submission-outcomes) above instead of implying that nothing was sent. The tool does not silently switch to AppleScript or create an unthreaded new message. With SMTP unconfigured and transport omitted, AppleScript remains available. `send: false` saves a Mail.app draft; combining it with `transport: "smtp"` is rejected before composing.
 
 The direct IMAP source read is bounded to 25 MiB, including MIME attachments. Its account login must match the SMTP login, configured From, or an explicitly configured `APPLE_MAIL_MCP_SMTP_ALLOWED_FROM` identity; otherwise the call fails rather than sending from an unrelated account. The SMTP configuration still represents a single sending identity, not a per-account SMTP registry.
 
@@ -980,17 +1179,20 @@ Forward a message to new recipients.
 | Parameter     | Type                                    | Required | Description                                                                                                                                                                                   |
 | ------------- | --------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `id`          | string                                  | Yes      | Message ID to forward                                                                                                                                                                         |
+| `account`     | string                                  | No       | Source account for a numeric ID; provide together with `mailbox`                                                                                                                              |
+| `mailbox`     | string                                  | No       | Source mailbox path for a numeric ID; provide together with `account`                                                                                                                         |
 | `to`          | string[]                                | Yes      | Recipients to forward to                                                                                                                                                                      |
 | `body`        | string                                  | No       | Message to prepend (plain text)                                                                                                                                                               |
 | `send`        | boolean                                 | No       | Send immediately (default: true, false = save as draft)                                                                                                                                       |
 | `transport`   | string                                  | No       | `smtp` or `applescript`; omitted prefers configured SMTP when sending. Drafts use AppleScript.                                                                                                |
+| `composition` | string                                  | No       | `native-editor` uses Mail's visible editor and preserves its native forward history                                                                                                           |
 | `attachments` | (string \| {filename, contentBase64})[] | No       | Up to 20 additional attachments, same rules as `send-email`: absolute file paths inside the configured read roots and/or inline `{filename, contentBase64}` objects up to 25 MiB decoded each |
 
 **Delivery:** uses the same source lookup, transport selection, 25 MiB source limit, account-identity check, and failure behavior as `reply-to-message`. A forward deliberately starts a new conversation, so it has no `In-Reply-To` or `References` headers. The existing plain-text forwarding behavior is unchanged: original attachments are not reattached. See [SMTP transport](#smtp-transport). On the AppleScript transport, a `body` is merged with the forwarded-message header block and original text the same way the SMTP path builds it (see `reply-to-message`'s AppleScript transport quoting note); with no `body`, Mail's own forward content is left untouched — unless `attachments` are given, in which case the forwarded-message block is built the same way so Mail has a paragraph to anchor the new files after.
 
 **Attachments (2.20.0, #267):** `attachments` adds new files to the forward, with or without a prepended `body`, under the same rules, validation and per-transport mechanics as `reply-to-message`'s attachments. They are independent of the original's attachments (which the SMTP path still does not reattach).
 
-SMTP forwarding requires a readable plain-text original. HTML-only IMAP messages and failed Mail.app body reads return an error before sending instead of silently omitting the original content. Explicitly select `transport: "applescript"` to forward these with Mail.app; no automatic fallback occurs. An intentionally empty plain-text message is still valid.
+SMTP forwarding requires a readable plain-text original. Scoped AppleScript-content forwards that add a body or attachments also stop if the original text is unreadable; without added content, Mail retains its own forward history. Native-editor mode preserves Mail's native history. An intentionally empty plain-text message is still valid.
 
 **⚠️ Safety:** With the default `send: true`, sends real mail immediately and cannot be unsent. Confirm the recipients, subject, and body with the user before calling (or pass `send: false` to save a draft for review).
 
