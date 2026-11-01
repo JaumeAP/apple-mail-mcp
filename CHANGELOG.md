@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [2.20.22-jap.3] - 2026-11-01 (JaumeAP fork)
+
+### Fixed
+
+- **A message another account forwarded in was answered from the wrong address.** A mail sent to `james.puig@elcine.com` and delivered to a `jap@nopuedomas.com` mailbox sits in an account none of whose addresses appear in its to/cc, so `reply-to-message` and `forward-message` (AppleScript path) fell back to that account's first address and the reply left from `jap@nopuedomas.com`. When the sitting account has no matching recipient, the to/cc recipients are now matched against every other enabled account before that fallback, so the reply leaves from the address the sender wrote to. The original's own sender is not used in this second pass.
+
 ## [2.20.22-jap.2] - 2026-10-20 (JaumeAP fork)
 
 ### Fixed
