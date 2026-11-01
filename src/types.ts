@@ -99,7 +99,16 @@ export interface SearchDiagnostics {
    * "Account / Mailbox".
    */
   notSearchedMailboxes: string[];
+  /**
+   * Which backend answered each searched account. Recorded only while the
+   * opt-in Envelope Index is enabled (#342); absent means every account was
+   * answered by AppleScript.
+   */
+  backendByAccount?: Record<string, SearchBackend>;
 }
+
+/** Backend that answered a non-IMAP account's header search (#342). */
+export type SearchBackend = "envelope-index" | "applescript";
 
 /**
  * A search result paired with diagnostics about coverage.
@@ -390,6 +399,19 @@ export interface SerialEmailRecipient {
 }
 
 /**
+ * Outcome of an AppleScript send-email / create-draft.
+ */
+export interface ComposeResult {
+  success: boolean;
+
+  /** Why nothing was sent / saved */
+  error?: string;
+
+  /** The sender Mail.app actually used (`Name <address>` or a bare address) */
+  from?: string;
+}
+
+/**
  * Result of sending a serial email to a single recipient.
  */
 export interface SerialEmailResult {
@@ -401,6 +423,18 @@ export interface SerialEmailResult {
 
   /** Error message if sending failed */
   error?: string;
+
+  /** SMTP returned no definitive submission result; verify before retrying. */
+  deliveryUnknown?: boolean;
+
+  /** SMTP accepted this submission for some recipients but rejected others. */
+  partial?: boolean;
+
+  /** SMTP envelope recipients accepted for the submitted message. */
+  accepted?: string[];
+
+  /** SMTP envelope recipients refused by the server. */
+  rejected?: string[];
 }
 
 // =============================================================================

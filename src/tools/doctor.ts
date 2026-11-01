@@ -10,6 +10,8 @@ import type { AppleMailManager } from "@/services/appleMailManager.js";
 import { imapHealthCheck, IMAP_ENV, listImapAccountLabels } from "@/services/imapClient.js";
 import { SMTP_ENV, isSmtpConfigured } from "@/services/smtpMailer.js";
 import { SETUP_GUIDE_URL } from "@/utils/docsUrls.js";
+import { BODY_INDEX_ENV, bodyIndexStatus, type BodyIndexStatus } from "@/utils/bodyIndexSync.js";
+import { ENVELOPE_INDEX_ENV, isTruthyFlag } from "@/utils/envelopeIndex.js";
 
 export type CheckStatus = "ok" | "warn" | "fail";
 export interface DoctorCheck {
@@ -93,12 +95,84 @@ export async function runDoctor(mailManager: AppleMailManager): Promise<DoctorRe
     name: "SMTP transport",
     status: isSmtpConfigured() ? "ok" : "warn",
     detail: isSmtpConfigured()
-      ? `configured (${smtpHost}); send-email auto-prefers clean SMTP (no Mail.app Sent-folder copy; a non-email "account" label still routes to AppleScript). Pass transport:"applescript" to force Mail.app. The apple-mail-send CLI is also available.`
+      ? `configuration present (${smtpHost}); SMTP authentication and delivery have not been checked. send-email auto-prefers SMTP unless a non-email "account" label selects AppleScript. SMTP sends attempt a best-effort Sent-folder copy through matching-account IMAP; check the send result for whether it was filed. Pass transport:"applescript" to force Mail.app. The apple-mail-send CLI is also available.`
       : `not configured — send-email uses AppleScript (subject to macOS 15+ blockquote wrapping). Set ${SMTP_ENV.host} and ${SMTP_ENV.user} (+ password via Keychain) to enable. ${CONFIG_FILE_HINT}. Setup guide: ${SETUP_GUIDE_URL}`,
   });
 
+  // 5. Body index (opt-in). Reported only when asked for, so default setups see no noise.
+  const body = bodyIndexCheck(bodyIndexStatus());
+  if (body) checks.push(body);
+
   const healthy = !checks.some((c) => c.status === "fail");
   return { healthy, checks };
+}
+
+/**
+ * The body index line: enabled or not, path, writer or reader, where the build
+ * runs and whether it is running, coverage, last full walk, last rebuild and
+ * last error. Null when the flag isn't set at all.
+ */
+export function bodyIndexCheck(
+  s: BodyIndexStatus,
+  env: NodeJS.ProcessEnv = process.env
+): DoctorCheck | null {
+  if (!s.enabled) {
+    if (!isTruthyFlag(env[BODY_INDEX_ENV])) return null;
+    return {
+      name: "Body index",
+      status: "warn",
+      detail: `${BODY_INDEX_ENV} is set but ${ENVELOPE_INDEX_ENV} is not; the body index needs both, so body search on AppleScript-only accounts is off.`,
+    };
+  }
+  const fmt = (n: number) => n.toLocaleString("en-US");
+  const parts: string[] = [];
+  if (s.path) parts.push(`file ${s.path}`);
+  if (s.role) {
+    parts.push(
+      s.role === "writer"
+        ? `this instance is the writer (${s.watching ? "watching the mail store" : "no file watcher; timed walks only"})`
+        : "this instance is a reader (another instance keeps the index current)"
+    );
+  }
+  if (s.build) {
+    const b = s.build;
+    parts.push(
+      b.fallback
+        ? `${b.fallback}${b.running ? "; build running" : ""}`
+        : b.running
+          ? `build running in a ${b.runsOn}`
+          : `no build running (it starts in a ${b.runsOn} when there is work)`
+    );
+  }
+  if (s.counts) {
+    const c = s.counts;
+    parts.push(
+      `${fmt(c.indexed + c.partial)} messages indexed` +
+        (c.queued ? `, ${fmt(c.queued)} not indexed yet` : "") +
+        (c.partial ? `, ${fmt(c.partial)} with no body downloaded yet` : "") +
+        (c.tooLarge ? `, ${fmt(c.tooLarge)} over the 25 MB cap` : "") +
+        (c.unreadable ? `, ${fmt(c.unreadable)} that couldn't be read` : "")
+    );
+  }
+  if (s.meta) {
+    const m = s.meta;
+    parts.push(
+      m.lastFullWalk
+        ? `last full walk ${m.lastFullWalk} (${fmt(m.lastWalkFiles ?? 0)} files, ${fmt(m.lastWalkMs ?? 0)} ms)`
+        : "first full walk still running"
+    );
+    if (m.lastRebuild) parts.push(`rebuilt ${m.lastRebuild}`);
+  }
+  const lastError = s.lastError ?? s.meta?.lastError;
+  if (lastError) parts.push(`last error: ${lastError}`);
+  if (s.unavailable) {
+    return {
+      name: "Body index",
+      status: "warn",
+      detail: `enabled but not usable: ${s.unavailable}. Body searches on AppleScript-only accounts report those accounts as not searched.${parts.length ? ` ${parts.join("; ")}.` : ""}`,
+    };
+  }
+  return { name: "Body index", status: "ok", detail: `${parts.join("; ")}.` };
 }
 
 /** Render a DoctorReport as readable text. */

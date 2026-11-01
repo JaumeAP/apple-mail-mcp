@@ -29,24 +29,29 @@ import {
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { integerNumber, registerToolWithContracts } from "@/utils/toolRegistration.js";
 import {
   AppleMailManager,
   resolveAttachmentSaveTarget,
   LOCAL_STORE_LABEL,
+  noteAccountListFailure,
 } from "@/services/appleMailManager.js";
 import { readFileSync, writeFileSync } from "fs";
 import { join as joinPath } from "path";
 import {
   sendViaSmtp,
+  smtpDeliveryFields,
+  smtpDeliveryNotice,
+  unknownSmtpResult,
   sendSerialViaSmtp,
   shouldUseSmtp,
   isSmtpConfigured,
   resolveSmtpConfig,
   composeRawMime,
   SMTP_ENV,
-  type SmtpConfig,
 } from "@/services/smtpMailer.js";
 import { runReply, runForward, type ComposeDeps } from "@/tools/compose.js";
+import { createSerialEmailHandler } from "@/tools/serialEmail.js";
 import {
   runThreadedDraft,
   threadingHeaders,
@@ -101,9 +106,12 @@ import {
   successResponse,
   errorResponse,
   partialCoverageBlock,
+  searchBackendInfo,
+  type SearchBackendInfo,
   withErrorHandling,
   currentCallTiming,
   messageSummary,
+  formatMessageLines,
 } from "@/tools/respond.js";
 import { unlistableStoreError } from "@/tools/mailboxListing.js";
 import { createCallStop, searchDeadlineMs, stoppedByDeadline } from "@/utils/callStop.js";
@@ -133,6 +141,11 @@ import {
 } from "@/schemas.js";
 import { normalizeSubject, subjectFromGetMessage } from "@/tools/thread.js";
 import { extractRfcMessageIdFromSource } from "@/utils/mimeParse.js";
+import {
+  isBodyIndexEnabled,
+  startBackgroundIndexing,
+  stopBodyIndexing,
+} from "@/utils/bodyIndexSync.js";
 import { headersStructured, isoOrUndefined, parseHeaderBlock } from "@/utils/headers.js";
 import { ImapIdleWatcher } from "@/services/imapIdle.js";
 import { fileConfigPath, loadFileConfig } from "@/services/fileConfig.js";
@@ -145,6 +158,28 @@ import {
   reconciliationWarnings,
   type DestructiveOpReport,
 } from "@/services/auditLog.js";
+import { BODY_INDEX_BUILDER_ARG, fileIdentity, runBuilderProcess } from "@/utils/bodyIndexBuild.js";
+import { realClock } from "@/utils/bodyIndex.js";
+import { loadSqlite } from "@/utils/envelopeIndex.js";
+
+// Forked by the body index writer (bodyIndexSync.ts) to run its build: be
+// that, never the MCP server. Before anything else here, so the build process
+// reads no config and never touches stdio. It exits by itself (when its IPC
+// channel closes or its parent is gone), so the rest of this file never runs.
+if (process.argv.includes(BODY_INDEX_BUILDER_ARG) && process.send) {
+  runBuilderProcess(
+    {
+      send: (msg) => process.send!(msg),
+      onMessage: (fn) => process.on("message", fn),
+      onDisconnect: (fn) => process.on("disconnect", fn),
+      ppid: () => process.ppid,
+      entry: () => fileIdentity(process.argv[1]),
+      exit: (code) => process.exit(code),
+    },
+    { sqlite: loadSqlite(), clock: realClock }
+  );
+  await new Promise<never>(() => {});
+}
 
 // Load file-based config FIRST (2.1.1) — before anything reads APPLE_MAIL_MCP_*.
 // Lets users configure the server when the host app strips the MCP env block.
@@ -235,6 +270,10 @@ const LIST_OUTPUT_SCHEMA = {
   // and why. Non-empty implies `partial: true`.
   timedOutMailboxes: z.array(z.string()).optional(),
   stoppedBy: z.enum(["deadline", "cancelled"]).optional(),
+  // Which backend answered the non-IMAP accounts' header search (#342).
+  // "mixed" comes with per-account detail in backendByAccount.
+  backend: z.enum(["envelope-index", "applescript", "mixed"]).optional(),
+  backendByAccount: z.record(z.string(), z.enum(["envelope-index", "applescript"])).optional(),
 };
 
 /** Shape returned by the batch count tools. */
@@ -335,6 +374,17 @@ function mergeDiagnostics(a: SearchDiagnostics, b: SearchDiagnostics): SearchDia
     timedOutAccounts: [...a.timedOutAccounts, ...b.timedOutAccounts],
     skippedLargeMailboxes: [...a.skippedLargeMailboxes, ...b.skippedLargeMailboxes],
     notSearchedMailboxes: [...a.notSearchedMailboxes, ...b.notSearchedMailboxes],
+    ...(a.backendByAccount || b.backendByAccount
+      ? { backendByAccount: { ...a.backendByAccount, ...b.backendByAccount } }
+      : {}),
+  };
+}
+
+/** structuredContent fields for a search's backend (#342). */
+function backendFields(info: SearchBackendInfo) {
+  return {
+    backend: info.backend,
+    ...(info.backendByAccount ? { backendByAccount: info.backendByAccount } : {}),
   };
 }
 
@@ -342,6 +392,29 @@ function mergeDiagnostics(a: SearchDiagnostics, b: SearchDiagnostics): SearchDia
 interface AppleScan {
   rows: MessageRow[];
   diagnostics: SearchDiagnostics;
+}
+
+/**
+ * The accounts no IMAP config covers, plus whether Mail.app could be asked for
+ * its account list at all. An unreadable list yields an empty `appleScriptOnly`,
+ * which {@link withAccountListFailure} turns into a partial result rather than a
+ * confirmed "no such mail" (#346).
+ */
+function appleScriptOnlyAccounts(configs: ReturnType<typeof resolveImapConfigs>): {
+  appleScriptOnly: Account[];
+  listFailure: { error?: string } | null;
+} {
+  const { accounts, failed, error } = mailManager.listAccountsChecked();
+  return {
+    appleScriptOnly: partitionAccountsForCounts(accounts, configs).appleScriptOnly,
+    listFailure: failed ? { error } : null,
+  };
+}
+
+/** Mark an AppleScript scan partial when the account list couldn't be read (#346). */
+function withAccountListFailure(apple: AppleScan, failure: { error?: string } | null): AppleScan {
+  if (failure) noteAccountListFailure(apple.diagnostics, failure.error);
+  return apple;
 }
 
 /**
@@ -405,6 +478,11 @@ function mergedMessageResponse(
     timedOutAccounts: [...apple.diagnostics.timedOutAccounts, ...fan.accountsFailed],
     notSearchedMailboxes: [...apple.diagnostics.notSearchedMailboxes, ...fan.failedMailboxes],
   };
+  // #342: name the backend only when the Envelope Index tagged the AppleScript
+  // side; otherwise the merged response is unchanged.
+  const backendInfo = apple.diagnostics.backendByAccount
+    ? searchBackendInfo(apple.diagnostics)
+    : null;
   const structured = {
     messages: merged,
     count: merged.length,
@@ -421,6 +499,7 @@ function mergedMessageResponse(
           stoppedBy: stoppedByDeadline(stopSignal) ? ("deadline" as const) : ("cancelled" as const),
         }
       : {}),
+    ...(backendInfo ? backendFields(backendInfo) : {}),
   };
   const coverageBlock =
     partialCoverageBlock(diagnostics) +
@@ -438,7 +517,7 @@ function mergedMessageResponse(
   if (apple.rows.length > 0) parts.push("AppleScript");
   const accountsNote = parts.length > 0 ? ` (merged across ${parts.join(" + ")})` : "";
   return successResponse(
-    `Found ${merged.length} message(s)${accountsNote}:\n${formatMergedRows(merged)}${coverageBlock}`,
+    `Found ${merged.length} message(s)${accountsNote}${backendInfo?.note ?? ""}:\n${formatMergedRows(merged)}${coverageBlock}`,
     structured
   );
 }
@@ -460,25 +539,6 @@ const server = new McpServer(
   { capabilities: { logging: {} } }
 );
 
-/**
- * Register a tool, advertising its `outputSchema` as PERMISSIVE.
- *
- * The MCP **client** validates a result's `structuredContent` against the JSON
- * Schema the server advertised — not against the server's own zod object. A
- * bare zod raw shape renders as `additionalProperties: false`, so a payload
- * carrying any field the schema didn't enumerate is rejected client-side with
- * `-32602 … data must NOT have additional properties`, discarding a result the
- * handler produced correctly (#135: `get-mail-stats`'s IMAP branch emits
- * `perMailbox`). The server never sees it, because zod's own parse silently
- * *strips* unknown keys rather than failing — which is why the v2.3.0 migration
- * believed "all fields optional, no `.strict()`" already meant permissive. It
- * covered optionality; it did not cover undeclared keys.
- *
- * `.passthrough()` advertises `additionalProperties: true`, which is the
- * contract that migration intended: a declared field documents the shape,
- * an undeclared one is carried through instead of nuking the whole result.
- * Enforced for every tool by `test/output-schema.test.ts`.
- */
 function registerTool<
   OutputArgs extends z.ZodRawShape,
   InputArgs extends undefined | z.ZodRawShape = undefined,
@@ -493,11 +553,16 @@ function registerTool<
   },
   cb: ToolCallback<InputArgs>
 ): RegisteredTool {
-  const { outputSchema, ...rest } = config;
-  rest.annotations = withSafetyAnnotations(name, rest.annotations);
-  const tool = server.registerTool(
+  // The v3 converter reused the described inReplyTo token for references.items.
+  // Preserve that published annotation while keeping the original token parser.
+  if (name === "send-email" || name === "create-draft") {
+    const token = REFERENCES_SCHEMA.unwrap().element;
+    z.globalRegistry.add(token, { ...token.meta(), description: IN_REPLY_TO_SCHEMA.description });
+  }
+  const tool = registerToolWithContracts(
+    server,
     name,
-    outputSchema ? { ...rest, outputSchema: z.object(outputSchema).passthrough() } : rest,
+    { ...config, annotations: withSafetyAnnotations(name, config.annotations) },
     cb
   );
   // A disabled tool is neither listed nor callable (see toolMode.ts).
@@ -575,14 +640,14 @@ registerTool(
   "search-messages",
   {
     description:
-      "Use when: finding messages by query/sender/subject/date/read/flag/flag-color filters and you need their ids for follow-up operations.\nReturns: matching messages with id, date, subject, sender, read state, and flagColor when flagged with an explicit color (plus partial-coverage diagnostics when some mailboxes were skipped). An IMAP search stops at its deadline (APPLE_MAIL_MCP_SEARCH_DEADLINE_MS, default 45s) or when the request is cancelled, returning the matches found so far with partial: true and timedOutMailboxes — narrow with mailbox/dateFrom rather than repeating it.\nDo not use when: you want a plain mailbox listing without filters (use list-messages), already have an id and want the body (use get-message), or want a whole conversation (use get-thread).\nPrefer this first to obtain the message ids that get-message/mark-as-read/delete-message/move-message and the batch tools require.\nTip: use flagColor to find messages you tagged earlier (e.g. all 'orange' across mailboxes) — colored flags work as cross-mailbox labels this way, via flag-message/batch-flag-messages to set them and this filter to find them again, without moving anything into a dedicated folder.",
+      "Use when: finding messages by query/sender/subject/date/read/flag/flag-color filters and you need their ids for follow-up operations.\nReturns: matching messages with id, date, subject, sender, read state, mailbox and account (each text line names its mailbox and account when the results can come from more than one), and flagColor when flagged with an explicit color (plus partial-coverage diagnostics when some mailboxes were skipped). An IMAP search stops at its deadline (APPLE_MAIL_MCP_SEARCH_DEADLINE_MS, default 45s) or when the request is cancelled, returning the matches found so far with partial: true and timedOutMailboxes — narrow with mailbox/dateFrom rather than repeating it.\nDo not use when: you want a plain mailbox listing without filters (use list-messages), already have an id and want the body (use get-message), or want a whole conversation (use get-thread).\nPrefer this first to obtain the message ids that get-message/mark-as-read/delete-message/move-message and the batch tools require.\nTip: use flagColor to find messages you tagged earlier (e.g. all 'orange' across mailboxes) — colored flags work as cross-mailbox labels this way, via flag-message/batch-flag-messages to set them and this filter to find them again, without moving anything into a dedicated folder.",
     inputSchema: {
       query: z.string().optional().describe("Text to search for in subject or sender"),
       body: z
         .string()
         .optional()
         .describe(
-          "Text to search for in the message body (server-side IMAP BODY search). Requires the IMAP backend for the account searched; AppleScript-only accounts cannot search bodies and are reported as not searched."
+          "Text to search for in the message body (server-side IMAP BODY search). Requires the IMAP backend for the account searched, or the opt-in local body index (APPLE_MAIL_MCP_BODY_INDEX); otherwise AppleScript-only accounts cannot search bodies and are reported as not searched. The local index matches words and word beginnings ('invoice' finds 'invoices', not 'reinvoice'); text with no letters or digits, or in Chinese, Japanese or Thai, is reported as not searched rather than as no match."
         ),
       from: z
         .string()
@@ -601,16 +666,12 @@ registerTool(
       flagColor: FLAG_COLOR_FILTER_SCHEMA,
       dateFrom: DATE_FILTER_SCHEMA.describe("Start date filter (e.g., 'January 1, 2026')"),
       dateTo: DATE_FILTER_SCHEMA.describe("End date filter (e.g., 'March 1, 2026')"),
-      limit: z
-        .number()
-        .int()
+      limit: integerNumber()
         .min(1)
         .max(500)
         .optional()
         .describe("Maximum number of results (default: 50, max: 500)"),
-      offset: z
-        .number()
-        .int()
+      offset: integerNumber()
         .min(0)
         .optional()
         .describe(
@@ -703,10 +764,7 @@ registerTool(
               : {}),
           });
         }
-        const { appleScriptOnly } = partitionAccountsForCounts(
-          mailManager.listAccounts(),
-          resolveImapConfigs()
-        );
+        const { appleScriptOnly, listFailure } = appleScriptOnlyAccounts(resolveImapConfigs());
         if (offset > 0 && appleScriptOnly.length > 0 && !body) {
           return errorResponse(
             `offset is supported only on IMAP accounts, and ${appleScriptOnly
@@ -721,7 +779,9 @@ registerTool(
         // real mailboxes. Rather than silently drop the body filter (and return
         // subject/sender matches as if they were body matches), AppleScript-only
         // accounts are skipped and reported as not searched.
-        if (body) {
+        // With the opt-in body index (APPLE_MAIL_MCP_BODY_INDEX) those accounts
+        // are searched locally instead; it reports partial coverage itself.
+        if (body && !isBodyIndexEnabled()) {
           const apple: AppleScan = {
             rows: [],
             diagnostics: {
@@ -732,7 +792,13 @@ registerTool(
               ),
             },
           };
-          return mergedMessageResponse(fan, apple, limit, "matched", signal);
+          return mergedMessageResponse(
+            fan,
+            withAccountListFailure(apple, listFailure),
+            limit,
+            "matched",
+            signal
+          );
         }
         if (signal.aborted && appleScriptOnly.length > 0) {
           // Out of time (or cancelled) after the IMAP fan-out: don't start a
@@ -747,20 +813,24 @@ registerTool(
           };
           return mergedMessageResponse(fan, apple, limit, "matched", signal);
         }
-        const apple = appleScanForAccounts(appleScriptOnly, (acctName) =>
-          mailManager.searchMessagesWithDiagnostics(
-            query,
-            mailbox,
-            acctName,
-            limit,
-            dateFrom,
-            dateTo,
-            from,
-            subject,
-            isRead,
-            isFlagged,
-            flagColorIndex
-          )
+        const apple = withAccountListFailure(
+          appleScanForAccounts(appleScriptOnly, (acctName) =>
+            mailManager.searchMessagesWithDiagnostics(
+              query,
+              mailbox,
+              acctName,
+              limit,
+              dateFrom,
+              dateTo,
+              from,
+              subject,
+              isRead,
+              isFlagged,
+              flagColorIndex,
+              body
+            )
+          ),
+          listFailure
         );
         return mergedMessageResponse(fan, apple, limit, "matched", signal);
       }
@@ -774,9 +844,9 @@ registerTool(
           );
         }
 
-        if (body) {
+        if (body && !isBodyIndexEnabled()) {
           return errorResponse(
-            `Body search requires the IMAP backend, which is not configured for ${
+            `Body search requires the IMAP backend (or the opt-in body index), which is not configured for ${
               account ? `account "${account}"` : "any account"
             }. Configure IMAP (see the IMAP backend section of the README) or search by query/subject/from instead.`
           );
@@ -793,10 +863,12 @@ registerTool(
           subject,
           isRead,
           isFlagged,
-          flagColorIndex
+          flagColorIndex,
+          body
         );
 
         const coverageBlock = partialCoverageBlock(diagnostics);
+        const backendInfo = searchBackendInfo(diagnostics);
         const structured = {
           messages: messages.map(messageSummary),
           count: messages.length,
@@ -804,24 +876,20 @@ registerTool(
           skippedLargeMailboxes: diagnostics.skippedLargeMailboxes,
           notSearchedMailboxes: diagnostics.notSearchedMailboxes,
           timedOutAccounts: diagnostics.timedOutAccounts,
+          ...backendFields(backendInfo),
         };
 
         if (messages.length === 0) {
           const base = diagnostics.partial
             ? "No messages found in the portions that were searched."
             : "No messages found matching criteria";
-          return successResponse(`${base}${coverageBlock}`, structured);
+          return successResponse(`${base}${backendInfo.note}${coverageBlock}`, structured);
         }
 
-        const messageList = messages
-          .map(
-            (m) =>
-              `  - ID: ${m.id} | ${m.dateReceived.toLocaleDateString()} | ${m.subject} (from: ${m.sender}) [${m.isRead ? "read" : "unread"}]`
-          )
-          .join("\n");
+        const messageList = formatMessageLines(messages, { readState: true, mailbox, account });
 
         return successResponse(
-          `Found ${messages.length} message(s):\n${messageList}${coverageBlock}`,
+          `Found ${messages.length} message(s)${backendInfo.note}:\n${messageList}${coverageBlock}`,
           structured
         );
       }
@@ -1064,9 +1132,7 @@ registerTool(
         .describe(
           "File name to use with savePath (no path separators or '..'). Default: <account>-<mailbox>-uidv<uidValidity>-uid<uid>.eml"
         ),
-      maxBytes: z
-        .number()
-        .int()
+      maxBytes: integerNumber()
         .min(1)
         .optional()
         .describe(
@@ -1192,7 +1258,7 @@ registerTool(
   "get-thread",
   {
     description:
-      "Use when: you have one message id and want the whole conversation it belongs to, oldest-first. With an imap: id it threads by References/Message-ID; otherwise it groups by normalized subject.\nReturns: the thread's normalized subject and its messages (id, date, subject, sender, read state).\nDo not use when: you only need the single message (use get-message) or are searching by arbitrary criteria (use search-messages).",
+      "Use when: you have one message id and want the whole conversation it belongs to, oldest-first. With an imap: id it threads by References/Message-ID; otherwise it groups by normalized subject.\nReturns: the thread's normalized subject and its messages (id, date, subject, sender, read state, mailbox and account; each text line names its mailbox and account when the messages can come from more than one).\nDo not use when: you only need the single message (use get-message) or are searching by arbitrary criteria (use search-messages).",
     inputSchema: {
       id: MESSAGE_ID_SCHEMA.describe("A message ID in the conversation (numeric or imap:…)"),
       account: z.string().optional().describe("Account to search (omit to search all)"),
@@ -1256,21 +1322,21 @@ registerTool(
         });
       }
       const fan = await fanOutImapMessages({ subject: base, mailbox, limit }, "search");
-      const { appleScriptOnly } = partitionAccountsForCounts(
-        mailManager.listAccounts(),
-        resolveImapConfigs()
-      );
-      const apple = appleScanForAccounts(appleScriptOnly, (acctName) =>
-        mailManager.searchMessagesWithDiagnostics(
-          undefined,
-          mailbox,
-          acctName,
-          limit,
-          undefined,
-          undefined,
-          undefined,
-          base
-        )
+      const { appleScriptOnly, listFailure } = appleScriptOnlyAccounts(resolveImapConfigs());
+      const apple = withAccountListFailure(
+        appleScanForAccounts(appleScriptOnly, (acctName) =>
+          mailManager.searchMessagesWithDiagnostics(
+            undefined,
+            mailbox,
+            acctName,
+            limit,
+            undefined,
+            undefined,
+            undefined,
+            base
+          )
+        ),
+        listFailure
       );
       // Merge + de-dup (IMAP wins), then sort OLDEST-first for thread order.
       const mergedNewestFirst = mergeMessages(fan.rows, apple.rows, limit);
@@ -1336,12 +1402,7 @@ registerTool(
     if (ordered.length === 0) {
       return successResponse(`No messages found in thread "${base}".${coverageBlock}`, structured);
     }
-    const list = ordered
-      .map(
-        (m) =>
-          `  - ID: ${m.id} | ${m.dateReceived.toLocaleDateString()} | ${m.subject} (from: ${m.sender}) [${m.isRead ? "read" : "unread"}]`
-      )
-      .join("\n");
+    const list = formatMessageLines(ordered, { readState: true, mailbox, account });
     return successResponse(
       `Thread "${base}" — ${ordered.length} message(s), oldest first:\n${list}${coverageBlock}`,
       structured
@@ -1355,23 +1416,19 @@ registerTool(
   "list-messages",
   {
     description:
-      "Use when: browsing a mailbox's recent messages (optionally filtered by sender or unread-only) with pagination via limit/offset, and you need their ids.\nReturns: messages with id, date, subject, sender, and flagColor when flagged with an explicit color (plus partial-coverage diagnostics when some mailboxes were skipped).\nDo not use when: you have specific search criteria like subject/date/flags/flag color (use search-messages, which also supports filtering by flagColor) or already have an id and want the body (use get-message).\nLike search-messages, use this to obtain the ids that read/mark/delete/move and batch tools require.",
+      "Use when: browsing a mailbox's recent messages (optionally filtered by sender or unread-only) with pagination via limit/offset, and you need their ids.\nReturns: messages with id, date, subject, sender, mailbox and account (each text line names its mailbox and account when the results can come from more than one), and flagColor when flagged with an explicit color (plus partial-coverage diagnostics when some mailboxes were skipped).\nDo not use when: you have specific search criteria like subject/date/flags/flag color (use search-messages, which also supports filtering by flagColor) or already have an id and want the body (use get-message).\nLike search-messages, use this to obtain the ids that read/mark/delete/move and batch tools require.",
     inputSchema: {
       mailbox: z
         .string()
         .optional()
         .describe("Mailbox to list messages from. Omit to list from all mailboxes."),
       account: z.string().optional().describe("Account to list messages from"),
-      limit: z
-        .number()
-        .int()
+      limit: integerNumber()
         .min(1)
         .max(500)
         .optional()
         .describe("Maximum number of messages (default: 50, max: 500)"),
-      offset: z
-        .number()
-        .int()
+      offset: integerNumber()
         .min(0)
         .optional()
         .describe("Number of messages to skip (for pagination)"),
@@ -1402,12 +1459,12 @@ registerTool(
         });
       }
       const fan = await fanOutImapMessages({ mailbox, limit, offset, from, unreadOnly }, "list");
-      const { appleScriptOnly } = partitionAccountsForCounts(
-        mailManager.listAccounts(),
-        resolveImapConfigs()
-      );
-      const apple = appleScanForAccounts(appleScriptOnly, (acctName) =>
-        mailManager.listMessagesWithDiagnostics(mailbox, acctName, limit, from, offset)
+      const { appleScriptOnly, listFailure } = appleScriptOnlyAccounts(resolveImapConfigs());
+      const apple = withAccountListFailure(
+        appleScanForAccounts(appleScriptOnly, (acctName) =>
+          mailManager.listMessagesWithDiagnostics(mailbox, acctName, limit, from, offset)
+        ),
+        listFailure
       );
       return mergedMessageResponse(fan, apple, limit, "listed");
     }
@@ -1437,12 +1494,7 @@ registerTool(
       return successResponse(`${base}${coverageBlock}`, structured);
     }
 
-    const messageList = messages
-      .map(
-        (m) =>
-          `  - ID: ${m.id} | ${m.dateReceived.toLocaleDateString()} | ${m.subject} (from: ${m.sender})`
-      )
-      .join("\n");
+    const messageList = formatMessageLines(messages, { readState: false, mailbox, account });
 
     return successResponse(
       `Found ${messages.length} message(s):\n${messageList}${coverageBlock}`,
@@ -1466,6 +1518,31 @@ const SENT_COPY_ERROR_SCHEMA = z
   .string()
   .optional()
   .describe("Present only when sentCopy is false: why the Sent-folder copy failed.");
+const SENT_COPY_ALREADY_FILED_SCHEMA = z
+  .boolean()
+  .optional()
+  .describe(
+    "Present (true) only when sentCopy is true because the Sent mailbox already " +
+      "held this Message-ID (e.g. Gmail's SMTP files its own copy), so none was appended."
+  );
+
+const SMTP_DELIVERY_SCHEMA = {
+  deliveryUnknown: z
+    .boolean()
+    .optional()
+    .describe("SMTP returned no definitive submission result. Verify before retrying."),
+  partial: z
+    .boolean()
+    .optional()
+    .describe(
+      "SMTP accepted some recipients and rejected others; do not resend to accepted recipients."
+    ),
+  accepted: z
+    .array(z.string())
+    .optional()
+    .describe("Recipients accepted by the SMTP server, not final inbox delivery."),
+  rejected: z.array(z.string()).optional().describe("Recipients rejected by the SMTP server."),
+};
 
 // --- send-email: draftId clean-up ---
 
@@ -1549,6 +1626,28 @@ async function cleanUpDraft(
 }
 
 // --- send-email ---
+const COMPOSITION_SCHEMA = z
+  .literal("native-editor")
+  .optional()
+  .describe(
+    "Opt in to Mail's visible native editor: inserts only new prose, preserving its signature, " +
+      "HTML quotation and reply ancestry without the AppleScript content setter. Requires an unlocked " +
+      "desktop and existing Accessibility and Automation permissions. Uses Mail.app even when SMTP " +
+      "is configured; cannot be combined with transport=smtp or caller-built threading headers. " +
+      "New messages require an explicit account. Do not interact with Mail or the clipboard while it runs. " +
+      "Failure never falls back to another composition method or sends an unverified message."
+  );
+
+const SEND_ACCOUNT_SCHEMA = z
+  .string()
+  .optional()
+  .describe(
+    "Account to send from. AppleScript transport: a Mail account name or an exact sender " +
+      "address, resolved to one address and verified before sending; if it matches no enabled " +
+      "account, or Mail would use a different sender, nothing is sent and an error is returned. " +
+      "Omitted → Mail's default sender (reported back in `from`). SMTP transport: an " +
+      "email-form From override (see README)."
+  );
 
 registerTool(
   "send-email",
@@ -1561,10 +1660,8 @@ registerTool(
       body: z.string().min(1, "Body is required"),
       cc: z.array(z.string()).optional().describe("CC recipients"),
       bcc: z.array(z.string()).optional().describe("BCC recipients"),
-      account: z
-        .string()
-        .optional()
-        .describe("Account to send from: its name or its email address (see list-accounts)."),
+      account: SEND_ACCOUNT_SCHEMA,
+      composition: COMPOSITION_SCHEMA,
       attachments: ATTACHMENTS_SCHEMA,
       inReplyTo: IN_REPLY_TO_SCHEMA,
       references: REFERENCES_SCHEMA,
@@ -1584,8 +1681,10 @@ registerTool(
           "Send transport. 'smtp' submits clean MIME directly via SMTP, avoiding " +
             "the macOS 15+ Mail.app <blockquote> wrapping (issue #12); requires " +
             "APPLE_MAIL_MCP_SMTP_* env config. 'applescript' sends through Mail.app. " +
-            "If omitted, SMTP is used automatically when APPLE_MAIL_MCP_SMTP_* is " +
-            "configured, otherwise AppleScript."
+            "If omitted, configured SMTP is used unless account is a Mail.app " +
+            "account label (for example 'Work'), which selects AppleScript. " +
+            "Explicit SMTP uses the configured SMTP identity; it does not resolve " +
+            "Mail.app account labels. Without SMTP configuration, use AppleScript."
         ),
       draftId: z
         .string()
@@ -1599,6 +1698,8 @@ registerTool(
     },
     outputSchema: {
       ok: z.boolean().optional(),
+      sent: z.boolean().optional(),
+      ...SMTP_DELIVERY_SCHEMA,
       recipients: z.array(z.string()).optional(),
       attachmentCount: z.number().optional(),
       transport: z.string().optional(),
@@ -1611,6 +1712,7 @@ registerTool(
         .string()
         .optional()
         .describe("Present only when draftId was given and the draft was kept or not deleted."),
+      sentCopyAlreadyFiled: SENT_COPY_ALREADY_FILED_SCHEMA,
     },
   },
   withErrorHandling(
@@ -1623,6 +1725,7 @@ registerTool(
       account,
       attachments,
       transport,
+      composition,
       replyTo,
       inReplyTo,
       references,
@@ -1645,16 +1748,26 @@ registerTool(
       // configured and no transport was specified — except when a non-email
       // `account` label requests Mail.app account selection (see shouldUseSmtp).
       // Explicit transport:"applescript" always forces the Mail.app path.
-      const useSmtp = shouldUseSmtp(transport, account);
+      if (composition && transport === "smtp") {
+        return errorResponse(
+          "Native-editor composition uses Mail.app and cannot be combined with SMTP."
+        );
+      }
+      const useSmtp = !composition && shouldUseSmtp(transport, account);
       // #267: never silently drop caller threading headers on a transport that
       // cannot emit them.
       const threading = sendEmailThreading({ inReplyTo, references }, useSmtp);
       if (!threading.ok) return errorResponse(threading.error);
       if (useSmtp) {
-        // `account` is a Mail.app account label for the AppleScript path; for SMTP
-        // it only makes sense as a From override when it is an actual address.
-        // A bare label (only possible here via explicit transport:"smtp") must not
-        // corrupt the From — fall back to the configured SMTP From in that case.
+        // Explicit SMTP cannot resolve Mail.app labels. Reject instead of
+        // silently sending from the configured, potentially different identity.
+        if (account && !account.includes("@")) {
+          return errorResponse(
+            "A Mail.app account label cannot select an SMTP identity. Use a configured " +
+              "sender email address, omit account to use the configured SMTP sender, " +
+              "or explicitly select transport=applescript."
+          );
+        }
         const smtpFrom = account?.includes("@") ? account : undefined;
         const result = await sendViaSmtp({
           to,
@@ -1666,35 +1779,57 @@ registerTool(
           attachments,
           replyTo,
           ...threading.headers,
-        });
+        }).catch(unknownSmtpResult);
+        if (result.deliveryUnknown) {
+          return successResponse(smtpDeliveryNotice(result), {
+            ok: false,
+            transport: "smtp",
+            ...smtpDeliveryFields(result),
+          });
+        }
         if (!result.success) {
-          return errorResponse(result.error ?? "Failed to send email via SMTP.");
+          return errorResponse(result.error ?? "Failed to send email via SMTP.", {
+            ok: false,
+            sent: false,
+            transport: "smtp",
+            ...smtpDeliveryFields(result),
+          });
         }
         const copyNote =
           result.sentCopy === true
-            ? " (Sent-folder copy filed)"
+            ? result.sentCopyAlreadyFiled
+              ? " (Sent-folder copy already filed by the server)"
+              : " (Sent-folder copy filed)"
             : result.sentCopy === false
               ? ` (Sent-folder copy NOT filed: ${result.sentCopyError ?? "unknown error"})`
               : "";
         const draft = draftToClean
           ? await cleanUpDraft(draftToClean, () => result.sentCopy === true)
           : {};
-        return successResponse(`Email sent via SMTP to ${to.join(", ")}${attachInfo}${copyNote}`, {
-          ok: true,
+        const delivery = result.partial
+          ? smtpDeliveryNotice(result)
+          : `Email sent via SMTP to ${to.join(", ")}`;
+        return successResponse(`${delivery}${attachInfo}${copyNote}`, {
+          ok: !result.partial,
+          sent: true,
           recipients: to,
           attachmentCount,
           transport: "smtp",
+          ...smtpDeliveryFields(result),
           ...(result.messageId ? { messageId: result.messageId } : {}),
           ...(result.sentCopy !== undefined ? { sentCopy: result.sentCopy } : {}),
           ...(result.sentCopyError !== undefined ? { sentCopyError: result.sentCopyError } : {}),
+          ...(result.sentCopyAlreadyFiled ? { sentCopyAlreadyFiled: true } : {}),
           ...draft,
         });
       }
 
-      const success = mailManager.sendEmail(to, subject, body, cc, bcc, account, attachments);
+      const sent = composition
+        ? mailManager.sendEmail(to, subject, body, cc, bcc, account, attachments, true)
+        : mailManager.sendEmail(to, subject, body, cc, bcc, account, attachments);
 
-      if (!success) {
-        return errorResponse("Failed to send email. Check Mail.app configuration.");
+      if (!sent.success) {
+        return errorResponse(sent.error ?? "Failed to send email. Check Mail.app configuration.");
       }
 
       const draft = draftToClean
@@ -1717,13 +1852,17 @@ registerTool(
             )
           )
         : {};
-      return successResponse(`Email sent to ${to.join(", ")}${attachInfo}`, {
-        ok: true,
-        recipients: to,
-        attachmentCount,
-        transport: "applescript",
-        ...draft,
-      });
+      return successResponse(
+        `Email sent to ${to.join(", ")}${attachInfo}${sent.from ? ` from ${sent.from}` : ""}`,
+        {
+          ok: true,
+          recipients: to,
+          attachmentCount,
+          transport: "applescript",
+          from: sent.from,
+          ...draft,
+        }
+      );
     },
     "Error sending email"
   )
@@ -1742,7 +1881,7 @@ registerTool(
           z.object({
             email: z.string().min(1, "Recipient email is required"),
             variables: z
-              .record(z.string())
+              .record(z.string(), z.string())
               .describe("Placeholder values, e.g. { Name: 'Alice', Company: 'Acme' }"),
           })
         )
@@ -1757,10 +1896,17 @@ registerTool(
         .string()
         .min(1, "Body is required")
         .describe("Email body — use {{Key}} for placeholders"),
-      account: z
-        .string()
+      account: SEND_ACCOUNT_SCHEMA,
+      transport: z
+        .enum(["applescript", "smtp"])
         .optional()
-        .describe("Account to send from: its name or its email address (see list-accounts)."),
+        .describe(
+          "Send transport for the whole batch. 'smtp' sends clean MIME without Mail.app " +
+            "quote wrapping and requires matching SMTP configuration; errors never fall " +
+            "back to AppleScript. SMTP accepts an allowed sender email address in account, " +
+            "not a Mail.app account label. 'applescript' explicitly uses Mail.app. If " +
+            "omitted, configured SMTP is used unless account is a Mail.app account label."
+        ),
       delayMs: z
         .number()
         .min(0)
@@ -1772,6 +1918,16 @@ registerTool(
       ok: z.boolean().optional(),
       sent: z.number().optional(),
       failed: z.number().optional(),
+      unknown: z
+        .number()
+        .optional()
+        .describe("Submissions with an unknown outcome, excluded from sent and failed counts."),
+      deliveryUnknown: SMTP_DELIVERY_SCHEMA.deliveryUnknown,
+      partial: z.boolean().optional(),
+      transport: z
+        .enum(["smtp", "applescript"])
+        .optional()
+        .describe("Transport used for this batch"),
       results: z
         .array(
           z
@@ -1779,48 +1935,19 @@ registerTool(
               email: z.string().optional(),
               success: z.boolean().optional(),
               error: z.string().optional(),
+              ...SMTP_DELIVERY_SCHEMA,
             })
             .passthrough()
         )
         .optional(),
     },
   },
-  withErrorHandling(async ({ recipients, subject, body, account, delayMs }) => {
-    // 2.5.0: prefer direct SMTP for mail-merge when configured (and not targeting
-    // a bare Mail.app account label); Mail.app fallback when not configured.
-    const smtpCfg = shouldUseSmtp(undefined, account) ? resolveSmtpOrFallback() : null;
-    // As in send-email: an `account` that is an address is the From override.
-    const results = smtpCfg
-      ? await sendSerialViaSmtp(recipients, subject, body, smtpCfg, {
-          delayMs,
-          from: account?.includes("@") ? account : undefined,
-        })
-      : mailManager.sendSerialEmail(recipients, subject, body, account, delayMs);
-    const successCount = results.filter((r) => r.success).length;
-    const failCount = results.length - successCount;
-
-    const details = results
-      .map((r) => `  - ${r.email}: ${r.success ? "sent" : `FAILED (${r.error})`}`)
-      .join("\n");
-
-    const structured = {
-      ok: failCount === 0,
-      sent: successCount,
-      failed: failCount,
-      results: results.map((r) => ({ email: r.email, success: r.success, error: r.error })),
-    };
-
-    if (failCount === 0) {
-      return successResponse(`Successfully sent ${successCount} email(s):\n${details}`, structured);
-    } else if (successCount === 0) {
-      return errorResponse(`Failed to send all ${failCount} email(s):\n${details}`);
-    } else {
-      return successResponse(
-        `Sent ${successCount} of ${results.length} email(s), ${failCount} failed:\n${details}`,
-        structured
-      );
-    }
-  }, "Error sending serial emails")
+  createSerialEmailHandler({
+    smtpConfigured: isSmtpConfigured,
+    smtpConfig: resolveSmtpConfig,
+    smtpSend: sendSerialViaSmtp,
+    appleScriptSend: (...args) => mailManager.sendSerialEmail(...args),
+  })
 );
 
 // --- create-draft ---
@@ -1834,6 +1961,7 @@ registerTool(
       to: z.array(z.string()).min(1, "At least one recipient is required"),
       subject: z.string().min(1, "Subject is required"),
       body: z.string().min(1, "Body is required"),
+      composition: COMPOSITION_SCHEMA,
       cc: z.array(z.string()).optional().describe("CC recipients"),
       bcc: z.array(z.string()).optional().describe("BCC recipients"),
       account: z
@@ -1863,8 +1991,23 @@ registerTool(
     },
   },
   withErrorHandling(
-    async ({ to, subject, body, cc, bcc, account, attachments, inReplyTo, references }) => {
+    async ({
+      to,
+      subject,
+      body,
+      cc,
+      bcc,
+      account,
+      attachments,
+      inReplyTo,
+      references,
+      composition,
+    }) => {
       if (threadingHeaders({ inReplyTo, references })) {
+        if (composition)
+          return errorResponse(
+            "Native-editor drafts cannot use caller-built threading headers. Use reply-to-message with send=false for a native reply."
+          );
         return runThreadedDraft(threadedDraftDeps, {
           to,
           subject,
@@ -1877,20 +2020,28 @@ registerTool(
           references,
         });
       }
-      const success = mailManager.createDraft(to, subject, body, cc, bcc, account, attachments);
+      const drafted = composition
+        ? mailManager.createDraft(to, subject, body, cc, bcc, account, attachments, true)
+        : mailManager.createDraft(to, subject, body, cc, bcc, account, attachments);
 
-      if (!success) {
-        return errorResponse("Failed to create draft. Check Mail.app configuration.");
+      if (!drafted.success) {
+        return errorResponse(
+          drafted.error ?? "Failed to create draft. Check Mail.app configuration."
+        );
       }
 
       const attachmentCount = attachments?.length ?? 0;
       const attachInfo = attachmentCount ? ` with ${attachmentCount} attachment(s)` : "";
-      return successResponse(`Draft created for ${to.join(", ")}${attachInfo}`, {
-        ok: true,
-        recipients: to,
-        attachmentCount,
-        transport: "applescript",
-      });
+      return successResponse(
+        `Draft created for ${to.join(", ")}${attachInfo}${drafted.from ? ` from ${drafted.from}` : ""}`,
+        {
+          ok: true,
+          recipients: to,
+          attachmentCount,
+          transport: "applescript",
+          from: drafted.from,
+        }
+      );
     },
     "Error creating draft"
   )
@@ -1906,15 +2057,6 @@ const threadedDraftDeps: ThreadedDraftDeps = {
   compose: composeRawMime,
   append: (account, raw) => imapAppendDraft(account, raw),
 };
-
-/** Resolve SMTP config, falling back (host/user set but no password) to Mail.app. */
-function resolveSmtpOrFallback(): SmtpConfig | null {
-  try {
-    return resolveSmtpConfig();
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Reply and forward drive Mail.app's `reply`/`forward` verbs, which take a
@@ -1978,7 +2120,20 @@ registerTool(
       "Use when: replying to an existing message by id, preserving its threading headers and quoting the original, optionally with attachments (same rules as send-email). Set replyAll for all recipients; set send=false to save as a draft instead of sending.\nReturns: a confirmation that the reply was sent or saved as a draft, with the attachment count; over SMTP, also whether a Sent-folder copy was filed (sentCopy).\nDo not use when: composing a brand-new message (use send-email / create-draft) or forwarding to new recipients (use forward-message).\nSafety: with the default send=true this SENDS real email immediately and cannot be unsent — require explicit user confirmation of the recipients and body, or pass send=false to let the user review.",
     inputSchema: {
       id: MESSAGE_ID_SCHEMA,
+      account: z
+        .string()
+        .optional()
+        .describe(
+          "For a numeric id, the account it was listed from; pair with mailbox. Omit for an imap: id."
+        ),
+      mailbox: z
+        .string()
+        .optional()
+        .describe(
+          "For a numeric id, the exact source mailbox path; pair with account. A miss never searches elsewhere."
+        ),
       transport: COMPOSE_TRANSPORT_SCHEMA,
+      composition: COMPOSITION_SCHEMA,
       body: z
         .string()
         .min(1, "Reply body is required")
@@ -1996,10 +2151,12 @@ registerTool(
       messageId: z.string().optional(),
       ok: z.boolean().optional(),
       sent: z.boolean().optional(),
+      ...SMTP_DELIVERY_SCHEMA,
       id: z.string().optional(),
       attachmentCount: z.number().optional(),
       sentCopy: SENT_COPY_SCHEMA,
       sentCopyError: SENT_COPY_ERROR_SCHEMA,
+      sentCopyAlreadyFiled: SENT_COPY_ALREADY_FILED_SCHEMA,
     },
   },
   withErrorHandling((args) => runReply(composeDeps, args), "Error replying to message")
@@ -2014,7 +2171,20 @@ registerTool(
       "Use when: forwarding an existing message (by id) to new recipients (to is an array), with an optional body to prepend and optional extra attachments (same rules as send-email). Set send=false to save as a draft.\nReturns: a confirmation that the message was forwarded or saved as a draft, with the attachment count; over SMTP, also whether a Sent-folder copy was filed (sentCopy).\nDo not use when: replying to the sender/recipients (use reply-to-message) or composing a new message (use send-email / create-draft).\nSafety: with the default send=true this SENDS real email immediately and cannot be unsent — require explicit user confirmation of the recipients and any prepended body, or pass send=false to let the user review.",
     inputSchema: {
       id: MESSAGE_ID_SCHEMA,
+      account: z
+        .string()
+        .optional()
+        .describe(
+          "For a numeric id, the account it was listed from; pair with mailbox. Omit for an imap: id."
+        ),
+      mailbox: z
+        .string()
+        .optional()
+        .describe(
+          "For a numeric id, the exact source mailbox path; pair with account. A miss never searches elsewhere."
+        ),
       transport: COMPOSE_TRANSPORT_SCHEMA,
+      composition: COMPOSITION_SCHEMA,
       to: z.array(z.string()).min(1, "At least one recipient is required"),
       body: z.string().optional().describe("Optional message to prepend (plain text)"),
       send: z
@@ -2029,11 +2199,13 @@ registerTool(
       messageId: z.string().optional(),
       ok: z.boolean().optional(),
       sent: z.boolean().optional(),
+      ...SMTP_DELIVERY_SCHEMA,
       recipients: z.array(z.string()).optional(),
       id: z.string().optional(),
       attachmentCount: z.number().optional(),
       sentCopy: SENT_COPY_SCHEMA,
       sentCopyError: SENT_COPY_ERROR_SCHEMA,
+      sentCopyAlreadyFiled: SENT_COPY_ALREADY_FILED_SCHEMA,
     },
   },
   withErrorHandling((args) => runForward(composeDeps, args), "Error forwarding message")
@@ -3141,13 +3313,11 @@ registerTool(
         .boolean()
         .default(true)
         .describe("If true (default), only propose; if false, actually create"),
-      minCount: z
-        .number()
-        .int()
+      minCount: integerNumber()
         .min(1)
         .default(3)
         .describe("Minimum messages from sender in the period"),
-      days: z.number().int().min(1).default(90).describe("Look back this many days in INBOXes"),
+      days: integerNumber().min(1).default(90).describe("Look back this many days in INBOXes"),
     },
     outputSchema: {
       dryRun: z.boolean().optional(),
@@ -3254,7 +3424,7 @@ registerTool(
     },
     outputSchema: {
       account: z.string().optional(),
-      settings: z.record(z.unknown()).optional(),
+      settings: z.record(z.string(), z.unknown()).optional(),
     },
   },
   withErrorHandling(({ account }) => {
@@ -3291,7 +3461,7 @@ registerTool(
     outputSchema: {
       account: z.string().optional(),
       refused: z.array(z.string()).optional(),
-      settings: z.record(z.unknown()).optional(),
+      settings: z.record(z.string(), z.unknown()).optional(),
     },
   },
   withErrorHandling(({ account, ...changes }) => {
@@ -4193,6 +4363,10 @@ process.on("unhandledRejection", (reason) => {
 const transport = withJsonSchema2020_12(new StdioServerTransport());
 await server.connect(transport);
 
+// Opt-in local body index (APPLE_MAIL_MCP_BODY_INDEX): fill it in the
+// background so body searches on AppleScript-only accounts reach full coverage.
+if (isBodyIndexEnabled()) startBackgroundIndexing();
+
 // IMAP IDLE push notifications (B5) — opt-in. When enabled, watch every
 // configured IMAP account's INBOX and notify the client on new mail via a
 // logging message + a resource-updated signal for the account's mailbox.
@@ -4239,6 +4413,8 @@ const shutdown = (): void => {
   clearInterval(orphanWatchdog);
   const force = setTimeout(() => process.exit(0), 2000);
   force.unref?.();
+  // Release the body index's FSEvents watcher and close its database file.
+  stopBodyIndexing();
   // Closing the IDLE watcher logs out its dedicated per-account connections
   // (one persistent socket per account when APPLE_MAIL_MCP_IMAP_IDLE=1) and
   // dropAllPools() closes the request pool — together this releases EVERY IMAP

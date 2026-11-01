@@ -1,5 +1,18 @@
 ## [Unreleased]
 
+## [2.20.50-jap.1] - 2026-11-01 (JaumeAP fork)
+
+Merges upstream 2.20.23 to 2.20.50. Where both sides had solved the same problem differently, upstream's version is kept and the fork's is removed:
+
+- **Sender of `send-email`, `create-draft` and `send-serial-email`** now follows upstream's `resolveSender` and `senderGuardScript` (`utils/senderAccount.ts`): an `account` is resolved to one exact address of an enabled account (aliases included), the compose script reads the sender back before it leaves, and the sender Mail used is reported in `from`. The fork's `resolveSendingAddress` and its tests (`appleMailManager.sendingAccount.test.ts`) are gone. With no `account`, Mail's default sender is used and reported, as before.
+- **SMTP reply and forward of a numeric id** are bound to the mailbox that holds the source and checked against the SMTP identity through upstream's `requireScopedSmtpIdentity`. The fork's identity check and its two tests in `tools/compose.test.ts` are gone.
+- **`send-serial-email`** takes upstream's `createSerialEmailHandler` and `resolveSmtpFrom`.
+- Native-editor composition (`composition: "native-editor"`), the Envelope Index and body index search, and the Zod 4 tool registration come from upstream.
+
+Kept from the fork: the server-side tool gate (`APPLE_MAIL_MCP_MODE`), `set-account-settings`, the Mail recovery tools, `send-email` with `draftId` (the draft is deleted after a send that filed a Sent copy), `use-template` with `account`, the attachment read policy and the windows-1252 decoder, and the fix below for forwarded-in messages.
+
+Conflicts in `README.md` were resolved with upstream's text. `build/` is regenerated.
+
 ## [2.20.22-jap.3] - 2026-11-01 (JaumeAP fork)
 
 ### Fixed
@@ -371,6 +384,607 @@ Fixes from a review of the fork's own changes (`a98e669..origin/main`).
 - Inline base64 attachments staged under a `TMPDIR` inside `~/Library` are no
   longer refused, and a root in `APPLE_MAIL_MCP_ATTACHMENT_READ_ROOTS` lifts
   the Library rule beneath it.
+## [2.20.50] - 2026-10-31
+
+### Changed
+
+- **Search, list and thread results say which mailbox each message is in.**
+  `search-messages`, `list-messages` and `get-thread` return each message's
+  `mailbox` and `account` in the structured result, but not in the text, and
+  some clients show a model only the text. When the results can come from more
+  than one mailbox or account, each text line now ends with where that message
+  is: `| in "Deleted Items" (Exchange)`. (The rows of `get-thread`'s IMAP
+  References path, which reads only the seed's mailbox, now carry the two
+  fields too.)
+  - **Why.** On a real store, a search for one sent Exchange message matched
+    four times: once in Sent Items, and three times in Deleted Items, where
+    Exchange keeps the drafts Mail replaced while the message was being
+    written. With only ids, dates, subjects and senders, the four lines read as
+    duplicates of one message.
+  - **When.** A call that names one mailbox of one account prints its lines as
+    before, unless that mailbox is read from several (a Gmail-style INBOX is
+    read from All Mail and Important). A merged multi-account result always
+    names them. Over IMAP, a search names them when it covers more than one
+    mailbox; its `imap:` ids encode the mailbox, but not readably.
+
+||||||| fd18dcf
+## [2.20.49] - 2026-10-31
+
+### Fixed
+
+- Preserve SMTP recipient acceptance through send, reply, forward, serial-send,
+  and CLI results. Partial submission reports the accepted and rejected
+  addresses without retrying; a lost final acknowledgment reports
+  `deliveryUnknown` rather than claiming that nothing was sent. Known
+  connection-timeout failures remain ordinary errors.
+- Partial and unknown SMTP outcomes are non-error MCP responses with
+  `ok: false`. Callers must inspect the structured result, not only `isError`.
+  An unknown outcome omits `sent`; serial results count it separately from
+  successful and failed submissions. CLI exit status `2` means partial
+  acceptance and `3` means unknown; neither permits an automatic full retry.
+- Parse reply address headers as structured address lists, retaining quoted
+  display names and groups without creating unintended recipients. Refuse
+  computed mailbox forms that would change meaning during SMTP serialization.
+- Require unscoped numeric SMTP replies and forwards to establish the source's
+  account and mailbox before composition. The configured From mailbox must
+  belong to that enabled account; an SMTP login or `allowedFrom` entry alone
+  does not authorize a different From. Display names around a single valid
+  sender mailbox remain supported. Incomplete unscoped scans now require
+  explicit account and mailbox inputs.
+- Build the quotation for an unscoped numeric SMTP source from its bound raw
+  MIME instead of a second content lookup. An unreadable original stops the
+  operation. Preserve Unicode returned by Mail and recognize multipart
+  boundaries only as MIME delimiter lines, so body text cannot silently
+  truncate the quotation. Existing AppleScript composition and IMAP account
+  matching are unchanged.
+
+||||||| fd18dcf
+## [2.20.48] - 2026-10-31
+
+### Fixed
+
+Fixes to the opt-in Envelope Index
+([#345](https://github.com/sweetrb/apple-mail-mcp/pull/345)) and body index
+([#353](https://github.com/sweetrb/apple-mail-mcp/pull/353)), found by
+attacking them with hostile input and permission failures. Each has a
+regression test.
+
+- **Envelope Index search ignores case outside ASCII.** SQLite's `lower()` and
+  `LIKE` fold ASCII letters only, so a `query`, `subject` or `from` of `über`
+  missed `Über`, and `café` missed `CAFÉ`, where AppleScript finds them (on
+  the test store, `é` now finds 143 subjects instead of 140). Text with such a
+  letter is matched through a GLOB pattern with a class of every case form per
+  letter (`[Üü]`, `[ßẞ]`, `[ςΣσ]`; GLOB's own `*`, `?` and `[` taken literally);
+  other text keeps `LIKE`, which is about twice as fast. A filter with a NUL
+  character, a date that doesn't parse, or text too long for a SQLite pattern
+  (over 50,000 bytes) falls back to AppleScript instead of matching nothing.
+- **Envelope Index: no files are created in the mail store.** A read-only
+  SQLite connection to a WAL database creates its `-wal` and `-shm` files when
+  they are missing, as they are after Mail quits; the search and `get-message`
+  disk read would have created them in `~/Library/Mail/V10/MailData`. When Mail
+  has the index closed, they now fall back to AppleScript, which starts Mail.
+  (The check sees whether the files exist, not whether Mail holds them: after
+  a Mail crash leaves them behind, a read can still update `-shm`, which SQLite
+  rebuilds when Mail next opens the index.)
+- **Envelope Index: mailbox names match across Unicode normalization**, as the
+  AppleScript resolver does since #253 (`Büro` finds a mailbox stored as NFD).
+- **`get-message` from the store doesn't return an empty body.** A message
+  Mail has downloaded only the headers of (4,710 `.partial.emlx` files on the
+  test store, 10 with no body text) is read through AppleScript, which downloads
+  it. A blank `text/plain` part no longer hides the HTML body, there and in the
+  body index.
+- **HTML-to-text runs in linear time.** Its regexes rescanned the rest of the
+  input from every `<` without a `>` and every unclosed `<style>`/`<script>`:
+  20,000 `<script`s took 1.6 s and it grows with the square, so one hostile
+  spam message could hold the body index build for hours. Every scan now moves
+  forward only, openers sharing one distant `>` included. The output is
+  unchanged: a test checks it against the old regexes on 10,000 random tag-soup
+  inputs, and another counts the characters scanned on hostile input (at most
+  about 3 per input character).
+- **Body search finds what a "contains" search finds wherever a word begins.**
+  The last word of the text matches as a prefix when the text ends inside it
+  (`invoice` finds `invoices`; a Korean word finds itself with a particle
+  attached; `invoice ` with a trailing space doesn't). Text the word index can't
+  match faithfully — no letters or digits (`@`), or Chinese, Japanese, Thai,
+  Lao, Khmer or Burmese, written without spaces between words — reports the
+  account as not searched, with the reason, instead of as no match.
+- **Body index: one bad file stops nothing and isn't counted as searched.** A
+  message file that can't be read (no permission, an I/O error) or that makes
+  the parser throw was marked indexed (searched, no match) or failed the whole
+  batch, every retry. It is now recorded as unreadable — counted in a search's
+  coverage (`3 that couldn't be read`) and in `doctor`, with the error code in
+  `lastError` — and read again on the next full walk. A file that vanished
+  before it was read drops its row. The index layout is now v4 (that new state);
+  a v3 index from 2.20.46 is upgraded in place, without a rebuild, and every
+  message it marked indexed without a body is read again, so the ones it
+  couldn't read stop being a silent "no match" (11 of 21,933 on the test
+  store). A 2.20.46 instance reports a v4 index as being rebuilt rather than
+  miscounting it.
+- **Body index: only Mail's message files are indexed.** An attachment saved
+  as `…/Attachments/…/123.emlx` was indexed as message 123; only files in a
+  `Messages` folder count now.
+- **Body index: a search's catch-up never parses a file over 1 MB**; the build
+  does, so the search keeps to its 50 ms.
+- **Body index: until the first walk has finished**, messages it hasn't reached
+  are reported as not indexed yet, not as not downloaded.
+- **Body index build process (follow-ups from the review of
+  [#354](https://github.com/sweetrb/apple-mail-mcp/pull/354)).**
+  - File events handed to a build process that stops before reporting them
+    done (a crash, a stall, a failed step) are no longer dropped until the next
+    timed walk: a walk is asked for at once.
+  - After a failed step the background loop waits at least 5 s before trying
+    again; a walk that was due could otherwise retry every millisecond.
+  - On Electron's Node the build runs on the main thread: the build process
+    gets an empty environment, and without `ELECTRON_RUN_AS_NODE` a fork of
+    that binary starts the app.
+  - The start message carries the bundle file's identity (device, inode, size
+    and mtime) as the server loaded it, so a build process started from a
+    bundle an update replaced refuses to run, whatever its version number,
+    and the server builds with its own code instead.
+  - The build process is started with `--disable-warning=ExperimentalWarning`,
+    so Node 22–24 don't print the `node:sqlite` warning into the server's log
+    on every build.
+
+## [2.20.47] - 2026-10-30
+
+### Changed
+
+- **The opt-in body index builds in a short-lived child process, and gives the
+  memory back.** Follow-up to
+  [#353](https://github.com/sweetrb/apple-mail-mcp/pull/353). With
+  `APPLE_MAIL_MCP_BODY_INDEX=1`, walking the Mail store and parsing `.emlx`
+  files no longer run in the server: the writer forks its own bundle
+  (`build/index.js --body-index-builder`) when there is such work and stops it as
+  soon as it reports it has caught up. The writer lock, the FSEvents watcher and
+  the cheap work (applying file events, a search's catch-up) stay in the server.
+  - **Memory.** On a 21,924-message store the server's physical footprint stays
+    at the flag-off level through the first build and after it (68 MB; flag off
+    66–68 MB), instead of peaking at 291–309 MB and holding 212–274 MB until
+    restart. The build process itself peaks at 306–330 MB RSS and exits when it
+    has caught up. While it runs, server and build process together use more
+    than the in-process build did (420–444 MB vs 324–335 MB RSS), because the
+    build process loads the whole server bundle; all of it is returned when it
+    exits.
+  - **Responsiveness.** The server's main thread no longer runs the build's
+    slices: MCP `ping` p95 during a build went from 46–49 ms to 0.3 ms.
+  - **Why not a `worker_thread`.** Measured first: a terminated worker's V8
+    heap pages stay in the process (114 MB of worker garbage was still there
+    30 s after `terminate()`, with or without `--no-memory-pool`, on Node 26.5
+    and 26.13), so a worker fixes the latency but not the memory.
+  - **One writer at a time.** While the build process runs it owns the index's
+    writes; the server hands it file events instead of writing them. Every write
+    transaction is now `BEGIN IMMEDIATE` under `busy_timeout`, so the rare
+    overlap waits instead of failing with `SQLITE_BUSY`.
+  - **Never outlives the server.** The build process gets an empty environment
+    (the index path and store directory come over IPC), no Node flags but
+    `--experimental-sqlite` when the server has it, and a discarded stdout, so
+    nothing it prints can reach the MCP stream. It exits when its IPC channel
+    closes or when it is orphaned (`ppid` 1), and never holds the writer lock.
+    With no `TMPDIR`, its SQLite connection keeps temporary files in memory
+    rather than in the shared `/var/tmp` (the server's does too).
+  - **Failures don't stop the index.** A build process that crashes, fails a
+    step or stops responding (it reports every 5 s; nothing for 60 s and it is
+    stopped) is noted in `lastError` and `doctor` and started again after 5 s,
+    then at the walk interval while it keeps failing; a search never waits on
+    it. One that can't start, can't read a Mail store the server itself can
+    read, or runs other code than the server (its files were updated on disk
+    while the server ran; the two compare a protocol and schema number) is
+    noted, and the build runs on the server's main thread as before — for an
+    hour, then a build process is tried again. A store the server can't read
+    either is not blamed on the build process. `doctor` reports where the build
+    runs and whether it is running.
+  - **Full Disk Access.** The build process is the same Node binary, forked by
+    the server, so macOS attributes its file access to the same responsible
+    process as the server's — verified on a host-launched server (Claude Desktop
+    launches it through its `disclaimer` helper, which makes the server its own
+    responsible process).
+
+### Fixed
+
+- **Body index: a walk that can't list the Mail store fails instead of reading
+  it as empty.** Before, losing access to the store's root (Full Disk Access
+  revoked, the store moved) let the walk finish with no files and drop every
+  indexed message; now the walk fails, the error is noted, and nothing is
+  dropped.
+- **Body index: a walk requested by a coalesced file event or a renamed mailbox
+  is no longer lost** when the build stops before finishing it; it is asked for
+  again.
+
+## [2.20.46] - 2026-10-30
+
+### Added
+
+- **Opt-in local body index: body search for AppleScript-only accounts.** With
+  `APPLE_MAIL_MCP_BODY_INDEX=1` on top of `APPLE_MAIL_MCP_ENVELOPE_INDEX=1`,
+  `search-messages` answers `body` queries for accounts with no IMAP config from
+  a local SQLite FTS5 index of the `.emlx` files Mail already keeps on disk,
+  instead of reporting those accounts as not searched. The body match runs in
+  the same query as the header filters, against the index attached read-only.
+  ([#349](https://github.com/sweetrb/apple-mail-mcp/issues/349))
+  - **Never a false empty (#346).** Every message in the searched scope that
+    the index could not read in full — not downloaded, not indexed yet, only
+    headers downloaded, or over the 25 MB cap — is counted, and the result is
+    `partial: true` with `notSearchedMailboxes`, e.g.
+    `Google / * (1,234 messages not downloaded)`, even when there are hits. An
+    unreadable index, a file that isn't ours, or a schema mismatch reports the
+    account as not searched, with the reason.
+  - **Privacy.** Contentless FTS5 (`content=''`): only the token index is
+    stored, never a second copy of any body. The directory is created `0700`;
+    the database, its `-wal`/`-shm` and the writer lock are `0600`. Default
+    location `~/Library/Application Support/apple-mail-mcp/body-index.db`
+    (`APPLE_MAIL_MCP_BODY_INDEX_FILE` to move it).
+  - **Our file only.** The index is stamped with `PRAGMA application_id` and
+    `user_version`. A file at the index path without our application id is
+    never modified or deleted. One of ours that is damaged or has an older
+    layout is rebuilt by the writer, and the rebuild is noted in `doctor`.
+  - **One writer per index file.** Several server instances share the file;
+    the first takes an OS-released lock and is the only one that walks,
+    watches and writes. The others attach it read-only and take over when it
+    exits or crashes. A reader never rebuilds.
+  - **Kept current by FSEvents plus a full walk.** A recursive `fs.watch`
+    makes new mail searchable within seconds; a full walk every 10 minutes
+    (5 without a watcher, and at once after a coalesced event, a renamed
+    mailbox or a watcher error) is the guarantee. The walk compares
+    `(path, size, mtime)` and only parses changed files.
+  - **Bounded work.** Walking and indexing run in 50 ms slices with 100 ms
+    pauses, on `unref()`'d timers, and stop on shutdown. A search never waits
+    for the build: it indexes queued file events for at most 50 ms, then
+    answers with the coverage it has.
+  - **`doctor`** reports the body index: path, writer or reader, watcher,
+    coverage, last full walk, last rebuild and last error.
+  - Off by default and inert when off: no file, watcher or timer. Turns itself
+    off with a diagnostic on Node < 22.5 (no `node:sqlite`) or a SQLite without
+    FTS5 `contentless_delete`.
+
+## [2.20.45] - 2026-10-30
+
+### Changed
+
+- **Inbox searches and lists reuse the receiving-server lookup while mailbox
+  names remain cached.** Both values expire together after 60 seconds and are
+  discarded on mailbox-structure changes. Failed or empty host reads are retried;
+  an expired Gmail identity is not reused when the next lookup fails, so an
+  unreadable host still keeps the request scoped to the literal Inbox.
+
+## [2.20.44] - 2026-10-30
+
+### Fixed
+
+- **Inbox lookups no longer classify Proton or other providers as Gmail merely
+  because they expose an All Mail folder.** Search, list, and recent-message
+  statistics now require a Gmail receiving-server host before applying the
+  existing All Mail workaround. Other providers retain their literal Inbox;
+  an unavailable host does not broaden the requested mailbox scope.
+- **Scoped message reads distinguish a missing account from a missing mailbox.**
+  A nonexistent explicit account now names the account in the error and directs
+  callers to `list-accounts`, without a fallback scan. Stale remembered accounts
+  retain their existing bounded lookup behavior.
+
+## [2.20.43] - 2026-10-29
+
+### Fixed
+
+- **Replies and forwards can target the numeric ID's source mailbox explicitly.**
+  Pass `account` and `mailbox` together to bind the original read and Mail's
+  compose target to that source. Missing or ambiguous scopes fail without a
+  cross-mailbox fallback; Mail composition also checks the original Message-ID
+  again before creating a composer. Scoped SMTP checks its From address against
+  the selected account. `imap:` IDs retain their encoded scope and reject the
+  extra fields. Unscoped calls retain the remembered-location and bounded-scan
+  strategy, but an ambiguous remembered account or mailbox now stops without
+  falling back to a scan.
+- **Native composition tolerates delayed editor accessibility state.** The
+  marked composer window, subject, and body are re-observed briefly as Mail
+  publishes them; missing or ambiguous targets still stop without inserting or
+  sending. Failure diagnostics identify which part was missing or ambiguous.
+
+## [2.20.42] - 2026-10-29
+
+### Fixed
+
+- **Unscoped `search-messages` / `list-messages` / `get-thread` no longer report a confirmed
+  empty result when Mail never answered the account-list request** (#346, reported by
+  @ToxicalNoob3062). With a cold account cache and Mail busy, the account read timed out, the
+  per-account loop ran zero times and the result stayed `partial: false` — indistinguishable
+  from "no such mail". Both paths (the AppleScript-only loops in the manager and the
+  prefer-IMAP merge in the tool layer) now use `listAccountsChecked()`; on a failed read the
+  result is `partial: true` with `* / *: could not list accounts (<error>)` in
+  `notSearchedMailboxes`, so the existing partial-coverage warning appears.
+
+## [2.20.41] - 2026-10-29
+
+### Added
+
+- **Opt-in Envelope Index search for AppleScript-only accounts** (#342). With
+  `APPLE_MAIL_MCP_ENVELOPE_INDEX=1`, `search-messages` answers an account's header
+  search (`query`, `from`, `subject`, read/flagged state, dates, mailbox) from Mail's
+  on-disk Envelope Index, opened read-only, instead of an AppleScript scan, so large
+  mailboxes are searched completely instead of skipped. Gmail label mailboxes such as
+  INBOX are resolved through the index's labels table. Date-only `dateFrom`/`dateTo`
+  are read as local days. Needs Full Disk Access for the server's Node runtime; off by
+  default.
+- With the same switch, `get-message` reads a numeric id's `.emlx` file directly,
+  avoiding the `whose id is` lookup that times out on very large mailboxes.
+- `search-messages` reports which backend answered in `structuredContent.backend`
+  (`"envelope-index"`, `"applescript"`, or `"mixed"` with per-account
+  `backendByAccount`), and names it on the summary line while the index is enabled.
+
+### Changed
+
+- Anything the index can't answer completely falls back to the existing AppleScript
+  path: a `flagColor` filter, an unknown or ambiguous mailbox, an unreadable index (no
+  Full Disk Access), an unrecognised schema, or a corrupt, truncated or locked
+  database. A `get-message` miss on disk falls back the same way. With the switch off,
+  behaviour and output are unchanged.
+
+## [2.20.40] - 2026-10-29
+
+### Security
+
+- **`body-parser` floor added at 2.4.0** for GHSA-27r3-jxmh-p828 (high). Reached through
+  `@modelcontextprotocol/sdk` → express, the HTTP transport this stdio server never enters, so
+  exposure is near-zero. 2.4.0 was published 2026-10-22 and floored once the 7-day
+  `minimumReleaseAge` soak cleared; no `minimumReleaseAgeExclude` was used.
+- **`@hono/node-server` exact pin `2.0.10` replaced by the two-sided floor `>=2.1.3 <3`** for
+  GHSA-rmxm-3fg6-px4f (moderate: `serveStatic` double-decode, fixed in 2.1.3). An exact pin is a
+  ceiling and had held the tree on the vulnerable version. Same reachability as above.
+
+## [2.20.39] - 2026-10-28
+
+### Security
+
+- **`qs` floor raised to 6.16.1** for GHSA-6pq8-jhm2-2vcw (medium: `qs.stringify` with
+  `arrayFormat: 'comma'` throws an uncaught TypeError on array elements carrying a
+  non-callable own `toString`). Reached through `@modelcontextprotocol/sdk` → express, the
+  HTTP transport this stdio server never enters, so exposure is near-zero. 6.16.1 was
+  published 2026-10-14, past the 7-day `minimumReleaseAge` soak. Clears Dependabot alert #48.
+
+## [2.20.38] - 2026-10-28
+
+### Changed
+
+- Dependency bump via Dependabot; committed bundle rebuilt. (automated)
+
+## [2.20.37] - 2026-10-27
+
+### Fixed
+
+- Native composition preserves ordinary image and file clipboard contents
+  instead of rejecting snapshots over 256 KiB. Snapshot, subprocess-output,
+  and restoration limits now share a bounded in-memory budget. Oversized or
+  unreadable data still stops composition before clipboard mutation, and a
+  newer clipboard owner is never overwritten.
+- Native insertion focuses the editor's interior rather than its top-left
+  corner, avoiding Mail's floating Siri writing control. The verified body
+  must still own keyboard focus before any paste.
+- Native-editor drafts use the save-confirmation guard introduced in 2.20.35.
+  New messages, replies, and forwards close only after a fresh draft ID appears;
+  an unconfirmed save leaves the composer open and reports failure without retrying.
+
+### Added
+
+- Opt-in `composition: "native-editor"` on send, draft, reply, and forward tools.
+  New prose is inserted through Mail's visible editor, preserving native
+  signatures and reply history without assigning the AppleScript body property.
+  The operation verifies the composer, sender, recipients, focus, and insertion;
+  failures stop without retrying or changing transports. Existing macOS
+  Accessibility and Automation permissions are required.
+- Preserve the clipboard during native insertion, with a parent-held recovery
+  snapshot for an interrupted editor process. Clipboard data stays in memory.
+
+### Changed
+
+- Generic MCP resource discovery no longer enumerates Mail accounts or
+  mailboxes. Explicit resource reads remain available.
+
+## [2.20.36] - 2026-10-27
+
+### Security
+
+- Raised the `fast-uri` override floor from `>=3.1.7 <4` to `>=3.1.9 <4`,
+  clearing four Dependabot alerts: #41
+  ([GHSA-333x-w4r6-6crp](https://github.com/advisories/GHSA-333x-w4r6-6crp),
+  low), #42
+  ([GHSA-wjr9-j795-jxcr](https://github.com/advisories/GHSA-wjr9-j795-jxcr),
+  medium), #43
+  ([GHSA-xhq7-xmqj-769h](https://github.com/advisories/GHSA-xhq7-xmqj-769h),
+  low), and #44
+  ([GHSA-w74x-v6f9-j3xg](https://github.com/advisories/GHSA-w74x-v6f9-j3xg),
+  medium) — all fixed in `fast-uri@3.1.9`. `3.1.9` published
+  2026-10-19T23:06Z; deferred until this repo's 7-day `minimumReleaseAge`
+  supply-chain soak cleared on 2026-10-26T23:06Z. `fast-uri` is reachable in
+  the shipped bundle (via `ajv`), so `build/index.js` was rebuilt.
+
+## [2.20.35] - 2026-10-26
+
+### Fixed
+
+- **`reply-to-message` and `forward-message` with `send: false` could lose the
+  draft while reporting success** (#312 follow-up). Their compose objects are
+  visible even `without opening window`, so they had the same race 2.20.34
+  fixed for `create-draft`: `save` returns before the draft is committed, and
+  the `close` straight after it discarded it. Live, 1 of 6 reply drafts and 3
+  of 6 forward drafts vanished. Both now close only after the save has landed
+  in Drafts, as `create-draft` does. 12 of 12 were kept live, half of them
+  replacing an existing draft of the same message.
+- **2.20.34's save confirmation now looks for a new draft id, not a higher
+  count.** Once a reply's sender is set, Mail autosaves it before the explicit
+  `save`, which then replaces that draft under a new id, so a count of drafts
+  with the subject never grows. A draft id that was not in Drafts before the
+  save covers both that case and a fresh compose.
+
+## [2.20.34] - 2026-10-26
+
+### Fixed
+
+- **A draft deleted after `create-draft` no longer comes back** (#312). The
+  AppleScript compose built the draft as an invisible outgoing message, which
+  no `close` or `delete` releases: it stayed in Mail's `outgoing messages`
+  until Mail quit, and autosaved into Drafts again after the user (or an
+  agent) had deleted the draft. `create-draft` now composes visible, like
+  `send-email` already did, so closing the compose releases it. The visible
+  compose window flashes for a fraction of a second and does not take focus.
+  A wrong-account draft refused by the sender guard is now discarded for real
+  too, instead of lingering to be autosaved later.
+- `create-draft` now closes the compose only after the draft is in Drafts. On
+  a visible compose, `save` returns before the draft is committed, and an
+  immediate close discarded it while the tool still reported success (2 of 5
+  drafts lost in live testing; 11 of 11 kept with the wait). If Mail does not
+  confirm the draft within 10 seconds, the call fails and the compose window
+  is left open so the draft is not lost.
+
+## [2.20.33] - 2026-10-26
+
+### Added
+
+- Distribute a standalone Codex plugin archive with the bundled server, so the
+  plugin installs without fetching a runtime from npm. CI builds and verifies
+  it, and the release job attaches the archive to the matching GitHub release
+  only after confirming the tag resolves to the packaged commit. Optional — the
+  npm-pinned marketplace install is unchanged (#334, @jjoanna2-debug).
+- Ship a portable Codex plugin manifest (`codex/plugin.json`) and typed stdio
+  MCP configuration (`codex/mcp.json`) beside the existing compatibility
+  layout; release sync now updates both runtime pins, with parity tests (#334).
+- `scripts/package-codex-plugin.mjs --icon <png>` embeds local artwork in a
+  personal build; the standard archive is unchanged (#334).
+- `scripts/render-authored-body.mjs`, shipped in the npm package: renders
+  authored prose as inherited-size HTML for hosts that compose through Mail's
+  native editor. The server does not call it (#333, @jjoanna2-debug).
+
+### Documentation
+
+- Skill: an **optional** native-editor workflow for hosts that provide computer
+  control, preserving configured signatures and native reply quotation. The
+  existing `send-email` / `create-draft` / `reply-to-message` /
+  `forward-message` guidance remains the default (#333, #334).
+- `docs/NATIVE-COMPOSITION.md`, plus Codex update/migration notes in
+  `docs/CODEX-SETUP.md` (#333, #334).
+
+## [2.20.32] - 2026-10-26
+
+### Changed
+
+- Dependency bump via Dependabot; committed bundle rebuilt. (automated)
+
+## [2.20.31] - 2026-10-25
+
+### Fixed
+
+- Stop reply drafts and sends when the original source or text cannot be read,
+  instead of silently omitting the quoted message. Preserve lookup diagnostics
+  and recover numeric-message reply text from raw MIME when Mail.app's decoded
+  content is unavailable. Genuinely empty original text remains supported.
+
+## [2.20.30] - 2026-10-24
+
+### Fixed
+
+- Stop mail merge before sending when selected SMTP credentials or configuration
+  cannot be resolved, instead of silently switching to Mail.app. Report the
+  selected transport in attempted-batch results, including complete failures.
+- Let mail merge explicitly select SMTP or AppleScript and honor allowed SMTP
+  sender overrides. Reject ambiguous SMTP account labels and unapproved senders
+  before sending the batch.
+- Reject a bare Mail.app account label on explicit SMTP single-message sends
+  instead of silently sending from the configured SMTP identity.
+- Make setup diagnostics distinguish SMTP configuration from authenticated
+  delivery, and describe the existing best-effort IMAP Sent-folder copy.
+- Preserve literal dollar sequences in personalized SMTP and Mail.app messages.
+- Retain Bcc recipients in the author's saved IMAP draft and Sent-folder copy,
+  while keeping the delivered message's Bcc header hidden.
+- Clarify account-label routing and quoted-body limitations in the tool
+  description and bundled Apple Mail skill for Codex and other hosts.
+
+### Documentation
+
+- README Tool Reference: document `send-serial-email`'s new `transport` parameter
+  and returned `transport`, and `send-email`'s account-label routing and
+  explicit-SMTP label rejection (#329).
+
+## [2.20.29] - 2026-10-24
+
+### Security
+
+- **Upgrade Zod to `^4.6.6`** to address GHSA-mrhx-c7xc-m3w5. Preserve the
+  existing tool input/output JSON Schema contracts, integer validation, and
+  string-valued template records across the Zod 4 migration. The dependency
+  retains the repository's seven-day minimum release age.
+
+## [2.20.28] - 2026-10-23
+
+### Security
+
+- **`ip-address` floor raised to `>=10.7.4 <11`** (Dependabot alert #39, medium). The
+  tree carried 10.7.2/10.7.3 duplicates inside the vulnerable range, and the fix ships in
+  the bundle (reached via `@modelcontextprotocol/sdk` and `imapflow` → `socks`).
+- **`vitest` / `@vitest/coverage-v8` raised to `^4.1.12`**, pulling `@vitest/mocker`
+  4.1.12 (alerts #37/#38, medium). Dev scope only; `@vitest/mocker` is an exact-version
+  dependency of vitest, so it moves with vitest rather than through an override.
+
+## [2.20.27] - 2026-10-23
+
+### Fixed
+
+- **`resolveById` no longer discards an explicit account-only hint in favor of a
+  remembered location in a different account (#319).** `get-message`,
+  `get-message-headers` and the content/source reads accept `account` without
+  `mailbox`; previously that hint was dropped the moment an `idLocationIndex` entry
+  existed for the id, even when the remembered entry pointed at a different account —
+  and since numeric ids are per-mailbox counters, an unrelated message there could
+  answer to the same number and be returned silently. A remembered location is now
+  used only when its account matches an explicitly supplied `account`; otherwise the
+  hint falls through to the already-correct account-scoped scan (the recovery path
+  added by #315), not to a fabricated "explicit" hit.
+
+## [2.20.26] - 2026-10-22
+
+### Fixed
+
+- **SMTP sends no longer leave two copies in a Gmail Sent mailbox.** The best-effort
+  Sent-folder copy (#220) was APPENDed unconditionally, but `smtp.gmail.com` already
+  files every submitted message into `[Gmail]/Sent Mail`, so each `send-email`,
+  `reply-to-message` and `forward-message` over SMTP produced a duplicate with the same
+  Message-ID. Before appending, the Sent mailbox is now searched for the message's
+  Message-ID; when it is already there nothing is appended, and the result reports
+  `sentCopy: true` plus the new optional `sentCopyAlreadyFiled: true`. Gmail files its
+  copy asynchronously, so on a Gmail IMAP/SMTP host the search is retried for up to ~3 s
+  before falling back to appending; other hosts get one check. A message with no
+  Message-ID, or a failed search, still appends (a duplicate beats a missing copy).
+- The Sent-folder copy now carries the same `Date:` header as the delivered message;
+  it was composed after the send and so was stamped seconds later.
+
+## [2.20.25] - 2026-10-21
+
+### Security
+
+- Raised the `vite` floor to `>=8.2.4 <9` (dev-only, via vitest/@vitest/coverage-v8;
+  not in the shipped bundle), closing GHSA-r825-w8mm-5pxw (medium, alert #36),
+  GHSA-587h-7wmj-h5pm (high, alert #35), and GHSA-698v-4r3x-3vcv (medium, alert #34).
+  vite is reached only as a peerDependency with no real dependency edge, so a
+  `pnpm-workspace.yaml` overrides range doesn't force pnpm to re-resolve it off the
+  stale 8.2.1 — it is pinned as an explicit devDependency range instead, which
+  resolves correctly (landed on 8.3.4).
+
+## [2.20.24] - 2026-10-21
+
+### Changed
+
+- Dependency bump via Dependabot; committed bundle rebuilt. (automated)
+
+## [2.20.23] - 2026-10-19
+
+### Security
+
+- **The outbound attachment read policy now treats app state under a user `~/Library`
+  as protected.** `resolveAttachmentReadPath` refused hidden segments, four credential
+  roots and `Application Support/*/config.json`, and allowed the rest of the home
+  directory. It now also refuses anything under a user Library except iCloud Drive and
+  CloudStorage, unless `APPLE_MAIL_MCP_ATTACHMENT_READ_ROOTS` names a root for it (a root
+  that holds the whole home directory never lifts the rule). Both the canonical path and
+  the path as given are judged, so a hidden symlink to an ordinary file is refused too.
+  A Library is recognised at the top of the boot volume, of a volume under `/Volumes` and
+  of `/System/Volumes/Data`, and the filesystem root is no longer an allowed root. The
+  function keeps its signature.
 
 ## [2.20.22] - 2026-10-19
 

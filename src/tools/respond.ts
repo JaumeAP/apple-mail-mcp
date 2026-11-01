@@ -7,7 +7,8 @@
  */
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createSerialGate } from "@/utils/serialize.js";
-import type { SearchDiagnostics, Message } from "@/types.js";
+import { locationSuffix, spansLocations } from "@/utils/messageLocation.js";
+import type { SearchBackend, SearchDiagnostics, Message } from "@/types.js";
 
 /**
  * Plain, JSON-friendly summary of a Message for `structuredContent` (A1) — dates
@@ -59,6 +60,29 @@ export function messageSummary(m: Message): Record<string, unknown> {
 }
 
 /**
+ * The text lines `search-messages`, `list-messages` and `get-thread` print for
+ * messages read through Mail.app: `  - ID: … | date | subject (from: sender)`,
+ * then the read state when `readState` is set. Each line also says which
+ * mailbox and account the message is in, unless the call named one mailbox of
+ * one account and every message is in it. (A Gmail-style INBOX is read from
+ * All Mail and Important, so naming both is not always enough.)
+ */
+export function formatMessageLines(
+  messages: Message[],
+  opts: { readState: boolean; mailbox?: string; account?: string }
+): string {
+  const located = !(opts.mailbox && opts.account) || spansLocations(messages);
+  return messages
+    .map(
+      (m) =>
+        `  - ID: ${m.id} | ${m.dateReceived.toLocaleDateString()} | ${m.subject} (from: ${m.sender})` +
+        (opts.readState ? ` [${m.isRead ? "read" : "unread"}]` : "") +
+        (located ? locationSuffix(m.mailbox, m.account) : "")
+    )
+    .join("\n");
+}
+
+/**
  * Creates a successful MCP tool response. When `structured` is provided it is
  * returned as `structuredContent` so callers can consume typed data instead of
  * re-parsing the human text (A1).
@@ -89,6 +113,33 @@ export function errorResponse(message: string, structured?: Record<string, unkno
 }
 
 export type ToolResponse = ReturnType<typeof successResponse> | ReturnType<typeof errorResponse>;
+
+export interface SearchBackendInfo {
+  /** The backend that answered, or "mixed" when accounts were answered differently. */
+  backend: SearchBackend | "mixed";
+  /** Per-account detail, present only for "mixed". */
+  backendByAccount?: Record<string, SearchBackend>;
+  /** Text for the summary line, e.g. " [backend: envelope-index]"; "" when untagged. */
+  note: string;
+}
+
+/**
+ * Report which backend answered a non-IMAP header search (#342). Untagged
+ * diagnostics (Envelope Index off) mean AppleScript answered everything, and the
+ * summary line is left unchanged.
+ */
+export function searchBackendInfo(diagnostics: SearchDiagnostics): SearchBackendInfo {
+  const byAccount = diagnostics.backendByAccount ?? {};
+  const entries = Object.entries(byAccount);
+  if (entries.length === 0) return { backend: "applescript", note: "" };
+  const kinds = new Set(entries.map(([, b]) => b));
+  if (kinds.size === 1) {
+    const [only] = kinds;
+    return { backend: only, note: ` [backend: ${only}]` };
+  }
+  const detail = entries.map(([acct, b]) => `${acct}: ${b}`).join(", ");
+  return { backend: "mixed", backendByAccount: byAccount, note: ` [backend: ${detail}]` };
+}
 
 /**
  * Render a partial-coverage warning from search/list diagnostics, so a caller
