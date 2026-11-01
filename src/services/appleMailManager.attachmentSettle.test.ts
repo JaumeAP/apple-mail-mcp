@@ -6,7 +6,7 @@
  * leaving the draft to Mail's autosave.
  */
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -20,8 +20,11 @@ vi.mock("@/utils/applescript.js", async (importOriginal) => {
     ...actual,
     executeAppleScript: (script: string, options?: Record<string, unknown>) => {
       h.calls.push({ script, options });
-      if (script.includes("make new outgoing message with properties")) {
-        const output = script.includes('return "sent"') ? "sent" : "draft created";
+      if (script.includes("make new outgoing message")) {
+        // Compose success is `<prefix><the sender Mail used>` since 2.20.13.
+        const output = script.includes('return "sent:"')
+          ? "sent:Me <me@example.com>"
+          : "draft created:Me <me@example.com>";
         return { success: true, output };
       }
       if (script.includes("reply msg") || script.includes("forward msg")) {
@@ -40,7 +43,7 @@ let a: string;
 let b: string;
 let c: string;
 beforeAll(() => {
-  dir = realpathSync(mkdtempSync(join(tmpdir(), "amcp-settle-")));
+  dir = mkdtempSync(join(tmpdir(), "amcp-settle-"));
   a = join(dir, "a.pdf");
   b = join(dir, "b.pdf");
   c = join(dir, "c.pdf");
@@ -62,7 +65,7 @@ function positions(script: string, ...needles: string[]): number[] {
 
 /** The compose script (account lookups may run before it). */
 function compose(): { script: string } {
-  const hit = h.calls.find((c) => c.script.includes("make new outgoing message with properties"));
+  const hit = h.calls.find((c) => c.script.includes("make new outgoing message"));
   expect(hit, "no compose script was run").toBeDefined();
   return { script: hit!.script };
 }
@@ -76,7 +79,7 @@ describe("compose scripts wait for attachments before save/send", () => {
     const mgr = new AppleMailManager();
     expect(
       mgr.createDraft(["x@example.com"], "s", "b", undefined, undefined, undefined, [a, b, c])
-    ).toBe(true);
+    ).toMatchObject({ success: true });
     const { script } = compose();
     expectAscending(
       positions(
@@ -84,6 +87,7 @@ describe("compose scripts wait for attachments before save/send", () => {
         "make new attachment",
         "count of attachments of content of newMessage",
         "if attachCount >= 3 then exit repeat",
+        "set actualSender to sender of newMessage",
         "save newMessage",
         "close newMessage saving yes"
       )
@@ -116,13 +120,14 @@ describe("compose scripts wait for attachments before save/send", () => {
     const mgr = new AppleMailManager();
     expect(
       mgr.sendEmail(["x@example.com"], "s", "b", undefined, undefined, undefined, [a, b])
-    ).toBe(true);
+    ).toMatchObject({ success: true });
     const { script } = compose();
     expectAscending(
       positions(
         script,
         "make new attachment",
         "if attachCount >= 2 then exit repeat",
+        "set actualSender to sender of newMessage",
         "send newMessage"
       )
     );
