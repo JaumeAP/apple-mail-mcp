@@ -155,7 +155,8 @@ test("produces a deterministic, self-contained archive with unchanged source lau
     responses.find((response) => response.id === 1).result.serverInfo.version,
     first.version
   );
-  assert.equal(responses.find((response) => response.id === 2).result.tools.length, 52);
+  // 52 upstream tools plus the fork's own (account settings, restart-mail, ...).
+  assert.equal(responses.find((response) => response.id === 2).result.tools.length, 56);
 });
 
 test("optionally bundles local artwork and changes only generated manifest icon fields", (t) => {
