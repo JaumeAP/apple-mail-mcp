@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [2.20.50-jap.2] - 2026-11-04 (JaumeAP fork)
+
+### Fixed
+
+- **`send-email` with `draftId` kept the draft after a send that had gone out.** Mail can file the Sent copy later than 30 s on some accounts, so the wait for it ran out and the draft stayed. The wait is now 50 s (`SENT_COPY_WAIT_MS`). `build/` is regenerated.
+
 ## [2.20.50-jap.1] - 2026-11-01 (JaumeAP fork)
 
 Merges upstream 2.20.23 to 2.20.50. Where both sides had solved the same problem differently, upstream's version is kept and the fork's is removed:
