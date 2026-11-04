@@ -16,7 +16,7 @@ import type { Message } from "@/types.js";
 export const SEND_CLOCK_SLACK_MS = 60_000;
 
 /** How long to wait for Mail.app to file the Sent copy, and how often to look. */
-export const SENT_COPY_WAIT_MS = 30_000;
+export const SENT_COPY_WAIT_MS = 50_000;
 export const SENT_COPY_POLL_MS = 2_000;
 
 /**
