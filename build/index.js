@@ -109214,7 +109214,7 @@ async function routeMessage(id, opts) {
 
 // src/tools/draftCleanup.ts
 var SEND_CLOCK_SLACK_MS = 6e4;
-var SENT_COPY_WAIT_MS = 3e4;
+var SENT_COPY_WAIT_MS = 5e4;
 var SENT_COPY_POLL_MS = 2e3;
 async function pollUntil(check2, timeoutMs = SENT_COPY_WAIT_MS, intervalMs = SENT_COPY_POLL_MS, sleep2 = (ms) => new Promise((r) => setTimeout(r, ms)), now = Date.now) {
   const deadline = now() + timeoutMs;
