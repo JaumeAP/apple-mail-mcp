@@ -9,6 +9,7 @@
  */
 
 import { decodeText, decodeWindows1252 } from "@/utils/textDecode.js";
+import { sameAttachmentName } from "@/utils/attachmentName.js";
 
 export interface MimeAttachmentInfo {
   /** Filename from Content-Disposition or Content-Type name parameter */
@@ -647,7 +648,8 @@ export function extractMimeAttachment(
 
   for (const part of parts) {
     const filename = extractFilename(part.headers);
-    if (filename !== attachmentName) continue;
+    // NFC on both sides (#370): Mail.app stores non-ASCII names NFD, callers pass NFC.
+    if (filename === null || !sameAttachmentName(filename, attachmentName)) continue;
 
     const encoding = getHeader(part.headers, "Content-Transfer-Encoding");
     const data = decodeBody(part.body, encoding);

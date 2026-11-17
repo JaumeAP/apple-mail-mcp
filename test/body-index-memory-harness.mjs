@@ -105,10 +105,16 @@ function sampleProcess() {
   try {
     const rss = Number(execFileSync("ps", ["-o", "rss=", "-p", String(server.pid)]).toString());
     const threads =
-      execFileSync("ps", ["-M", "-p", String(server.pid)]).toString().trim().split("\n").length - 1;
+      execFileSync("ps", ["-M", "-p", String(server.pid)])
+        .toString()
+        .trim()
+        .split("\n").length - 1;
     let childRss = 0;
     try {
-      const kids = execFileSync("pgrep", ["-P", String(server.pid)]).toString().trim().split("\n");
+      const kids = execFileSync("pgrep", ["-P", String(server.pid)])
+        .toString()
+        .trim()
+        .split("\n");
       for (const k of kids.filter(Boolean)) {
         childPids.add(k);
         childRss += Number(execFileSync("ps", ["-o", "rss=", "-p", k]).toString()) || 0;
@@ -149,7 +155,10 @@ function footprintTop(n = 5) {
     const unit = { B: 1 / 1048576, KB: 1 / 1024, MB: 1, GB: 1024 };
     const rows = [];
     for (const line of out.split("\n")) {
-      const m = /^\s*([\d.]+) (B|KB|MB|GB)\s+[\d.]+ (?:B|KB|MB|GB)\s+[\d.]+ (?:B|KB|MB|GB)\s+\d+\s+(.+)$/.exec(line);
+      const m =
+        /^\s*([\d.]+) (B|KB|MB|GB)\s+[\d.]+ (?:B|KB|MB|GB)\s+[\d.]+ (?:B|KB|MB|GB)\s+\d+\s+(.+)$/.exec(
+          line
+        );
       if (m && m[3] !== "TOTAL") rows.push([m[3].trim(), +(Number(m[1]) * unit[m[2]]).toFixed(1)]);
     }
     return Object.fromEntries(rows.sort((a, b) => b[1] - a[1]).slice(0, n));
@@ -194,8 +203,11 @@ async function main() {
     capabilities: {},
     clientInfo: { name: "body-index-memory-harness", version: "1" },
   });
-  if (init.error) throw new Error(`initialize failed: ${JSON.stringify(init.error)}\n${stderrTail}`);
-  server.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
+  if (init.error)
+    throw new Error(`initialize failed: ${JSON.stringify(init.error)}\n${stderrTail}`);
+  server.stdin.write(
+    JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n"
+  );
 
   const phases = {
     build: { rss: [], threads: [], ping: [], childRss: [], total: [] },

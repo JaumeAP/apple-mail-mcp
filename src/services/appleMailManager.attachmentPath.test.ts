@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mkdtempSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "fs";
-import { homedir } from "os";
+import { tmpdir } from "os";
 import { dirname, join } from "path";
 
 const h = vi.hoisted(() => ({ calls: 0, success: false, output: "", savePath: "" }));
@@ -26,21 +26,6 @@ vi.mock("@/utils/applescript.js", async (importOriginal) => {
   };
 });
 
-// getAttachmentBase64 stages under the fixed save root /private/tmp, which a sandboxed
-// run cannot write. Stage under the (throwaway) home instead, which is also a save root.
-vi.mock("fs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("fs")>();
-  const { homedir } = await import("os");
-  return {
-    ...actual,
-    mkdtempSync: ((prefix: string, ...rest: unknown[]) =>
-      (actual.mkdtempSync as (...args: unknown[]) => string)(
-        prefix.replace(/^\/private\/tmp\//, `${homedir()}/`),
-        ...rest
-      )) as typeof actual.mkdtempSync,
-  };
-});
-
 import { AppleMailManager } from "@/services/appleMailManager.js";
 
 const cleanup: string[] = [];
@@ -55,7 +40,7 @@ afterEach(() => {
 
 describe("attachment path boundaries", () => {
   it("rejects an allowed-root symlink that resolves outside the allowed roots", () => {
-    const root = mkdtempSync(join(homedir(), "apple-mail-mcp-test-"));
+    const root = mkdtempSync(join(tmpdir(), "apple-mail-mcp-test-"));
     cleanup.push(root);
     const link = join(root, "outside");
     symlinkSync("/etc", link, "dir");
@@ -66,7 +51,7 @@ describe("attachment path boundaries", () => {
   });
 
   it("rejects an existing symbolic-link destination", () => {
-    const root = mkdtempSync(join(homedir(), "apple-mail-mcp-test-"));
+    const root = mkdtempSync(join(tmpdir(), "apple-mail-mcp-test-"));
     cleanup.push(root);
     symlinkSync("/etc/hosts", join(root, "hosts"));
 
@@ -76,7 +61,7 @@ describe("attachment path boundaries", () => {
   });
 
   it("rejects an existing regular-file destination", () => {
-    const root = mkdtempSync(join(homedir(), "apple-mail-mcp-test-"));
+    const root = mkdtempSync(join(tmpdir(), "apple-mail-mcp-test-"));
     cleanup.push(root);
     writeFileSync(join(root, "hosts"), "keep me");
 
@@ -89,12 +74,8 @@ describe("attachment path boundaries", () => {
     const file = "/etc/hosts";
 
     const mgr = new AppleMailManager();
-    vi.spyOn(
-      mgr as unknown as { getCachedAccounts: () => unknown },
-      "getCachedAccounts"
-    ).mockReturnValue([{ name: "Work", email: "me@work.example", enabled: true }]);
     expect(() =>
-      mgr.sendEmail(["to@example.com"], "subject", "body", undefined, undefined, "Work", [file])
+      mgr.sendEmail(["to@example.com"], "subject", "body", undefined, undefined, undefined, [file])
     ).toThrow(/outside the allowed read roots/);
     expect(h.calls).toBe(0);
   });
@@ -114,8 +95,7 @@ describe("attachment path boundaries", () => {
   });
 
   it("creates MIME fallback files with owner-only permissions", () => {
-    // Save targets may not sit under a hidden folder, so this root is visible.
-    const root = mkdtempSync(join(homedir(), "apple-mail-mcp-test-"));
+    const root = mkdtempSync(join(tmpdir(), "apple-mail-mcp-test-"));
     cleanup.push(root);
     const mgr = new AppleMailManager();
     vi.spyOn(mgr, "getRawSource").mockReturnValue(`Content-Type: multipart/mixed; boundary="b"
@@ -134,7 +114,7 @@ cGF5bG9hZA==
   });
 
   it("stages AppleScript files privately and normalizes the final mode", () => {
-    const root = mkdtempSync(join(homedir(), "apple-mail-mcp-test-"));
+    const root = mkdtempSync(join(tmpdir(), "apple-mail-mcp-test-"));
     cleanup.push(root);
     h.success = true;
     h.output = "ok";

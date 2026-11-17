@@ -3,7 +3,7 @@
 macOS gates this MCP server's access to your data behind **TCC** permissions —
 **Full Disk Access** (to read app data such as Mail, Notes, or Photos) and
 **Automation / Apple Events** (to drive an app like Mail.app or Notes.app via
-AppleScript). See this repo's Full Disk Access / Automation notes for *which*
+AppleScript). See this repo's Full Disk Access / Automation notes for _which_
 operations need which permission.
 
 This page is about a **separate, recurring annoyance**: being asked to approve
@@ -13,7 +13,7 @@ those permissions **over and over**, often right after a routine `brew upgrade`.
 
 - You granted Full Disk Access (and/or Automation) to "node", but days later
   macOS prompts again — `"node" wants access to ...` or `"node" wants to control
-  "Mail"`.
+"Mail"`.
 - System Settings → Privacy & Security → Full Disk Access shows **several
   identical "node" rows**, usually only one enabled.
 - It tends to happen immediately after you update Node.
@@ -93,12 +93,12 @@ the MCP runtime from your Homebrew/dev Node, which can keep updating freely.
 4. **Restart your MCP client** so the server relaunches under the new Node.
 
 5. **Grant the permissions once** to the new binary:
-   - *Full Disk Access*: System Settings → Privacy & Security → Full Disk Access
+   - _Full Disk Access_: System Settings → Privacy & Security → Full Disk Access
      → **+** → ⌘⇧G → paste `~/mcp-runtime/node-current/bin/node`.
-   - *Automation*: the first time the server drives an app you'll get a one-time
+   - _Automation_: the first time the server drives an app you'll get a one-time
      `"node" wants to control "<App>"` prompt — click **Allow**.
 
-   ⚠️ **A TCC grant is keyed to the binary's resolved *path*, not only to its
+   ⚠️ **A TCC grant is keyed to the binary's resolved _path_, not only to its
    signature.** Because the steps above unpack Node into a fixed directory
    (`~/mcp-runtime/node-current`) rather than a versioned one, that path never
    moves and the grants survive Node updates — see "Updating" below. If you
@@ -129,5 +129,5 @@ the grant still match: existing grants carry over with no re-approval.
 
 ⚠️ **Restart your MCP client afterwards.** Replacing the binary unlinks the one
 any already-running server is executing; macOS then cannot validate that path,
-so those processes fail with *"Permission denied"* until they are restarted.
+so those processes fail with _"Permission denied"_ until they are restarted.
 Nothing is wrong with your grants — a freshly launched server works fine.

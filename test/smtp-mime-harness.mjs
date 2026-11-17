@@ -52,7 +52,10 @@ const checks = [
   ["no Apple-Mail-URLShareWrapperClass", !/URLShareWrapperClass/i.test(mime)],
   ["no '> ' quoted-line prefixes", !/^> /m.test(decodeQP(mime))],
   ["has text/plain part", /content-type:\s*text\/plain/i.test(mime)],
-  ["correct recipient/subject", /To:\s*bob@example.com/i.test(mime) && /Subject: .*NHL/i.test(mime)],
+  [
+    "correct recipient/subject",
+    /To:\s*bob@example.com/i.test(mime) && /Subject: .*NHL/i.test(mime),
+  ],
 ];
 
 // Second send: an HTML alternative body must produce a clean multipart/alternative

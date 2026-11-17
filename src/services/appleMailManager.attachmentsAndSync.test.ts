@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mkdtempSync, rmSync } from "fs";
-import { homedir } from "os";
+import { tmpdir } from "os";
 import { join } from "path";
 
 const h = vi.hoisted(() => ({ scripts: [] as string[], output: "", source: "" }));
@@ -130,7 +130,8 @@ describe("listAttachments survives an unreadable property (2026-10-14)", () => {
 
 describe("saveAttachment resolves the message the way the reads do", () => {
   function saveInto(mgr: AppleMailManager): boolean {
-    const dir = mkdtempSync(join(homedir(), "amcp-save-"));
+    // A temporary directory is always an allowed save root (2.20.54 policy).
+    const dir = mkdtempSync(join(tmpdir(), "amcp-save-"));
     try {
       return mgr.saveAttachment("538208", "a.pdf", dir);
     } finally {

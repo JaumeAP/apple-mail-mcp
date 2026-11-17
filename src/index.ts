@@ -30,6 +30,7 @@ import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { integerNumber, registerToolWithContracts } from "@/utils/toolRegistration.js";
+import { annotationsFor } from "@/tools/toolAnnotations.js";
 import {
   AppleMailManager,
   resolveAttachmentSaveTarget,
@@ -99,6 +100,7 @@ import {
   imapFetchMessageId,
   decodeImapId,
   imapAppendDraft,
+  imapUpdateSavedDraft,
   resolveDraftImapAccount,
   FLAG_COLOR_NAMES,
 } from "@/services/imapClient.js";
@@ -114,6 +116,11 @@ import {
   formatMessageLines,
 } from "@/tools/respond.js";
 import { unlistableStoreError } from "@/tools/mailboxListing.js";
+import {
+  UPDATE_SAVED_DRAFT_INPUT,
+  UPDATE_SAVED_DRAFT_OUTPUT,
+  runUpdateSavedDraft,
+} from "@/tools/savedDraft.js";
 import { createCallStop, searchDeadlineMs, stoppedByDeadline } from "@/utils/callStop.js";
 import { describeAccountSettings, splitAppliedSettings } from "@/utils/accountSettings.js";
 import { hybridBatchCounts, batchResponse } from "@/tools/batchResults.js";
@@ -129,6 +136,12 @@ import {
 import type { Account, SearchDiagnostics, SearchResult } from "@/types.js";
 import { routeMessage } from "@/services/messageRouter.js";
 import { hasSentCopy, isDraftForSend, pickCurrentDraft, pollUntil } from "@/tools/draftCleanup.js";
+import {
+  FETCH_ATTACHMENT_TOO_LARGE,
+  MAX_FETCH_ATTACHMENT_BASE64_CHARS,
+  MAX_FETCH_ATTACHMENT_BYTES,
+  MAX_FETCH_ATTACHMENT_RESPONSE_BYTES,
+} from "@/utils/attachmentLimits.js";
 import { runDoctor, formatDoctorReport } from "@/tools/doctor.js";
 import { registerResourcesAndPrompts } from "@/tools/resourcesAndPrompts.js";
 import {
@@ -562,7 +575,10 @@ function registerTool<
   const tool = registerToolWithContracts(
     server,
     name,
-    { ...config, annotations: withSafetyAnnotations(name, config.annotations) },
+    {
+      ...config,
+      annotations: withSafetyAnnotations(name, annotationsFor(name, config.annotations)),
+    },
     cb
   );
   // A disabled tool is neither listed nor callable (see toolMode.ts).
@@ -1950,6 +1966,22 @@ registerTool(
   })
 );
 
+// --- update-saved-draft ---
+
+registerTool(
+  "update-saved-draft",
+  {
+    description:
+      "Use when: editing an existing stored draft's subject, body, recipients or attachments after reviewing its current revision. IMAP-only: use an imap: id from the configured account's SPECIAL-USE Drafts mailbox. dryRun defaults to true and can show proposed changes.\nReturns: the current preview and UIDVALIDITY/UID/MIME SHA-256; after an update the new draftId and preview, with the old-revision cleanup result reported separately.\nDo not use when: creating a new message (use create-draft), editing a non-draft or an AppleScript-only account, or sending mail. Signed/encrypted, ambiguous or unpreviewable MIME is refused.\nSafety: changes a stored draft only; never calls SMTP or sends mail. Obtain approval for the changes and pass the current preview's approvedSha256 and approvedUidValidity with dryRun=false. APPEND is confirmed before targeted removal of the old UID. UIDPLUS is required to avoid global EXPUNGE. Unknown APPEND and cleanup failures must be inspected, never blindly retried.",
+    inputSchema: UPDATE_SAVED_DRAFT_INPUT,
+    outputSchema: UPDATE_SAVED_DRAFT_OUTPUT,
+  },
+  withErrorHandling(
+    (input) => runUpdateSavedDraft(input, imapUpdateSavedDraft),
+    "Error updating saved draft"
+  )
+);
+
 // --- create-draft ---
 
 registerTool(
@@ -2706,7 +2738,7 @@ registerTool(
   "save-attachment",
   {
     description:
-      "Use when: writing one of a message's attachments to disk, by message id and attachmentName, into the savePath directory (saved as savePath/attachmentName).\nReturns: a confirmation of the saved file path.\nDo not use when: you don't know the attachment name (use list-attachments first) or want the bytes inline rather than on disk (use fetch-attachment).\nSafety: writes a file to disk — savePath must be a directory inside the configured allowed roots, and attachmentName may not contain path separators or '..'; calls outside those constraints are rejected.",
+      "Use when: writing one of a message's attachments to disk, by message id and attachmentName, into the savePath directory (saved as savePath/attachmentName).\nReturns: a confirmation of the saved file path.\nDo not use when: you don't know the attachment name (use list-attachments first) or want the bytes inline rather than on disk (use fetch-attachment).\nSafety: writes a new file to disk and never overwrites — savePath must be an existing directory under ~/Downloads, ~/Desktop, ~/Documents, iCloud Drive, CloudStorage, a temporary directory, or a root named in APPLE_MAIL_MCP_ATTACHMENT_SAVE_ROOTS. Hidden files and folders, credential stores and other ~/Library folders are refused, and attachmentName may not contain path separators or '..'.",
     inputSchema: {
       id: MESSAGE_ID_SCHEMA,
       attachmentName: z.string().min(1, "Attachment name is required"),
@@ -2733,7 +2765,7 @@ registerTool(
         return errorResponse(error instanceof Error ? error.message : String(error));
       }
       const r = await imapFetchAttachment(id, attachmentName);
-      if (!r.success || !r.base64) {
+      if (!r.success || typeof r.base64 !== "string") {
         return errorResponse(r.error || `Failed to fetch attachment "${attachmentName}"`);
       }
       writeFileSync(target.savedPath, Buffer.from(r.base64, "base64"), { flag: "wx", mode: 0o600 });
@@ -2764,7 +2796,7 @@ registerTool(
   "fetch-attachment",
   {
     description:
-      "Use when: retrieving an attachment's raw bytes inline as base64 (by message id and attachmentName), e.g. to process its contents without keeping a file.\nReturns: the attachment's bytes base64-encoded, with its size and (for IMAP) MIME type.\nDo not use when: you don't know the attachment name (use list-attachments first) or you just want it saved to disk (use save-attachment).\nSafety: leaves no file behind, but the AppleScript path is not disk-free — Mail writes the attachment into a private temp directory, which is read back and then deleted. Needs no Full Disk Access either way: Mail performs that write under the Automation grant, and this server never reads the mail store itself.",
+      "Use when: retrieving an attachment's raw bytes inline as base64 (by message id and attachmentName), e.g. to process its contents without keeping a file.\nReturns: up to 3 MiB of decoded attachment bytes, base64-encoded, with its size and (for IMAP) MIME type. Larger attachments are refused; use save-attachment instead.\nDo not use when: you don't know the attachment name (use list-attachments first) or you just want it saved to disk (use save-attachment).\nSafety: leaves no file behind, but the AppleScript path is not disk-free — Mail writes the attachment into a private temp directory, which is read back and then deleted. Needs no Full Disk Access either way: Mail performs that write under the Automation grant, and this server never reads the mail store itself.",
     inputSchema: {
       id: MESSAGE_ID_SCHEMA,
       attachmentName: z.string().min(1, "Attachment name is required"),
@@ -2780,24 +2812,34 @@ registerTool(
     // Returns the attachment bytes as base64 (B4) — the read counterpart to
     // sending inline base64 content. IMAP (I1) fetches the part directly; numeric
     // ids fall back to the AppleScript/MIME path.
-    if (id.startsWith("imap:")) {
-      const r = await imapFetchAttachment(id, attachmentName);
-      if (!r.success || !r.base64) {
-        return errorResponse(r.error || `Failed to fetch attachment "${attachmentName}"`);
+    const r = id.startsWith("imap:")
+      ? await imapFetchAttachment(id, attachmentName, {}, "inline")
+      : mailManager.getAttachmentBase64(id, attachmentName);
+    if (!r.success || typeof r.base64 !== "string") {
+      const error = r.error || `Failed to fetch attachment "${attachmentName}"`;
+      return errorResponse(error.length > 8192 ? `${error.slice(0, 8192)}… (truncated)` : error);
+    }
+    if (
+      (r.bytes ?? 0) > MAX_FETCH_ATTACHMENT_BYTES ||
+      r.base64.length > MAX_FETCH_ATTACHMENT_BASE64_CHARS
+    ) {
+      return errorResponse(FETCH_ATTACHMENT_TOO_LARGE);
+    }
+    const response = successResponse(
+      `Fetched "${attachmentName}" (${r.bytes} bytes, base64-encoded below).\n\n${r.base64}`,
+      {
+        attachmentName,
+        bytes: r.bytes,
+        ...("mimeType" in r ? { mimeType: r.mimeType } : {}),
+        contentBase64: r.base64,
       }
-      return successResponse(
-        `Fetched "${attachmentName}" (${r.bytes} bytes, base64-encoded below).\n\n${r.base64}`,
-        { attachmentName, bytes: r.bytes, mimeType: r.mimeType, contentBase64: r.base64 }
+    );
+    if (Buffer.byteLength(JSON.stringify(response), "utf8") > MAX_FETCH_ATTACHMENT_RESPONSE_BYTES) {
+      return errorResponse(
+        "Attachment metadata exceeds the inline response budget. Use save-attachment instead."
       );
     }
-    const r = mailManager.getAttachmentBase64(id, attachmentName);
-    if (!r.success) {
-      return errorResponse(r.error || `Failed to fetch attachment "${attachmentName}"`);
-    }
-    return successResponse(
-      `Fetched "${attachmentName}" (${r.bytes} bytes, base64-encoded below).\n\n${r.base64}`,
-      { attachmentName, bytes: r.bytes, contentBase64: r.base64 }
-    );
+    return response;
   }, "Error fetching attachment")
 );
 

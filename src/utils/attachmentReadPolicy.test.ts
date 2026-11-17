@@ -16,10 +16,6 @@ import {
   isProtectedPath,
   resolveAttachmentReadPath,
 } from "@/utils/attachmentReadPolicy.js";
-import {
-  isPathWithinAllowedRoots,
-  resolveAttachmentSaveTarget,
-} from "@/services/appleMailManager.js";
 
 describe("outbound attachment read policy", () => {
   it("allows a regular file in the default temporary root", () => {
@@ -142,44 +138,6 @@ describe("outbound attachment read policy", () => {
     );
     expect(isProtectedPath("/srv/backup/users/someone/library/books/report.pdf")).toBe(false);
     expect(isProtectedPath("/Volumes/Disk/archive/Users/someone/Library/report.pdf")).toBe(false);
-  });
-
-  it("refuses save targets in hidden folders and Library app state", () => {
-    const home = realpathSync.native(homedir());
-    expect(isPathWithinAllowedRoots(join(home, "Downloads", "report.pdf"))).toBe(true);
-    expect(isPathWithinAllowedRoots(join(home, "Library", "LaunchAgents", "evil.plist"))).toBe(
-      false
-    );
-    expect(isPathWithinAllowedRoots(join(home, ".ssh", "authorized_keys"))).toBe(false);
-    expect(isPathWithinAllowedRoots(join(home, "Downloads", ".zshrc"))).toBe(false);
-  });
-
-  it("refuses a save through a hidden folder that symlinks to a visible one", () => {
-    const visible = mkdtempSync(join(homedir(), "amcp-dotfiles-"));
-    const hidden = join(homedir(), `.amcp-link-${process.pid}`);
-    try {
-      symlinkSync(visible, hidden, "dir");
-      expect(() => resolveAttachmentSaveTarget(hidden, "evil.lua")).toThrow(/outside allowed/);
-      expect(resolveAttachmentSaveTarget(visible, "ok.pdf").savedPath).toBe(
-        join(realpathSync.native(visible), "ok.pdf")
-      );
-    } finally {
-      rmSync(hidden, { force: true });
-      rmSync(visible, { recursive: true, force: true });
-    }
-  });
-
-  it("keeps a dot-named attachment's name only in a staging directory", () => {
-    // Any visible save root will do; the home keeps the test inside a sandboxed run.
-    const dir = mkdtempSync(join(homedir(), "amcp-stage-"));
-    try {
-      expect(() => resolveAttachmentSaveTarget(dir, ".env")).toThrow(/outside allowed/);
-      expect(resolveAttachmentSaveTarget(dir, ".env", { stagingDirectory: true }).savedPath).toBe(
-        join(realpathSync.native(dir), ".env")
-      );
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
   });
 
   it("never treats the filesystem root as a home-directory root", () => {

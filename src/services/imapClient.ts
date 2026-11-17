@@ -37,9 +37,12 @@ import { createHash } from "node:crypto";
 import { ImapFlow } from "imapflow";
 import { readKeychainPassword } from "@/services/smtpMailer.js";
 import { SETUP_HINT } from "@/utils/docsUrls.js";
+import { sameAttachmentName } from "@/utils/attachmentName.js";
 import { mailboxNameKey, nfc } from "@/utils/mailboxName.js";
 import { locationSuffix } from "@/utils/messageLocation.js";
 import { cidReferences, extractHtmlBody, extractTextBody } from "@/utils/mimeParse.js";
+import { patchSavedDraftMime, previewSavedDraftMime } from "@/services/savedDraftMime.js";
+import type { SavedDraftPreview, UpdateSavedDraftInput, UpdateSavedDraftResult } from "@/types.js";
 import {
   decodeHeaderBytes,
   headerBlockBytes,
@@ -50,7 +53,11 @@ import {
   type ParsedHeaders,
 } from "@/utils/headers.js";
 import { classifyCountStatus, type CountDelta } from "@/services/auditLog.js";
-import { MAX_IMAP_ATTACHMENT_BYTES } from "@/utils/attachmentLimits.js";
+import {
+  FETCH_ATTACHMENT_TOO_LARGE,
+  MAX_FETCH_ATTACHMENT_BYTES,
+  MAX_IMAP_ATTACHMENT_BYTES,
+} from "@/utils/attachmentLimits.js";
 
 export const IMAP_ENV = {
   user: "APPLE_MAIL_MCP_IMAP_USER",
@@ -175,6 +182,8 @@ export interface ImapMoveResult {
 }
 export interface ImapClientLike {
   connect(): Promise<void>;
+  /** UIDPLUS is required before saved-draft replacement: never global EXPUNGE. */
+  capabilities?: ReadonlyMap<string, unknown>;
   /** `readOnly: true` opens the mailbox with EXAMINE instead of SELECT. Test
    *  mocks may ignore the options argument. */
   getMailboxLock(path: string, options?: { readOnly?: boolean }): Promise<MailboxLock>;
@@ -206,7 +215,11 @@ export interface ImapClientLike {
     path: string,
     query: { messages?: boolean; unseen?: boolean; recent?: boolean }
   ): Promise<{ path: string; messages?: number; unseen?: number; recent?: number }>;
-  download(range: string, part: string, opts: { uid: true }): Promise<ImapDownload>;
+  download(
+    range: string,
+    part: string,
+    opts: { uid: true; maxBytes?: number }
+  ): Promise<ImapDownload>;
   mailboxCreate(path: string): Promise<{ path: string; created: boolean }>;
   mailboxRename(path: string, newPath: string): Promise<{ path: string; newPath: string }>;
   mailboxDelete(path: string): Promise<{ path: string }>;
@@ -216,7 +229,7 @@ export interface ImapClientLike {
     path: string,
     content: string | Buffer,
     flags?: string[]
-  ): Promise<{ destination: string } | false>;
+  ): Promise<{ destination: string; uid?: number; uidValidity?: bigint } | false>;
   messageFlagsAdd(range: number[], flags: string[], opts: FlagOpts): Promise<boolean>;
   messageFlagsRemove(range: number[], flags: string[], opts: FlagOpts): Promise<boolean>;
   /** `false` on failure — see `assertMutated`. Typed as a union deliberately:
@@ -2688,6 +2701,264 @@ export async function imapAppendDraft(
   });
 }
 
+/**
+ * Preview or replace one stored draft (#372). One connection/lock, no retries,
+ * no SMTP and no AppleScript fallback. APPEND and cleanup have separate outcomes.
+ * IMAP UIDs identify immutable messages; another client's edit gets a new UID,
+ * which this operation never deletes. External edits racing the final snapshot
+ * can leave both versions, rather than overwriting a concurrent user's revision.
+ */
+export async function imapUpdateSavedDraft(
+  input: UpdateSavedDraftInput,
+  deps: ImapDeps = {}
+): Promise<UpdateSavedDraftResult> {
+  const ref = decodeImapId(input.draftId);
+  if (
+    !ref ||
+    !ref.account ||
+    !ref.path ||
+    !Number.isSafeInteger(ref.uid) ||
+    ref.uid < 1 ||
+    ref.uid > 0xffffffff
+  ) {
+    throw new Error(
+      "update-saved-draft requires an imap: id from a configured account's Drafts mailbox; no AppleScript fallback."
+    );
+  }
+  if (
+    !input.dryRun &&
+    (!/^[a-f0-9]{64}$/i.test(input.approvedSha256 ?? "") ||
+      !/^[1-9]\d*$/.test(input.approvedUidValidity ?? "") ||
+      !input.changes ||
+      !Object.values(input.changes).some((v) => v !== undefined))
+  ) {
+    throw new Error(
+      "Updating requires changes and the approvedSha256/approvedUidValidity from a fresh preview."
+    );
+  }
+  const selectedDeps = depsForMessageRef(ref, deps);
+  if (
+    !deps.config &&
+    listImapAccountSpecs().filter((spec) => specMatchesSelector(spec, ref.account)).length !== 1
+  ) {
+    throw new Error(
+      "Draft account is absent or ambiguous; exactly one configured IMAP login must match the id. No fallback is permitted."
+    );
+  }
+  return withClient(selectedDeps, async (client) => {
+    const boxes = (await client.list()).filter(
+      (b) =>
+        !b.flags?.has("\\Noselect") &&
+        (b.specialUse?.toLowerCase() === "\\drafts" || b.flags?.has("\\Drafts"))
+    );
+    if (boxes.length !== 1)
+      throw new Error(
+        "Drafts mailbox is absent or ambiguous; exactly one SPECIAL-USE \\Drafts mailbox is required."
+      );
+    if (boxes[0].path !== ref.path)
+      throw new Error("The message is not in the account's exact SPECIAL-USE \\Drafts mailbox.");
+    if (!input.dryRun && !client.capabilities?.has("UIDPLUS")) {
+      throw new Error(
+        "Saved-draft replacement requires UIDPLUS for APPENDUID and targeted UID EXPUNGE; no global EXPUNGE is permitted."
+      );
+    }
+    const lock = await client.getMailboxLock(ref.path, { readOnly: input.dryRun });
+    try {
+      const uidValidity = client.mailbox && client.mailbox.uidValidity?.toString();
+      if (!uidValidity || !/^[1-9]\d*$/.test(uidValidity))
+        throw new Error("Draft mailbox has no usable UIDVALIDITY.");
+      if (!input.dryRun && client.mailbox && client.mailbox.readOnly)
+        throw new Error("Drafts mailbox is read-only; nothing was appended.");
+      const read = async (uid: number) => {
+        const m = await client.fetchOne(
+          String(uid),
+          {
+            uid: true,
+            flags: true,
+            size: true,
+            source: { start: 0, maxLength: MAX_RFC822_FILE_BYTES + 1 },
+          },
+          { uid: true }
+        );
+        if (!m || m.uid !== uid)
+          throw new Error(`Draft UID ${uid} is missing or changed; re-list Drafts.`);
+        if (!m.flags?.has("\\Draft") || m.flags.has("\\Deleted"))
+          throw new Error(`UID ${uid} is not an active draft; editing refused.`);
+        if (!m.source?.length) throw new Error("IMAP returned no stored draft MIME.");
+        const bytes = asBuffer(m.source);
+        // RFC822.SIZE is advisory: Gmail reports it after its own line-ending
+        // normalisation, so it differs from the fetched bytes by a few bytes on a
+        // perfectly good draft (live-found 2026-11-11). Refuse only a gross
+        // shortfall/excess, which is what a truncated fetch would look like.
+        if (
+          bytes.length > MAX_RFC822_FILE_BYTES ||
+          (m.size !== undefined && Math.abs(m.size - bytes.length) > 1024 + m.size * 0.02)
+        )
+          throw new Error("Draft source is oversized or incomplete; editing refused.");
+        return {
+          bytes,
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+          flags: [...m.flags].filter((f) => f !== "\\Recent" && f !== "\\Deleted"),
+        };
+      };
+      const current = await read(ref.uid);
+      const preview: SavedDraftPreview = {
+        ...previewSavedDraftMime(current.bytes),
+        draftId: input.draftId,
+        uid: ref.uid,
+        uidValidity,
+        sha256: current.sha256,
+      };
+      if (
+        !input.dryRun &&
+        (input.approvedUidValidity !== uidValidity ||
+          input.approvedSha256?.toLowerCase() !== current.sha256)
+      )
+        throw new Error(
+          "Draft changed since preview (UIDVALIDITY or MIME SHA-256); review its current revision again."
+        );
+      const replacement = input.changes
+        ? await patchSavedDraftMime(current.bytes, input.changes)
+        : current.bytes;
+      const proposed = previewSavedDraftMime(replacement);
+      if (replacement.length > MAX_RFC822_FILE_BYTES)
+        throw new Error("Edited draft exceeds the 25 MiB stored-MIME limit.");
+      if (input.dryRun)
+        return {
+          ok: true,
+          status: "preview",
+          sourceDraftId: input.draftId,
+          draftId: input.draftId,
+          preview,
+          ...(input.changes ? { proposed } : {}),
+        };
+      if (replacement.equals(current.bytes))
+        return {
+          ok: true,
+          status: "unchanged",
+          sourceDraftId: input.draftId,
+          draftId: input.draftId,
+          preview,
+          sourceRemoved: false,
+        };
+      // Preparing MIME may take time: refuse a disappeared/changed source before
+      // creating anything. A new UID from another client is never a substitute.
+      const fresh = await read(ref.uid);
+      if (
+        fresh.sha256 !== current.sha256 ||
+        !client.mailbox ||
+        client.mailbox.uidValidity?.toString() !== uidValidity
+      )
+        throw new Error("Draft changed while preparing the edit; nothing appended.");
+      let appended: Awaited<ReturnType<ImapClientLike["append"]>>;
+      try {
+        appended = await client.append(ref.path, replacement, fresh.flags);
+      } catch (error) {
+        const status =
+          error && typeof error === "object" && "responseStatus" in error
+            ? String(error.responseStatus).toUpperCase()
+            : "";
+        const rejected = status === "NO" || status === "BAD";
+        return {
+          ok: false,
+          status: rejected ? "append_failed" : "append_unknown",
+          sourceDraftId: input.draftId,
+          sourceRemoved: false,
+          error: `APPEND ${rejected ? "was rejected" : "outcome is uncertain"}: ${errText(error)}. Source was not removed. Re-list Drafts before any retry.`,
+        };
+      }
+      if (!appended)
+        return {
+          ok: false,
+          status: "append_failed",
+          sourceDraftId: input.draftId,
+          sourceRemoved: false,
+          error: "Server rejected APPEND; source was not removed.",
+        };
+      const newUid = appended.uid;
+      if (
+        !newUid ||
+        !Number.isSafeInteger(newUid) ||
+        newUid > 0xffffffff ||
+        newUid === ref.uid ||
+        appended.uidValidity?.toString() !== uidValidity
+      ) {
+        return {
+          ok: false,
+          status: "append_unknown",
+          sourceDraftId: input.draftId,
+          sourceRemoved: false,
+          error:
+            "APPEND returned no trustworthy new UID/UIDVALIDITY. Source was not removed. Re-list Drafts; do not blindly repeat the edit.",
+        };
+      }
+      const draftId = encodeImapId(ref.account, ref.path, newUid);
+      const replacementSha256 = createHash("sha256").update(replacement).digest("hex");
+      let savedPreview: SavedDraftPreview;
+      try {
+        const saved = await read(newUid);
+        if (saved.sha256 !== replacementSha256)
+          throw new Error("Stored replacement MIME differs from APPEND bytes.");
+        savedPreview = {
+          ...previewSavedDraftMime(saved.bytes),
+          draftId,
+          uid: newUid,
+          uidValidity,
+          sha256: saved.sha256,
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          status: "append_unknown",
+          sourceDraftId: input.draftId,
+          draftId,
+          sourceRemoved: false,
+          error: `${errText(error)} Source was not removed; inspect both draft IDs before retrying.`,
+        };
+      }
+      let removalOutcome: "not_attempted" | "uncertain" | "not_removed" = "not_attempted";
+      try {
+        const original = await read(ref.uid);
+        if (
+          original.sha256 !== current.sha256 ||
+          !client.mailbox ||
+          client.mailbox.uidValidity?.toString() !== uidValidity
+        )
+          throw new Error("Source revision changed during APPEND; cleanup refused.");
+        removalOutcome = "uncertain";
+        if (!(await client.messageDelete([ref.uid], { uid: true }))) {
+          removalOutcome = "not_removed";
+          throw new Error("Server rejected removal of the old draft.");
+        }
+        if (await client.fetchOne(String(ref.uid), { uid: true }, { uid: true })) {
+          removalOutcome = "not_removed";
+          throw new Error("Old draft removal was not confirmed.");
+        }
+      } catch (error) {
+        return {
+          ok: false,
+          status: "cleanup_failed",
+          sourceDraftId: input.draftId,
+          draftId,
+          preview: savedPreview,
+          sourceRemoved: removalOutcome === "uncertain" ? undefined : false,
+          error: `${errText(error)} Replacement is saved; inspect both IDs. No cleanup retry was attempted.`,
+        };
+      }
+      return {
+        ok: true,
+        status: "updated",
+        sourceDraftId: input.draftId,
+        draftId,
+        preview: savedPreview,
+        sourceRemoved: true,
+      };
+    } finally {
+      lock.release();
+    }
+  });
+}
+
 // ===========================================================================
 // Phase 3 — message-level operations by composite IMAP id (issue #43)
 //
@@ -3581,6 +3852,8 @@ export function bodyStructureHasAttachments(node?: ImapBodyStructure): boolean {
   return !!node && collectAttachments(node).length > 0;
 }
 
+class AttachmentSizeLimitError extends Error {}
+
 async function streamToBuffer(
   content: AsyncIterable<Uint8Array>,
   maxBytes: number
@@ -3590,7 +3863,9 @@ async function streamToBuffer(
   for await (const chunk of content) {
     total += chunk.byteLength;
     if (total > maxBytes) {
-      throw new Error(`IMAP attachment exceeds the ${maxBytes / 1024 / 1024} MiB size limit.`);
+      throw new AttachmentSizeLimitError(
+        `IMAP attachment exceeds the ${maxBytes / 1024 / 1024} MiB size limit.`
+      );
     }
     chunks.push(Buffer.from(chunk));
   }
@@ -3699,7 +3974,8 @@ export async function imapListAttachments(
 export async function imapFetchAttachment(
   id: string,
   attachmentName: string,
-  deps: ImapDeps = {}
+  deps: ImapDeps = {},
+  mode: "inline" | "save" = "save"
 ): Promise<{
   success: boolean;
   base64?: string;
@@ -3719,7 +3995,8 @@ export async function imapFetchAttachment(
       [],
       await embeddedContentIds(client, ref.uid, msg.bodyStructure)
     );
-    const match = atts.find((a) => a.filename === attachmentName);
+    // NFC on both sides (#370): Mail.app stores non-ASCII names NFD, callers pass NFC.
+    const match = atts.find((a) => sameAttachmentName(a.filename, attachmentName));
     if (!match) {
       const names = atts.map((a) => a.filename).join(", ") || "none";
       return {
@@ -3727,20 +4004,56 @@ export async function imapFetchAttachment(
         error: `Attachment "${attachmentName}" not found on UID ${ref.uid}. Available: ${names}.`,
       };
     }
-    // Pre-check on the decoded size (the limit applies to decoded bytes, which
-    // is what streamToBuffer counts) — a base64 part's encoded size is ~4/3 of
-    // it and would refuse files that fit. Estimate only; the stream cut-off
-    // below stays the hard guard.
-    const expected = decodedSizeWithoutBody(match).size;
-    if (expected > MAX_IMAP_ATTACHMENT_BYTES) {
-      return {
-        success: false,
-        error: `IMAP attachment "${attachmentName}" is ${expected} bytes; the maximum is ${MAX_IMAP_ATTACHMENT_BYTES} bytes (25 MiB).`,
-      };
+    const maxBytes = mode === "inline" ? MAX_FETCH_ATTACHMENT_BYTES : MAX_IMAP_ATTACHMENT_BYTES;
+    // Preserve the existing save precheck. Inline output may be smaller than
+    // either the advisory size or the encoded input after text transforms.
+    if (mode === "save") {
+      const expected = decodedSizeWithoutBody(match);
+      if (expected.size > maxBytes) {
+        return {
+          success: false,
+          error: `IMAP attachment "${attachmentName}" is ${expected.size} bytes; the maximum is ${maxBytes} bytes (25 MiB).`,
+        };
+      }
     }
     try {
-      const dl = await client.download(String(ref.uid), match.part, { uid: true });
-      const buf = await streamToBuffer(dl.content, MAX_IMAP_ATTACHMENT_BYTES);
+      if (mode === "inline") {
+        // ImapFlow can buffer decoded text before yielding it (for example,
+        // format=flowed). Its internal maxBytes can truncate that input before
+        // the output reaches our limit, so first bound and verify the encoded
+        // part's reported length. Bound raw bytes without trusting the transfer
+        // encoding: the separately fetched MIME headers select the decoder.
+        const encoded = match.encodedSize;
+        if (!Number.isSafeInteger(encoded) || encoded < 0 || encoded > MAX_IMAP_ATTACHMENT_BYTES) {
+          return {
+            success: false,
+            error: "Attachment is too large to verify inline. Use save-attachment instead.",
+          };
+        }
+        // Probe the last reported byte and one beyond it. This also detects a
+        // length that overstates the body, and handles single-part messages as
+        // TEXT, matching ImapFlow's own download path.
+        const probePart = match.part === "1" && !msg.bodyStructure.childNodes ? "text" : match.part;
+        const probeStart = Math.max(0, encoded - 1);
+        const probe = await client.fetchOne(
+          String(ref.uid),
+          { bodyParts: [{ key: probePart, start: probeStart, maxLength: encoded > 0 ? 2 : 1 }] },
+          { uid: true }
+        );
+        const tail = probe && probe.bodyParts?.get(probePart.toLowerCase());
+        if (!tail || tail.length !== (encoded > 0 ? 1 : 0)) {
+          return {
+            success: false,
+            error: "Could not verify the complete attachment inline. Use save-attachment instead.",
+          };
+        }
+      }
+      const dl = await client.download(
+        String(ref.uid),
+        match.part,
+        mode === "inline" ? { uid: true, maxBytes: MAX_IMAP_ATTACHMENT_BYTES + 1 } : { uid: true }
+      );
+      const buf = await streamToBuffer(dl.content, maxBytes);
       return {
         success: true,
         base64: buf.toString("base64"),
@@ -3748,6 +4061,9 @@ export async function imapFetchAttachment(
         mimeType: match.mimeType,
       };
     } catch (e) {
+      if (mode === "inline" && e instanceof AttachmentSizeLimitError) {
+        return { success: false, error: FETCH_ATTACHMENT_TOO_LARGE };
+      }
       return { success: false, error: `IMAP attachment fetch failed: ${errText(e)}` };
     }
   });

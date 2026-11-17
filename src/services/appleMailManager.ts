@@ -19,7 +19,6 @@ import {
   chmodSync,
   existsSync,
   writeFileSync,
-  readFileSync,
   readdirSync,
   unlinkSync,
   copyFileSync,
@@ -28,15 +27,21 @@ import {
   rmSync,
   realpathSync,
   lstatSync,
+  openSync,
+  fstatSync,
+  readSync,
+  closeSync,
 } from "fs";
-import { dirname, resolve, sep, join } from "path";
+import { resolve, join } from "path";
 import { homedir } from "os";
 import { randomUUID } from "crypto";
 import { executeAppleScript, isPermissionDenied } from "@/utils/applescript.js";
 import { MAIL_RUNNING_GUARD } from "@/utils/mailRecovery.js";
 import { flagColorName, isGmailHost } from "@/services/imapClient.js";
 import { SETUP_HINT } from "@/utils/docsUrls.js";
+
 import { parseMimeAttachments, extractMimeAttachment, extractHtmlBody } from "@/utils/mimeParse.js";
+import { attachmentNameForms } from "@/utils/attachmentName.js";
 import { plausibleDateSent } from "@/utils/headers.js";
 import { mailboxNameKey } from "@/utils/mailboxName.js";
 import { TemplateStore } from "@/services/templateStore.js";
@@ -54,12 +59,16 @@ import {
   type AccountSettings,
   type AccountSettingsChanges,
 } from "@/utils/accountSettings.js";
+import {
+  FETCH_ATTACHMENT_TOO_LARGE,
+  MAX_FETCH_ATTACHMENT_BYTES,
+} from "@/utils/attachmentLimits.js";
 import { extractAddress, pickSenderAddress, senderGuardScript } from "@/utils/senderAccount.js";
 import { nativeEditorPreflight, insertNativeAuthoredBody } from "@/services/nativeMailComposer.js";
 import {
-  canonicalRoots,
-  canonicalTmpdir,
-  isProtectedPath,
+  ATTACHMENT_SAVE_ROOTS_ENV,
+  isProtectedSaveTarget,
+  isWithinSaveRoots,
   resolveAttachmentReadPath,
 } from "@/utils/attachmentReadPolicy.js";
 import { searchContactsDb } from "@/utils/contactsDb.js";
@@ -793,62 +802,61 @@ export function splitSearchDiagnostics(
  * @returns Text safe for AppleScript string embedding
  */
 /**
- * Roots under which `save-attachment` is permitted to write.
- */
-const ALLOWED_SAVE_ROOTS = [homedir(), "/tmp", "/private/tmp", "/Volumes"];
-
-/**
- * True if `resolvedPath` is one of the allowed roots or strictly inside one.
+ * True if `resolvedPath` is one of the save roots or strictly inside one.
  *
- * Uses a path-segment boundary check rather than a bare `startsWith`, which
- * would let a sibling whose name merely shares the prefix slip through —
- * `/Volumes-evil` startsWith `/Volumes`, `/Users/robother` startsWith
- * `/Users/rob` (audit finding #12). `resolvedPath` must already be absolute
- * (caller passes `resolve(...)` output).
+ * The roots are the ordinary document folders (Downloads, Desktop, Documents,
+ * iCloud Drive, CloudStorage), the temporary directories, and any root named in
+ * APPLE_MAIL_MCP_ATTACHMENT_SAVE_ROOTS — see `attachmentSaveRoots`. Uses a
+ * path-segment boundary check rather than a bare `startsWith`, which would let a
+ * sibling whose name merely shares the prefix slip through (`/tmpevil` vs `/tmp`,
+ * audit finding #12). `resolvedPath` must already be absolute.
  */
-export function isPathWithinAllowedRoots(resolvedPath: string): boolean {
-  // Same deny rules as outbound reads: no hidden segments (~/.ssh, ~/.zshrc),
-  // no Library app state (LaunchAgents, Mail, Messages) outside its document
-  // folders, on this volume or under /Volumes. A new file there is as
-  // dangerous as an overwrite. The server's own tmpdir stays writable.
-  if (isProtectedPath(resolvedPath, canonicalTmpdir())) return false;
-  // Literal roots (`/tmp`) and their canonical form (`/private/tmp`); never
-  // "/" or "", which an empty or root HOME would otherwise make match anything.
-  const literal = ALLOWED_SAVE_ROOTS.map((root) => (root.endsWith(sep) ? root.slice(0, -1) : root));
-  const roots = [...literal.filter(Boolean), ...canonicalRoots(ALLOWED_SAVE_ROOTS)];
-  return roots.some((base) => resolvedPath === base || resolvedPath.startsWith(base + sep));
+export function isPathWithinAllowedRoots(
+  resolvedPath: string,
+  env: NodeJS.ProcessEnv = process.env
+): boolean {
+  return isWithinSaveRoots(resolvedPath, env);
 }
 
-/**
- * Resolve and validate an attachment save directory and its final output path.
- *
- * Paths are checked as given and again after `realpathSync.native`, so a
- * hidden folder that is a symlink to a visible one (`~/.config/nvim` →
- * `~/dotfiles/nvim`) and a respelled home (`/Users/JAP`) are both refused.
- * `stagingDirectory` is for the server's own private mkdtemp: there the
- * attachment keeps its real name even when that name starts with a dot.
- */
+const SAVE_ROOTS_HINT =
+  "Save into Downloads, Desktop, Documents, iCloud Drive or a temporary directory, " +
+  `or name another root in ${ATTACHMENT_SAVE_ROOTS_ENV}.`;
+
+/** Resolve and validate an attachment save directory and its final output path. */
 export function resolveAttachmentSaveTarget(
   savePath: string,
   attachmentName: string,
-  { stagingDirectory = false }: { stagingDirectory?: boolean } = {}
+  env: NodeJS.ProcessEnv = process.env
 ): { saveDirectory: string; savedPath: string } {
-  const requested = resolve(savePath);
   let saveDirectory: string;
   try {
-    saveDirectory = realpathSync.native(requested);
+    // .native returns the on-disk casing, so `~/library/launchagents` cannot
+    // dodge the Library rule by respelling a segment on case-insensitive APFS.
+    saveDirectory = realpathSync.native(resolve(savePath));
   } catch {
     throw new Error(`Save directory "${savePath}" does not exist`);
   }
 
-  if (isProtectedPath(requested, canonicalTmpdir()) || !isPathWithinAllowedRoots(saveDirectory)) {
-    throw new Error(`Save path "${savePath}" is outside allowed directories`);
+  // Both spellings are judged, as on the read side: the path the caller typed
+  // and the directory it resolves to.
+  if (isProtectedSaveTarget(saveDirectory, env) || isProtectedSaveTarget(resolve(savePath), env)) {
+    throw new Error(
+      `Save path "${savePath}" is in a protected location (hidden folders, credential stores ` +
+        `and Library folders other than iCloud Drive are never written). ${SAVE_ROOTS_HINT}`
+    );
+  }
+  if (!isPathWithinAllowedRoots(saveDirectory, env)) {
+    throw new Error(`Save path "${savePath}" is outside allowed directories. ${SAVE_ROOTS_HINT}`);
   }
 
   const savedPath = resolve(saveDirectory, attachmentName);
-  const checkedPath = stagingDirectory ? saveDirectory : savedPath;
-  if (dirname(savedPath) !== saveDirectory || !isPathWithinAllowedRoots(checkedPath)) {
-    throw new Error(`Output path "${savedPath}" is outside allowed directories`);
+  if (!isPathWithinAllowedRoots(savedPath, env)) {
+    throw new Error(
+      `Output path "${savedPath}" is outside allowed directories. ${SAVE_ROOTS_HINT}`
+    );
+  }
+  if (isProtectedSaveTarget(savedPath, env)) {
+    throw new Error(`Output path "${savedPath}" is a protected location (hidden file or folder).`);
   }
   if (existsSync(savedPath)) {
     if (lstatSync(savedPath).isSymbolicLink()) {
@@ -6550,12 +6558,7 @@ ${this.errorEmit("              ")}
    * Tries AppleScript first, falls back to MIME source extraction
    * when AppleScript can't find the attachment.
    */
-  saveAttachment(
-    id: string,
-    attachmentName: string,
-    savePath: string,
-    options: { stagingDirectory?: boolean } = {}
-  ): boolean {
+  saveAttachment(id: string, attachmentName: string, savePath: string): boolean {
     // Validate attachment name: block path separators, traversal, null bytes, and backslashes
     if (/[/\\\0]/.test(attachmentName) || attachmentName.includes("..")) {
       console.error(`Invalid attachment name: "${attachmentName}"`);
@@ -6564,13 +6567,18 @@ ${this.errorEmit("              ")}
 
     let target: { saveDirectory: string; savedPath: string };
     try {
-      target = resolveAttachmentSaveTarget(savePath, attachmentName, options);
+      target = resolveAttachmentSaveTarget(savePath, attachmentName);
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));
       return false;
     }
 
-    const safeName = escapeForAppleScript(attachmentName);
+    // AppleScript cannot normalize, so match Mail's stored name against every
+    // spelling of the caller's (#370): Mail.app stores non-ASCII names NFD,
+    // callers pass NFC. The file is still saved under the caller's name.
+    const nameTest = attachmentNameForms(attachmentName)
+      .map((form) => `_attName is "${escapeForAppleScript(form)}"`)
+      .join(" or ");
     let temporaryDirectory: string;
     try {
       // Mail.app writes the attachment into a private directory created with
@@ -6619,7 +6627,8 @@ ${this.errorEmit("              ")}
 
     const saveAction = `
                 repeat with att in mail attachments of msg
-                  if name of att is "${safeName}" then
+                  set _attName to name of att
+                  if ${nameTest} then
                     set savePath to POSIX file "${safeTemporaryPath}"
                     save att in savePath
                     return "ok"
@@ -6726,15 +6735,43 @@ ${this.errorEmit("              ")}
       dir = mkdtempSync("/private/tmp/amcp-fetch-");
       const dest = join(dir, attachmentName.replace(/[/\\]/g, "_"));
       // Our own mkdtemp: a dot-named attachment (".env") keeps its name here.
-      const ok = this.saveAttachment(id, attachmentName, dir, { stagingDirectory: true });
+      const ok = this.saveAttachment(id, attachmentName, dir);
       if (!ok) {
         return {
           success: false,
           error: `Attachment "${attachmentName}" not found on message ${id}`,
         };
       }
-      const buf = readFileSync(dest);
-      return { success: true, base64: buf.toString("base64"), bytes: buf.length };
+      // Read the same object we validate; do not follow a replaced pathname.
+      const fd = openSync(
+        dest,
+        fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK
+      );
+      try {
+        const stat = fstatSync(fd);
+        if (!stat.isFile()) return { success: false, error: "Attachment is not a regular file." };
+        if (stat.size > MAX_FETCH_ATTACHMENT_BYTES) {
+          return { success: false, error: FETCH_ATTACHMENT_TOO_LARGE };
+        }
+        const chunks: Buffer[] = [];
+        let total = 0;
+        while (total <= MAX_FETCH_ATTACHMENT_BYTES) {
+          const chunk = Buffer.allocUnsafe(
+            Math.min(64 * 1024, MAX_FETCH_ATTACHMENT_BYTES + 1 - total)
+          );
+          const count = readSync(fd, chunk, 0, chunk.length, null);
+          if (count === 0) break;
+          total += count;
+          if (total > MAX_FETCH_ATTACHMENT_BYTES) {
+            return { success: false, error: FETCH_ATTACHMENT_TOO_LARGE };
+          }
+          chunks.push(chunk.subarray(0, count));
+        }
+        const buf = Buffer.concat(chunks, total);
+        return { success: true, base64: buf.toString("base64"), bytes: buf.length };
+      } finally {
+        closeSync(fd);
+      }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) };
     } finally {
