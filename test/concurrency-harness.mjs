@@ -99,7 +99,8 @@ function send(method, params, timeoutMs = 60000) {
 function summarize(label, r) {
   if (r._timedOut) return `${label}: ✗ TRANSPORT TIMEOUT after ${r._ms}ms`;
   const isErr = r.result?.isError;
-  const text = r.result?.content?.[0]?.text?.split("\n")[0]?.slice(0, 60) ?? JSON.stringify(r).slice(0, 60);
+  const text =
+    r.result?.content?.[0]?.text?.split("\n")[0]?.slice(0, 60) ?? JSON.stringify(r).slice(0, 60);
   return `${label}: ${isErr ? "⚠ tool-error" : "✓"} (${r._ms}ms) ${text}`;
 }
 
@@ -112,7 +113,9 @@ async function main() {
     capabilities: {},
     clientInfo: { name: "concurrency-harness", version: "0" },
   });
-  server.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
+  server.stdin.write(
+    JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n"
+  );
 
   // Burst: 10 Mail.app-touching calls fired in one tick. Each spawns its own
   // `tell application "Mail"` osascript — the concurrent-dispatch contention
@@ -148,7 +151,9 @@ async function main() {
   const afterOk = !after._timedOut;
 
   console.log(`\nTransport timeouts (the #11 cascade failure mode): ${timeouts.length}`);
-  console.log(`Mid-burst health-check stayed live (<8s): ${healthOk ? "yes" : "NO"} (${health._ms}ms)`);
+  console.log(
+    `Mid-burst health-check stayed live (<8s): ${healthOk ? "yes" : "NO"} (${health._ms}ms)`
+  );
   console.log(`Mail.app not wedged after burst: ${afterOk ? "yes" : "NO"}`);
 
   const pass = timeouts.length === 0 && healthOk && afterOk;

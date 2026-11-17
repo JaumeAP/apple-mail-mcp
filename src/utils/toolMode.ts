@@ -62,6 +62,7 @@ export const READ_ONLY_TOOLS = new Set([
 export const WRITING_TOOLS = new Set([
   "get-message-rfc822",
   "create-draft",
+  "update-saved-draft",
   "mark-as-read",
   "mark-as-unread",
   "flag-message",

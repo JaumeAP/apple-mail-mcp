@@ -48,7 +48,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/punycode/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/punycode/index.js
 function error(type) {
   throw new RangeError(errors[type]);
 }
@@ -94,7 +94,7 @@ function ucs2decode(string) {
 }
 var maxInt, base, tMin, tMax, skew, damp, initialBias, initialN, delimiter, regexPunycode, regexNonASCII, regexSeparators, errors, baseMinusTMin, floor, stringFromCharCode, basicToDigit, digitToBasic, adapt, decode, encode, toUnicode, toASCII;
 var init_punycode = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/punycode/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/punycode/index.js"() {
     maxInt = 2147483647;
     base = 36;
     tMin = 1;
@@ -265,7 +265,7 @@ var init_punycode = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/shared/url.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/shared/url.js
 import net from "node:net";
 import urllib from "node:url";
 function stripSurroundingWhitespace(input) {
@@ -329,7 +329,7 @@ function normalizeHostname(raw, href) {
 }
 var SLASHLESS_AUTHORITY, LEGACY_TRIM, AUTHORITY, FORBIDDEN_HOST_CHARS, CONTROL_CHARS, parse, resolve;
 var init_url = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/shared/url.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/shared/url.js"() {
     init_punycode();
     SLASHLESS_AUTHORITY = /^([a-zA-Z][a-zA-Z0-9+.-]*:)(?!\/\/)([\s\S]+)$/;
     LEGACY_TRIM = /^[\x00-\x20\u00a0\ufeff]+/;
@@ -404,11 +404,11 @@ var init_url = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/fetch/cookies.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/fetch/cookies.js
 import net2 from "node:net";
 var SESSION_TIMEOUT, Cookies, cookies_default;
 var init_cookies = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/fetch/cookies.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/fetch/cookies.js"() {
     init_url();
     SESSION_TIMEOUT = 1800;
     Cookies = class {
@@ -622,25 +622,26 @@ var init_cookies = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/package-info.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/package-info.js
 var name, version, homepage;
 var init_package_info = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/package-info.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/package-info.js"() {
     name = "nodemailer";
-    version = "10.1.7";
+    version = "10.3.1";
     homepage = "https://nodemailer.com/";
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/errors.js
-var ECONNECTION, ETIMEDOUT, ESOCKET, EENVELOPE, EMESSAGE, ESTREAM, ENOAUTH, EOAUTH2, EMAXLIMIT, EMAXRECIPIENTS, ESENDMAIL, ESES, ECONFIG, EPROXY, EFILEACCESS, EURLACCESS, EFETCH, isTransientError, ERR_ACCESS_DENIED;
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/errors.js
+var ECONNECTION, ETIMEDOUT, ESOCKET, EENVELOPE, EMESSAGE, EOTP, ESTREAM, ENOAUTH, EOAUTH2, EMAXLIMIT, EMAXRECIPIENTS, ESENDMAIL, ESES, ECONFIG, EPROXY, EFILEACCESS, EURLACCESS, EFETCH, isTransientError, isPermanentResponseCode, ERR_ACCESS_DENIED;
 var init_errors = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/errors.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/errors.js"() {
     ECONNECTION = "ECONNECTION";
     ETIMEDOUT = "ETIMEDOUT";
     ESOCKET = "ESOCKET";
     EENVELOPE = "EENVELOPE";
     EMESSAGE = "EMESSAGE";
+    EOTP = "EOTP";
     ESTREAM = "ESTREAM";
     ENOAUTH = "ENOAUTH";
     EOAUTH2 = "EOAUTH2";
@@ -654,14 +655,15 @@ var init_errors = __esm({
     EURLACCESS = "EURLACCESS";
     EFETCH = "EFETCH";
     isTransientError = (err) => err.responseCode === 421 || err.code === ECONNECTION || err.code === ESOCKET || err.code === ETIMEDOUT;
+    isPermanentResponseCode = (responseCode) => responseCode >= 500 && responseCode < 600 && responseCode !== 503;
     ERR_ACCESS_DENIED = "ERR_ACCESS_DENIED";
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/shared/objects.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/shared/objects.js
 var isProtoKey, copyOwnKeys;
 var init_objects = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/shared/objects.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/shared/objects.js"() {
     isProtoKey = (key) => key === "__proto__";
     copyOwnKeys = (target, source, skip) => {
       Object.keys(source || {}).forEach((key) => {
@@ -675,7 +677,7 @@ var init_objects = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/fetch/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/fetch/index.js
 import http from "node:http";
 import https from "node:https";
 import zlib from "node:zlib";
@@ -737,7 +739,7 @@ function nmfetch(url, options) {
   let cookies;
   let body;
   const handler = parsed.protocol === "https:" ? https : http;
-  const headers = {
+  const headers2 = {
     "accept-encoding": "gzip,deflate",
     "user-agent": "nodemailer/" + version
   };
@@ -745,23 +747,23 @@ function nmfetch(url, options) {
     if (isProtoKey(key.toLowerCase().trim())) {
       return;
     }
-    headers[key.toLowerCase().trim()] = options.headers[key];
+    headers2[key.toLowerCase().trim()] = options.headers[key];
   });
   if (options.userAgent) {
-    headers["user-agent"] = options.userAgent;
+    headers2["user-agent"] = options.userAgent;
   }
   if (parsed.auth) {
-    headers.Authorization = "Basic " + Buffer.from(parsed.auth).toString("base64");
+    headers2.Authorization = "Basic " + Buffer.from(parsed.auth).toString("base64");
   }
   if (cookies = options.cookies.get(url)) {
-    headers.cookie = cookies;
+    headers2.cookie = cookies;
   }
   if (options.body) {
     if (options.contentType !== false) {
-      headers["Content-Type"] = options.contentType || "application/x-www-form-urlencoded";
+      headers2["Content-Type"] = options.contentType || "application/x-www-form-urlencoded";
     }
     if (typeof options.body.pipe === "function") {
-      headers["Transfer-Encoding"] = "chunked";
+      headers2["Transfer-Encoding"] = "chunked";
       body = options.body;
       body.on("error", (err) => {
         if (finished3) {
@@ -791,8 +793,8 @@ function nmfetch(url, options) {
       } else {
         body = Buffer.from(options.body.toString().trim());
       }
-      headers["Content-Type"] = options.contentType || "application/x-www-form-urlencoded";
-      headers["Content-Length"] = body.length;
+      headers2["Content-Type"] = options.contentType || "application/x-www-form-urlencoded";
+      headers2["Content-Length"] = body.length;
     }
     method = (options.method || "").toString().trim().toUpperCase() || "POST";
   }
@@ -802,7 +804,7 @@ function nmfetch(url, options) {
     host: parsed.hostname,
     path: parsed.path,
     port: fetchPort(parsed),
-    headers,
+    headers: headers2,
     // Validate TLS certificates by default. Callers that genuinely need to
     // reach a self-signed/internal host opt out explicitly with
     // options.tls = { rejectUnauthorized: false }.
@@ -955,7 +957,7 @@ function nmfetch(url, options) {
 }
 var MAX_REDIRECTS, DEFAULT_TIMEOUT, DEFAULT_MAX_TIME, DEFAULT_MAX_BYTES, TLS_OPTION_KEYS, fetch_default;
 var init_fetch = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/fetch/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/fetch/index.js"() {
     init_url();
     init_cookies();
     init_package_info();
@@ -995,7 +997,7 @@ var init_fetch = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/shared/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/shared/index.js
 import util from "node:util";
 import fs from "node:fs";
 import dns from "node:dns";
@@ -1018,14 +1020,14 @@ function resolveContent(data, key, options, callback) {
   return promise;
 }
 function resolveContentValue(data, key, options, callback) {
-  let content = data && data[key] && data[key].content || data[key];
+  let content2 = data && data[key] && data[key].content || data[key];
   const encoding = (typeof data[key] === "object" && data[key].encoding || "utf8").toString().toLowerCase().replace(/[-_\s]/g, "");
-  if (!content) {
-    return callback(null, content);
+  if (!content2) {
+    return callback(null, content2);
   }
-  if (typeof content === "object") {
-    if (typeof content.pipe === "function") {
-      return resolveStream(content, (err, value) => {
+  if (typeof content2 === "object") {
+    if (typeof content2.pipe === "function") {
+      return resolveStream(content2, (err, value) => {
         if (err) {
           return callback(err);
         }
@@ -1036,11 +1038,11 @@ function resolveContentValue(data, key, options, callback) {
         }
         callback(null, value);
       });
-    } else if (/^data:/i.test(content.path || content.href)) {
-      const parsedDataUri = parseDataURI(content.path || content.href);
+    } else if (/^data:/i.test(content2.path || content2.href)) {
+      const parsedDataUri = parseDataURI(content2.path || content2.href);
       return callback(null, parsedDataUri && parsedDataUri.data ? parsedDataUri.data : Buffer.alloc(0));
-    } else if (content.href || /^https?:\/\//i.test(content.path)) {
-      const url = content.href || content.path;
+    } else if (content2.href || /^https?:\/\//i.test(content2.path)) {
+      const url = content2.href || content2.path;
       if (options.disableUrlAccess) {
         setImmediate(() => {
           const err = new Error("Url access rejected for " + url);
@@ -1049,23 +1051,23 @@ function resolveContentValue(data, key, options, callback) {
         });
         return;
       }
-      return resolveStream(fetch_default(url, { headers: content.httpHeaders, tls: content.tls }), callback);
-    } else if (content.path) {
+      return resolveStream(fetch_default(url, { headers: content2.httpHeaders, tls: content2.tls }), callback);
+    } else if (content2.path) {
       if (options.disableFileAccess) {
         setImmediate(() => {
-          const err = new Error("File access rejected for " + content.path);
+          const err = new Error("File access rejected for " + content2.path);
           err.code = EFILEACCESS;
           callback(err);
         });
         return;
       }
-      return resolveStream(fs.createReadStream(content.path), callback);
+      return resolveStream(fs.createReadStream(content2.path), callback);
     }
   }
   if (typeof data[key].content === "string" && !["utf8", "usascii", "ascii"].includes(encoding)) {
-    content = Buffer.from(data[key].content, encoding);
+    content2 = Buffer.from(data[key].content, encoding);
   }
-  setImmediate(() => callback(null, content));
+  setImmediate(() => callback(null, content2));
 }
 function recordStreamErrors(stream) {
   stream.on("error", (err) => {
@@ -1167,7 +1169,7 @@ function createDefaultLogger(levels) {
 }
 var DNS_TTL, CACHE_CLEANUP_INTERVAL, MAX_CACHE_SIZE, lastCacheCleanup, networkInterfaces, networkInterfacesRead, _readNetworkInterfaces, isFamilySupported, resolve2, dnsCache, formatDNSValue, resolveHostname, parseConnectionUrl, _logFunc, getLogger, callbackPromise, parseDataURI, assign, encodeXText, streamErrors;
 var init_shared = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/shared/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/shared/index.js"() {
     init_url();
     init_fetch();
     init_errors();
@@ -1188,11 +1190,11 @@ var init_shared = __esm({
       return networkInterfaces;
     };
     isFamilySupported = (family, allowInternal) => {
-      const addresses = Object.values(_readNetworkInterfaces() || {}).flat();
-      if (!addresses.length) {
+      const addresses2 = Object.values(_readNetworkInterfaces() || {}).flat();
+      if (!addresses2.length) {
         return true;
       }
-      return addresses.filter((i) => !i.internal || allowInternal).some((i) => i.family === "IPv" + family || i.family === family);
+      return addresses2.filter((i) => !i.internal || allowInternal).some((i) => i.family === "IPv" + family || i.family === family);
     };
     resolve2 = (family, hostname, options, callback) => {
       options = options || {};
@@ -1201,7 +1203,7 @@ var init_shared = __esm({
         return null;
       }
       const dnsResolver = dns.Resolver ? new dns.Resolver(options) : dns;
-      dnsResolver["resolve" + family](hostname, (err, addresses) => {
+      dnsResolver["resolve" + family](hostname, (err, addresses2) => {
         if (err) {
           switch (err.code) {
             case dns.NODATA:
@@ -1215,7 +1217,7 @@ var init_shared = __esm({
           }
           return callback(err);
         }
-        return callback(null, Array.isArray(addresses) ? addresses : [].concat(addresses || []));
+        return callback(null, Array.isArray(addresses2) ? addresses2 : [].concat(addresses2 || []));
       });
       return dns.Resolver ? dnsResolver : null;
     };
@@ -1224,12 +1226,12 @@ var init_shared = __esm({
       if (!value) {
         return Object.assign({}, extra || {});
       }
-      const addresses = value.addresses || [];
-      const host = addresses.length > 0 ? addresses[Math.floor(Math.random() * addresses.length)] : null;
+      const addresses2 = value.addresses || [];
+      const host = addresses2.length > 0 ? addresses2[Math.floor(Math.random() * addresses2.length)] : null;
       return Object.assign({
         host,
         // Include all addresses for connection fallback support
-        _addresses: addresses
+        _addresses: addresses2
       }, extra || {});
     };
     resolveHostname = (options, callback) => {
@@ -1340,16 +1342,16 @@ var init_shared = __esm({
           return;
         }
         try {
-          dns.lookup(host, { all: true }, (err, addresses) => {
+          dns.lookup(host, { all: true }, (err, addresses2) => {
             if (err) {
               if (respondCached(err)) {
                 return;
               }
               return respond(err);
             }
-            const supportedAddresses = addresses ? addresses.filter((addr) => isFamilySupported(addr.family)).map((addr) => addr.address) : [];
-            if (addresses && addresses.length && !supportedAddresses.length) {
-              console.warn(`Failed to resolve IPv${addresses[0].family} addresses with current network`);
+            const supportedAddresses = addresses2 ? addresses2.filter((addr) => isFamilySupported(addr.family)).map((addr) => addr.address) : [];
+            if (addresses2 && addresses2.length && !supportedAddresses.length) {
+              console.warn(`Failed to resolve IPv${addresses2[0].family} addresses with current network`);
             }
             if (!supportedAddresses.length && cached) {
               return respond(null, formatDNSValue(cached.value, {
@@ -1377,13 +1379,13 @@ var init_shared = __esm({
         }
       };
       for (const family of [4, 6]) {
-        const resolver = resolve2(family, host, options, (err, addresses) => {
+        const resolver = resolve2(family, host, options, (err, addresses2) => {
           if (family === 4) {
             ipv4Error = err;
-            ipv4Addresses = addresses || [];
+            ipv4Addresses = addresses2 || [];
           } else {
             ipv6Error = err;
-            ipv6Addresses = addresses || [];
+            ipv6Addresses = addresses2 || [];
           }
           onResolved();
         });
@@ -1579,7 +1581,7 @@ var init_shared = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mime-funcs/mime-types.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mime-funcs/mime-types.js
 import path from "node:path";
 function detectMimeType(filename) {
   if (!filename) {
@@ -1616,7 +1618,7 @@ function detectExtension(mimeType) {
 }
 var defaultMimeType, defaultExtension, mimeTypes, extensions;
 var init_mime_types = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mime-funcs/mime-types.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mime-funcs/mime-types.js"() {
     defaultMimeType = "application/octet-stream";
     defaultExtension = "bin";
     mimeTypes = /* @__PURE__ */ new Map([
@@ -2714,10 +2716,7 @@ var init_mime_types = __esm({
       ["bdm", "application/vnd.syncml.dm+wbxml"],
       ["bed", "application/vnd.realvnc.bed"],
       ["bh2", "application/vnd.fujitsu.oasysprs"],
-      [
-        "bin",
-        ["application/octet-stream", "application/mac-binary", "application/macbinary", "application/x-macbinary", "application/x-binary"]
-      ],
+      ["bin", ["application/octet-stream", "application/mac-binary", "application/macbinary", "application/x-macbinary", "application/x-binary"]],
       ["bm", "image/bmp"],
       ["bmi", "application/vnd.bmi"],
       ["bmp", ["image/bmp", "image/x-windows-bmp"]],
@@ -2762,10 +2761,7 @@ var init_mime_types = __esm({
       ["cii", "application/vnd.anser-web-certificate-issue-initiation"],
       ["cil", "application/vnd.ms-artgalry"],
       ["cla", "application/vnd.claymore"],
-      [
-        "class",
-        ["application/octet-stream", "application/java", "application/java-byte-code", "application/java-vm", "application/x-java-class"]
-      ],
+      ["class", ["application/octet-stream", "application/java", "application/java-byte-code", "application/java-vm", "application/x-java-class"]],
       ["clkk", "application/vnd.crick.clicker.keyboard"],
       ["clkp", "application/vnd.crick.clicker.palette"],
       ["clkt", "application/vnd.crick.clicker.template"],
@@ -3370,10 +3366,7 @@ var init_mime_types = __esm({
       ["sbml", "application/sbml+xml"],
       ["sc", "application/vnd.ibm.secure-container"],
       ["scd", "application/x-msschedule"],
-      [
-        "scm",
-        ["application/vnd.lotus-screencam", "video/x-scm", "text/x-script.guile", "application/x-lotusscreencam", "text/x-script.scheme"]
-      ],
+      ["scm", ["application/vnd.lotus-screencam", "video/x-scm", "text/x-script.guile", "application/x-lotusscreencam", "text/x-script.scheme"]],
       ["scq", "application/scvp-cv-request"],
       ["scs", "application/scvp-cv-response"],
       ["sct", "text/scriptlet"],
@@ -3681,7 +3674,7 @@ var init_mime_types = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/base64/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/base64/index.js
 import { Transform } from "node:stream";
 function encode2(buffer) {
   if (typeof buffer === "string") {
@@ -3716,7 +3709,7 @@ function wrapBuffer(src, lineLength, final) {
 }
 var Encoder;
 var init_base64 = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/base64/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/base64/index.js"() {
     Encoder = class extends Transform {
       constructor(options) {
         super();
@@ -3782,7 +3775,7 @@ var init_base64 = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/qp/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/qp/index.js
 import { Transform as Transform2 } from "node:stream";
 function encode3(buffer) {
   return encodeBytes(typeof buffer === "string" ? Buffer.from(buffer, "utf-8") : buffer);
@@ -3887,7 +3880,7 @@ function checkRanges(nr, ranges) {
 }
 var MIN_LINE_LENGTH, QP_RANGES, QP_LITERAL, HEX_DIGITS, isWhitespace, ENCODE_SLICE_SIZE, Encoder2;
 var init_qp = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/qp/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/qp/index.js"() {
     MIN_LINE_LENGTH = 4;
     QP_RANGES = [
       [9],
@@ -3991,7 +3984,7 @@ var init_qp = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mime-funcs/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mime-funcs/index.js
 function isPlainText(value, isParam) {
   const re = isParam ? /[\x00-\x1f\x7f"\u0080-\uFFFF]/ : /[\x00-\x08\x0b\x0c\x0e-\x1f\u0080-\uFFFF]/;
   return typeof value === "string" && !re.test(value);
@@ -4210,14 +4203,29 @@ function buildHeaderParam(key, data, maxLength) {
     value: item.line
   }));
 }
+function _findCommentEnd(str2, start) {
+  let depth = 0;
+  for (let i = start, len = str2.length; i < len; i++) {
+    const c = str2.charAt(i);
+    if (c === "\\") {
+      i++;
+    } else if (c === "(") {
+      depth++;
+    } else if (c === ")" && --depth === 0) {
+      return i;
+    }
+  }
+  return -1;
+}
 function _isParamName(name2) {
   return !!name2 && !isProtoKey(name2);
 }
-function parseHeaderValue(str2) {
+function parseHeaderValue(str2, options) {
   const response = {
     value: "",
     params: {}
   };
+  let stripComments = !!options?.stripComments;
   const setParam = (name2, value2) => {
     name2 = name2.toLowerCase();
     if (_isParamName(name2) && !Object.prototype.hasOwnProperty.call(response.params, name2)) {
@@ -4262,6 +4270,17 @@ function parseHeaderValue(str2) {
   };
   for (let i = 0, len = str2.length; i < len; i++) {
     chr = str2.charAt(i);
+    if (stripComments && chr === "(" && !quote && !quoteClosed && !(stage === "value" && key !== false && !pendingSpace)) {
+      let end = _findCommentEnd(str2, i);
+      if (end < 0 && str2.indexOf(";", i) < 0) {
+        end = len - 1;
+      }
+      if (end >= 0) {
+        i = end;
+        continue;
+      }
+      stripComments = false;
+    }
     if (stage === "key") {
       if (chr === "=") {
         key = takeValue().trim();
@@ -4446,7 +4465,7 @@ function safeEncodeURIComponent(str2) {
 }
 var TOKEN;
 var init_mime_funcs = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mime-funcs/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mime-funcs/index.js"() {
     init_base64();
     init_qp();
     init_mime_types();
@@ -4455,7 +4474,7 @@ var init_mime_funcs = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/addressparser/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/addressparser/index.js
 function _domainAt(address) {
   const literal = address.charAt(address.length - 1) === "]" ? DOMAIN_LITERAL_TAIL.exec(address) : null;
   return literal ? address.length - literal[1].length - 1 : address.lastIndexOf("@");
@@ -4906,7 +4925,7 @@ function addressparser(str2, options) {
 }
 var TOKEN_OPERATOR, TOKEN_NO_BREAK, TOKEN_DIRTY, TOKEN_ESCAPES, TOKEN_STARTS_ESCAPED, TokenList, DOMAIN_LITERAL_TAIL, HAS_WHITESPACE, QUOTED_LOCAL_ADDR, ADDR_SPEC, LITERAL_ADDR_SPEC, QUOTED_LOCAL_DOMAIN, LOOSE_ADDR_SPEC, LOOSE_TEXT_ADDR, LEADING_QUOTED_STRING, Tokenizer, addressparser_default;
 var init_addressparser = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/addressparser/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/addressparser/index.js"() {
     TOKEN_OPERATOR = 1;
     TOKEN_NO_BREAK = 2;
     TOKEN_DIRTY = 4;
@@ -5245,11 +5264,11 @@ var init_addressparser = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mime-node/last-newline.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mime-node/last-newline.js
 import { Transform as Transform3 } from "node:stream";
 var LastNewline;
 var init_last_newline = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mime-node/last-newline.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mime-node/last-newline.js"() {
     LastNewline = class extends Transform3 {
       constructor() {
         super();
@@ -5279,11 +5298,11 @@ var init_last_newline = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mime-node/le-windows.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mime-node/le-windows.js
 import { Transform as Transform4 } from "node:stream";
 var LeWindows;
 var init_le_windows = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mime-node/le-windows.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mime-node/le-windows.js"() {
     LeWindows = class extends Transform4 {
       constructor(options) {
         super(options);
@@ -5321,11 +5340,11 @@ var init_le_windows = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mime-node/le-unix.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mime-node/le-unix.js
 import { Transform as Transform5 } from "node:stream";
 var LeUnix;
 var init_le_unix = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mime-node/le-unix.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mime-node/le-unix.js"() {
     LeUnix = class extends Transform5 {
       constructor(options) {
         super(options);
@@ -5356,7 +5375,7 @@ var init_le_unix = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mime-node/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mime-node/index.js
 import crypto from "node:crypto";
 import fs2 from "node:fs";
 import { PassThrough as PassThrough2, finished as finished2, pipeline } from "node:stream";
@@ -5414,7 +5433,7 @@ function _stripBoundaryControls(value) {
 }
 var FORMATTED_HEADERS, ATEXT, DOT_ATOM, QUOTED_STRING, PLAIN_ADDRESS, DOMAIN_LITERAL_TAIL2, URL_PARSER_UNSAFE, MAX_DOMAIN_LENGTH, MAX_LABEL_LENGTH, PIPELINE_NOOP, MimeNode, mime_node_default;
 var init_mime_node = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mime-node/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mime-node/index.js"() {
     init_punycode();
     init_shared();
     init_mime_funcs();
@@ -5652,8 +5671,8 @@ var init_mime_node = __esm({
        * @param content Body content
        * @return current node
        */
-      setContent(content) {
-        this.content = content;
+      setContent(content2) {
+        this.content = content2;
         if (typeof this.content.pipe === "function") {
           recordStreamErrors(this.content);
         } else if (typeof this.content === "string") {
@@ -5731,7 +5750,7 @@ var init_mime_node = __esm({
        */
       buildHeaders() {
         const transferEncoding = this.getTransferEncoding();
-        const headers = [];
+        const headers2 = [];
         if (transferEncoding) {
           this.setHeader("Content-Transfer-Encoding", transferEncoding);
         }
@@ -5770,22 +5789,25 @@ var init_mime_node = __esm({
           }
           if (options.prepared) {
             if (options.foldLines) {
-              headers.push(foldLines(key + ": " + value));
+              headers2.push(foldLines(key + ": " + value));
             } else {
-              headers.push(key + ": " + value);
+              headers2.push(key + ": " + value);
             }
             return;
           }
           switch (header.key) {
+            // The comments of a MIME header are not part of its value and are dropped, so a
+            // caller supplied 'boundary=b (comment)' is the boundary b it names, and the
+            // header goes out without the comment
             case "Content-Disposition":
-              structured = parseHeaderValue(value);
+              structured = parseHeaderValue(value, { stripComments: true });
               if (this.filename) {
                 structured.params.filename = this.filename;
               }
               value = buildHeaderValue(structured);
               break;
             case "Content-Type":
-              structured = parseHeaderValue(value);
+              structured = parseHeaderValue(value, { stripComments: true });
               structured.value = (structured.value || "").toString().replace(/[\x00-\x1f\x7f]/g, "");
               this._handleContentType(structured);
               if (structured.value.match(/^text\/plain\b/) && typeof this.content === "string" && /[\u0080-\uFFFF]/.test(this.content)) {
@@ -5813,7 +5835,7 @@ var init_mime_node = __esm({
               }
               break;
           }
-          value = this._encodeHeaderValue(key, value);
+          value = this.encodeHeaderValue(key, value);
           if (!(value || "").toString().trim()) {
             return;
           }
@@ -5824,9 +5846,9 @@ var init_mime_node = __esm({
               key = cleaned;
             }
           }
-          headers.push(foldLines(key + ": " + value, 76));
+          headers2.push(foldLines(key + ": " + value, 76));
         });
-        return headers.join("\r\n");
+        return headers2.join("\r\n");
       }
       /**
        * Streams the rfc2822 message from the current node. If this is a root node,
@@ -6060,19 +6082,19 @@ var init_mime_node = __esm({
        * @return Address object
        */
       getAddresses() {
-        const addresses = {};
+        const addresses2 = {};
         const seenByKey = /* @__PURE__ */ new Map();
         this._headers.forEach((header) => {
           const key = header.key.toLowerCase();
           if (["from", "sender", "reply-to", "to", "cc", "bcc"].includes(key)) {
-            if (!Array.isArray(addresses[key])) {
-              addresses[key] = [];
+            if (!Array.isArray(addresses2[key])) {
+              addresses2[key] = [];
               seenByKey.set(key, /* @__PURE__ */ new Set());
             }
-            this._convertAddresses(this._parseAddresses(header.value), addresses[key], seenByKey.get(key));
+            this._convertAddresses(this._parseAddresses(header.value), addresses2[key], seenByKey.get(key));
           }
         });
-        return addresses;
+        return addresses2;
       }
       /**
        * Generates and returns SMTP envelope with the sender address and a list of recipients addresses
@@ -6170,14 +6192,14 @@ var init_mime_node = __esm({
        * @returns The error to stop with, or null when the content can be read
        * @internal
        */
-      _takeStreamContent(content) {
-        if (Object.prototype.toString.call(content) === "[object Error]") {
-          return content;
+      _takeStreamContent(content2) {
+        if (Object.prototype.toString.call(content2) === "[object Error]") {
+          return content2;
         }
-        if (!content || typeof content.pipe !== "function" || content._resolvedValue) {
+        if (!content2 || typeof content2.pipe !== "function" || content2._resolvedValue) {
           return null;
         }
-        return unreadableStreamError(content);
+        return unreadableStreamError(content2);
       }
       /**
        * Detects and returns handle to a stream related with the content.
@@ -6186,50 +6208,50 @@ var init_mime_node = __esm({
        * @returns Stream object
        * @internal
        */
-      _getStream(content) {
+      _getStream(content2) {
         let contentStream;
-        if (content._resolvedValue) {
+        if (content2._resolvedValue) {
           contentStream = new PassThrough2();
           setImmediate(() => {
             try {
-              contentStream.end(content._resolvedValue);
+              contentStream.end(content2._resolvedValue);
             } catch (_err) {
               contentStream.emit("error", _err);
             }
           });
           return contentStream;
         }
-        if (typeof content.pipe === "function") {
-          return content;
+        if (typeof content2.pipe === "function") {
+          return content2;
         }
-        if (content && typeof content.path === "string" && !content.href) {
+        if (content2 && typeof content2.path === "string" && !content2.href) {
           if (this._accessDisabled("disableFileAccess")) {
             contentStream = new PassThrough2();
             setImmediate(() => {
-              const err = new Error("File access rejected for " + content.path);
+              const err = new Error("File access rejected for " + content2.path);
               err.code = EFILEACCESS;
               contentStream.emit("error", err);
             });
             return contentStream;
           }
-          return fs2.createReadStream(content.path);
+          return fs2.createReadStream(content2.path);
         }
-        if (content && typeof content.href === "string") {
+        if (content2 && typeof content2.href === "string") {
           if (this._accessDisabled("disableUrlAccess")) {
             contentStream = new PassThrough2();
             setImmediate(() => {
-              const err = new Error("Url access rejected for " + content.href);
+              const err = new Error("Url access rejected for " + content2.href);
               err.code = EURLACCESS;
               contentStream.emit("error", err);
             });
             return contentStream;
           }
-          return fetch_default(content.href, { headers: content.httpHeaders, tls: content.tls });
+          return fetch_default(content2.href, { headers: content2.httpHeaders, tls: content2.tls });
         }
         contentStream = new PassThrough2();
         setImmediate(() => {
           try {
-            contentStream.end(content || "");
+            contentStream.end(content2 || "");
           } catch (_err) {
             contentStream.emit("error", _err);
           }
@@ -6244,7 +6266,7 @@ var init_mime_node = __esm({
        * @return An array of address objects
        * @internal
        */
-      _parseAddresses(addresses) {
+      _parseAddresses(addresses2) {
         const flattened = [];
         const seen = /* @__PURE__ */ new WeakSet();
         const stack = [];
@@ -6254,7 +6276,7 @@ var init_mime_node = __esm({
             stack.push({ list, pos: 0 });
           }
         };
-        enter(Array.isArray(addresses) ? addresses : [addresses]);
+        enter(Array.isArray(addresses2) ? addresses2 : [addresses2]);
         while (stack.length) {
           const frame = stack[stack.length - 1];
           if (frame.pos >= frame.list.length) {
@@ -6318,8 +6340,8 @@ var init_mime_node = __esm({
        * @return An array of address objects
        * @internal
        */
-      _parseEnvelopeAddresses(addresses) {
-        return this._parseAddresses(addresses).map((entry) => {
+      _parseEnvelopeAddresses(addresses2) {
+        return this._parseAddresses(addresses2).map((entry) => {
           if (entry.address || entry.group || !entry.name || /[\s@]/.test(entry.name)) {
             return entry;
           }
@@ -6334,7 +6356,7 @@ var init_mime_node = __esm({
        * @internal
        */
       _normalizeHeaderKey(key) {
-        key = (key || "").toString().replace(/[\s\x00-\x20\x7f:]/g, "").toLowerCase().replace(/^X-SMTPAPI$|^(MIME|DKIM|ARC|BIMI)\b|^[a-z]|-(SPF|FBL|ID|MD5)$|-[a-z]/gi, (c) => c.toUpperCase()).replace(/^Content-Features$/i, "Content-features");
+        key = (key || "").toString().replace(/[\s\x00-\x20\x7f:]/g, "").toLowerCase().replace(/^X-SMTPAPI$|^(MIME|DKIM|ARC|BIMI)\b|^OTP(?=-Token$)|^[a-z]|-(SPF|FBL|ID|MD5)$|-[a-z]/gi, (c) => c.toUpperCase()).replace(/^Content-Features$/i, "Content-features");
         return key;
       }
       /**
@@ -6364,13 +6386,19 @@ var init_mime_node = __esm({
         return _stripBoundaryControls(this.rootNode.boundaryPrefix + "-" + this.rootNode.baseBoundary) + "-Part_" + this._nodeId;
       }
       /**
-       * Encodes a header value for use in the generated rfc2822 email.
+       * Encodes a header value the way this node encodes it in the generated message:
+       * address headers are punycoded and mime encoded, message id headers get their
+       * angle brackets, a Date object is formatted and any other value is mime encoded
+       * when it holds non-ascii or control characters (using the node's `textEncoding`).
        *
-       * @param key Header key
+       * The result is a single unfolded line without the key. Fold it before writing it
+       * into a message, `key + ': ' + value` folded at 76 characters is what the node does.
+       *
+       * @param key Header key, case insensitive
        * @param value Header value
-       * @internal
+       * @returns Encoded header value
        */
-      _encodeHeaderValue(key, value) {
+      encodeHeaderValue(key, value) {
         key = this._normalizeHeaderKey(key);
         switch (key) {
           // Structured headers
@@ -6384,7 +6412,7 @@ var init_mime_node = __esm({
           // values enclosed in <>
           case "Message-ID":
           case "In-Reply-To":
-          case "Content-Id":
+          case "Content-ID":
             value = (value || "").toString().replace(/\r?\n|\r/g, " ").replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "");
             if (value.charAt(0) !== "<") {
               value = "<" + value;
@@ -6393,6 +6421,11 @@ var init_mime_node = __esm({
               value = value + ">";
             }
             return value;
+          // a structured field (RFC 9651) that can not be mime encoded, an encoded word would
+          // turn its quoted strings into text that no structured field parser reads. Only
+          // the characters that can not appear in a header at all are removed
+          case "OTP-Token":
+            return (value || "").toString().replace(/\r?\n|\r/g, " ").replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "");
           // space separated list of values enclosed in <>
           case "References": {
             const ids = [];
@@ -6425,6 +6458,27 @@ var init_mime_node = __esm({
         }
       }
       /**
+       * Encodes a header value without a node at hand. Same as the instance method of a
+       * node created with the given options.
+       *
+       * @param key Header key, case insensitive
+       * @param value Header value
+       * @param [options] Encoding options
+       * @param [options.textEncoding] either 'Q' (the default) or 'B'
+       * @returns Encoded header value
+       */
+      static encodeHeaderValue(key, value, options) {
+        return new _MimeNode(false, { textEncoding: options?.textEncoding }).encodeHeaderValue(key, value);
+      }
+      /**
+       * Alias of encodeHeaderValue, kept for callers that used the method before it was public
+       *
+       * @internal
+       */
+      _encodeHeaderValue(key, value) {
+        return this.encodeHeaderValue(key, value);
+      }
+      /**
        * Rebuilds address object using punycode and other adjustments
        *
        * @param addresses An array of address objects
@@ -6433,7 +6487,7 @@ var init_mime_node = __esm({
        * @return address string
        * @internal
        */
-      _convertAddresses(addresses, uniqueList, seenAddresses) {
+      _convertAddresses(addresses2, uniqueList, seenAddresses) {
         const values = [];
         uniqueList = uniqueList || [];
         if (!seenAddresses) {
@@ -6442,7 +6496,7 @@ var init_mime_node = __esm({
             seenAddresses.add(uniqueList[i].address);
           }
         }
-        [].concat(addresses || []).forEach((address) => {
+        [].concat(addresses2 || []).forEach((address) => {
           if (address.address) {
             address.address = this._normalizeAddress(address.address);
             if (!address.name) {
@@ -6592,16 +6646,69 @@ var init_mime_node = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mail-composer/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mail-composer/index.js
 function isContentObject(value) {
-  const content = value;
-  return typeof value === "object" && !!(content.content || content.path || content.href || content.raw);
+  const content2 = value;
+  return typeof value === "object" && !!(content2.content || content2.path || content2.href || content2.raw);
+}
+function fitsSevenBit(content2) {
+  let at;
+  let length;
+  if (typeof content2 === "string") {
+    at = (i) => content2.charCodeAt(i);
+    length = content2.length;
+  } else if (Buffer.isBuffer(content2)) {
+    at = (i) => content2[i];
+    length = content2.length;
+  } else {
+    return false;
+  }
+  let lineLength = 0;
+  for (let i = 0; i < length; i++) {
+    const c = at(i);
+    if (c === 0 || c > 127) {
+      return false;
+    }
+    if (c === 10 || c === 13) {
+      lineLength = 0;
+    } else if (++lineLength > 998) {
+      return false;
+    }
+  }
+  return true;
+}
+function formatOtpToken(otp) {
+  if (typeof otp.code !== "string" || !/^[\x20-\x7e]+$/.test(otp.code)) {
+    throw otpError("The otp code must be a non-empty string of printable ASCII characters");
+  }
+  return quoteString(otp.code) + "; origin=" + quoteString(getOtpOrigin(otp.origin));
+}
+function getOtpOrigin(origin) {
+  let url;
+  try {
+    url = new URL(String(origin));
+  } catch {
+  }
+  if (!url || url.username || url.password || !/^([a-z0-9_-]+\.)*[a-z0-9_-]+$|^\[[0-9a-f:.]+\]$/.test(url.hostname)) {
+    throw otpError("The otp origin must be an absolute https URL");
+  }
+  const isLoopback = /^(localhost|.+\.localhost|127(\.\d+){3}|\[::1\])$/.test(url.hostname);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && isLoopback)) {
+    throw otpError("The otp origin must be an https URL, or an http URL on a loopback host");
+  }
+  return url.origin;
+}
+function otpError(message) {
+  const err = new Error(message);
+  err.code = EOTP;
+  return err;
 }
 var MailComposer, mail_composer_default;
 var init_mail_composer = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mail-composer/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mail-composer/index.js"() {
     init_mime_node();
     init_mime_funcs();
+    init_errors();
     init_shared();
     MailComposer = class {
       constructor(mail) {
@@ -6639,6 +6746,9 @@ var init_mail_composer = __esm({
         if (this.mail.headers) {
           this.message.addHeader(this.mail.headers);
         }
+        if (this.mail.otp) {
+          this.message.setHeader("OTP-Token", formatOtpToken(this.mail.otp));
+        }
         ["from", "sender", "to", "cc", "bcc", "reply-to", "in-reply-to", "references", "subject", "message-id", "date"].forEach((header) => {
           const key = header.replace(/-(\w)/g, (o, c) => c.toUpperCase());
           if (this.mail[key]) {
@@ -6671,7 +6781,7 @@ var init_mail_composer = __esm({
           if ("contentTransferEncoding" in attachment) {
             contentTransferEncoding = attachment.contentTransferEncoding;
           } else if (isMessageNode) {
-            contentTransferEncoding = "8bit";
+            contentTransferEncoding = !attachment.encoding && fitsSevenBit(attachment.content) ? "7bit" : "8bit";
           } else {
             contentTransferEncoding = "base64";
           }
@@ -7086,7 +7196,7 @@ var init_mail_composer = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/dkim/message-parser.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/dkim/message-parser.js
 import { Transform as Transform6 } from "node:stream";
 function _trimFieldName(str2) {
   let start = 0;
@@ -7101,7 +7211,7 @@ function _trimFieldName(str2) {
 }
 var MessageParser, message_parser_default;
 var init_message_parser = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/dkim/message-parser.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/dkim/message-parser.js"() {
     MessageParser = class extends Transform6 {
       constructor(options) {
         super(options);
@@ -7229,12 +7339,12 @@ var init_message_parser = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/dkim/relaxed-body.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/dkim/relaxed-body.js
 import { Transform as Transform7 } from "node:stream";
 import crypto2 from "node:crypto";
 var CHAR_CR, CHAR_LF, CHAR_SPACE, CHAR_TAB, CRLF, EMPTY_LINES, RelaxedBody, relaxed_body_default;
 var init_relaxed_body = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/dkim/relaxed-body.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/dkim/relaxed-body.js"() {
     CHAR_CR = 13;
     CHAR_LF = 10;
     CHAR_SPACE = 32;
@@ -7356,18 +7466,18 @@ var init_relaxed_body = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/dkim/sign.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/dkim/sign.js
 import crypto3 from "node:crypto";
 function unsupportedHashAlgoError(hashAlgo) {
   const err = new Error('Unsupported DKIM hash algorithm "' + hashAlgo + '"');
   err.code = ECONFIG;
   return err;
 }
-function sign(headers, hashAlgo, bodyHash, options) {
+function sign(headers2, hashAlgo, bodyHash, options) {
   options = options || {};
-  const defaultFieldNames = "From:Sender:Reply-To:Subject:Date:Message-ID:To:Cc:MIME-Version:Content-Type:Content-Transfer-Encoding:Content-ID:Content-Description:Resent-Date:Resent-From:Resent-Sender:Resent-To:Resent-Cc:Resent-Message-ID:In-Reply-To:References:List-Id:List-Help:List-Unsubscribe:List-Subscribe:List-Post:List-Owner:List-Archive";
+  const defaultFieldNames = "From:Sender:Reply-To:Subject:Date:Message-ID:To:Cc:MIME-Version:Content-Type:Content-Transfer-Encoding:Content-ID:Content-Description:Resent-Date:Resent-From:Resent-Sender:Resent-To:Resent-Cc:Resent-Message-ID:In-Reply-To:References:List-Id:List-Help:List-Unsubscribe:List-Subscribe:List-Post:List-Owner:List-Archive:OTP-Token";
   const fieldNames = options.headerFieldNames || defaultFieldNames;
-  const canonicalizedHeaderData = relaxedHeaders(headers, fieldNames, options.skipFields);
+  const canonicalizedHeaderData = relaxedHeaders(headers2, fieldNames, options.skipFields);
   const dkimHeader = generateDKIMHeader(options.domainName, options.keySelector, canonicalizedHeaderData.fieldNames, hashAlgo, bodyHash);
   canonicalizedHeaderData.headers += "dkim-signature:" + relaxedHeaderLine(dkimHeader);
   let signer;
@@ -7399,7 +7509,7 @@ function generateDKIMHeader(domainName, keySelector, fieldNames, hashAlgo, bodyH
   ].join("; ");
   return foldLines("DKIM-Signature: " + dkim, 76) + ";\r\n b=";
 }
-function relaxedHeaders(headers, fieldNames, skipFields) {
+function relaxedHeaders(headers2, fieldNames, skipFields) {
   const includedFields = /* @__PURE__ */ new Set();
   const skip = /* @__PURE__ */ new Set();
   const headerFields = /* @__PURE__ */ new Map();
@@ -7409,8 +7519,8 @@ function relaxedHeaders(headers, fieldNames, skipFields) {
   (fieldNames || "").toLowerCase().split(":").filter((field) => !skip.has(field.trim())).forEach((field) => {
     includedFields.add(field.trim());
   });
-  for (let i = headers.length - 1; i >= 0; i--) {
-    const line = headers[i];
+  for (let i = headers2.length - 1; i >= 0; i--) {
+    const line = headers2[i];
     if (includedFields.has(line.key) && !headerFields.has(line.key)) {
       headerFields.set(line.key, relaxedHeaderLine(line.line));
     }
@@ -7433,7 +7543,7 @@ function relaxedHeaderLine(line) {
 }
 var sign_default;
 var init_sign = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/dkim/sign.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/dkim/sign.js"() {
     init_punycode();
     init_mime_funcs();
     init_errors();
@@ -7443,14 +7553,14 @@ var init_sign = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/dkim/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/dkim/index.js
 import { PassThrough as PassThrough3 } from "node:stream";
 import fs3 from "node:fs";
 import path2 from "node:path";
 import crypto4 from "node:crypto";
 var DKIM_ALGO, MAX_MESSAGE_SIZE, DKIMSigner, DKIM, dkim_default;
 var init_dkim = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/dkim/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/dkim/index.js"() {
     init_message_parser();
     init_relaxed_body();
     init_sign();
@@ -7667,7 +7777,7 @@ var init_dkim = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/smtp-connection/http-proxy-client.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/smtp-connection/http-proxy-client.js
 import net5 from "node:net";
 import tls from "node:tls";
 function httpProxyClient(proxyUrl, destinationPort, destinationHost, tlsOptions, callback) {
@@ -7797,7 +7907,7 @@ function httpProxyClient(proxyUrl, destinationPort, destinationHost, tlsOptions,
 }
 var MAX_RESPONSE_HEADER_BYTES, unbracket, http_proxy_client_default;
 var init_http_proxy_client = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/smtp-connection/http-proxy-client.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/smtp-connection/http-proxy-client.js"() {
     init_url();
     init_errors();
     MAX_RESPONSE_HEADER_BYTES = 64 * 1024;
@@ -7806,10 +7916,10 @@ var init_http_proxy_client = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mailer/mail-message.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mailer/mail-message.js
 var hasOwn, MailMessage;
 var init_mail_message = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mailer/mail-message.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mailer/mail-message.js"() {
     init_shared();
     init_mime_node();
     init_mime_funcs();
@@ -7991,7 +8101,7 @@ var init_mail_message = __esm({
             value = value && value.value || value;
             if (value) {
               if (["references", "in-reply-to", "message-id", "content-id"].includes(key)) {
-                value = this.message._encodeHeaderValue(key, value);
+                value = this.message.encodeHeaderValue(key, value);
               }
               data.normalizedHeaders[key] = value;
             }
@@ -8003,10 +8113,10 @@ var init_mail_message = __esm({
             });
           }
           if (data.references) {
-            data.normalizedHeaders.references = this.message._encodeHeaderValue("references", data.references);
+            data.normalizedHeaders.references = this.message.encodeHeaderValue("references", data.references);
           }
           if (data.inReplyTo) {
-            data.normalizedHeaders["in-reply-to"] = this.message._encodeHeaderValue("in-reply-to", data.inReplyTo);
+            data.normalizedHeaders["in-reply-to"] = this.message.encodeHeaderValue("in-reply-to", data.inReplyTo);
           }
           return callback(null, data);
         });
@@ -8088,7 +8198,7 @@ var init_mail_message = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mailer/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mailer/index.js
 import { EventEmitter } from "node:events";
 import util2 from "node:util";
 import net6 from "node:net";
@@ -8096,7 +8206,7 @@ import dns2 from "node:dns";
 import crypto5 from "node:crypto";
 var DEFAULT_MAX_RECIPIENTS, Mail, mailer_default;
 var init_mailer = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/mailer/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/mailer/index.js"() {
     init_shared();
     init_mime_types();
     init_mail_composer();
@@ -8452,11 +8562,11 @@ var init_mailer = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/smtp-connection/data-stream.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/smtp-connection/data-stream.js
 import { Transform as Transform8 } from "node:stream";
 var INSERT_LF, INSERT_LF_DOT, INSERT_CR, INSERT_DOT, DataStream;
 var init_data_stream = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/smtp-connection/data-stream.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/smtp-connection/data-stream.js"() {
     INSERT_LF = Buffer.from("\n");
     INSERT_LF_DOT = Buffer.from("\n.");
     INSERT_CR = Buffer.from("\r");
@@ -8543,7 +8653,40 @@ var init_data_stream = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/smtp-connection/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/smtp-connection/server-message-id.js
+function sesRegion(host) {
+  const labels = host.toLowerCase().replace(/\.$/, "").split(".");
+  const domain = labels.slice(-2).join(".");
+  if (domain !== "amazonaws.com" && domain !== "awsapps.com") {
+    return void 0;
+  }
+  return labels.slice(0, -2).find((label) => AWS_REGION.test(label));
+}
+function parseServerMessageId(response, host) {
+  const reply = (response || "").toString().trim();
+  const outlook = reply.match(OUTLOOK_REPLY);
+  if (outlook) {
+    return outlook[1];
+  }
+  const ses = reply.match(SES_REPLY);
+  if (ses && host) {
+    const region = sesRegion(host);
+    if (region) {
+      return "<" + ses[1].toLowerCase() + "@" + (region === "us-east-1" ? "email" : region) + ".amazonses.com>";
+    }
+  }
+  return void 0;
+}
+var OUTLOOK_REPLY, SES_REPLY, AWS_REGION;
+var init_server_message_id = __esm({
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/smtp-connection/server-message-id.js"() {
+    OUTLOOK_REPLY = /^250 2\.0\.0 OK (<[^<>\s]+\.prod\.outlook\.com>)/i;
+    SES_REPLY = /^250 Ok ([0-9a-f]+(?:-[0-9a-f]+)+)$/i;
+    AWS_REGION = /^[a-z]{2}(?:-[a-z]+)+-\d+$/;
+  }
+});
+
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/smtp-connection/index.js
 import { EventEmitter as EventEmitter2 } from "node:events";
 import net7 from "node:net";
 import tls2 from "node:tls";
@@ -8585,10 +8728,11 @@ function maskAuthCommand(cmd) {
 }
 var CONNECTION_TIMEOUT, SOCKET_TIMEOUT, GREETING_TIMEOUT, DNS_TIMEOUT, CLOSE_TIMEOUT, KEEPALIVE_DELAY, TEARDOWN_NOOP, MAX_RESPONSE_SIZE, SMTPConnection, smtp_connection_default;
 var init_smtp_connection = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/smtp-connection/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/smtp-connection/index.js"() {
     init_package_info();
     init_data_stream();
     init_shared();
+    init_server_message_id();
     init_errors();
     CONNECTION_TIMEOUT = 2 * 60 * 1e3;
     SOCKET_TIMEOUT = 10 * 60 * 1e3;
@@ -8744,15 +8888,15 @@ var init_smtp_connection = __esm({
             }
           }
           return this._resolveAndConnect(opts, (resolved) => {
-            let addresses = resolved._addresses || [];
+            let addresses2 = resolved._addresses || [];
             if (opts.localAddress) {
               const localFamily = net7.isIPv6(opts.localAddress) ? 6 : 4;
-              const sameFamily = addresses.filter((addr) => net7.isIP(addr) === localFamily);
-              addresses = sameFamily.length ? sameFamily : addresses;
+              const sameFamily = addresses2.filter((addr) => net7.isIP(addr) === localFamily);
+              addresses2 = sameFamily.length ? sameFamily : addresses2;
             }
-            if (addresses.length > 1) {
-              const ipv6 = addresses.filter((addr) => net7.isIPv6(addr));
-              const ipv4 = addresses.filter((addr) => !net7.isIPv6(addr));
+            if (addresses2.length > 1) {
+              const ipv6 = addresses2.filter((addr) => net7.isIPv6(addr));
+              const ipv4 = addresses2.filter((addr) => !net7.isIPv6(addr));
               const ordered = shuffle(ipv6).concat(shuffle(ipv4));
               opts.host = this.host;
               opts.autoSelectFamily = true;
@@ -8767,8 +8911,8 @@ var init_smtp_connection = __esm({
                 }
                 setImmediate(() => callback(null, ordered[0], net7.isIPv6(ordered[0]) ? 6 : 4));
               });
-            } else if (addresses.length) {
-              opts.host = addresses[0];
+            } else if (addresses2.length) {
+              opts.host = addresses2[0];
             }
             this._connectToHost(opts, this.secureConnection);
           });
@@ -9115,6 +9259,14 @@ var init_smtp_connection = __esm({
             result.messageTime = Date.now() - envelopeTime;
             result.messageSize = stream.outByteCount;
             result.response = str2;
+            const serverMessageId = parseServerMessageId(result.response, this.options.host);
+            if (serverMessageId) {
+              result.serverMessageId = serverMessageId;
+            }
+            const rejectedErrors = this._envelope?.rejectedErrors;
+            if (!result.rejectedErrors && rejectedErrors && rejectedErrors.length) {
+              result.rejectedErrors = rejectedErrors;
+            }
             return callback(null, result);
           });
           if (typeof message.pipe === "function") {
@@ -9308,6 +9460,7 @@ var init_smtp_connection = __esm({
         const responseCode = typeof response === "string" && Number((response.match(/^\d+/) || [])[0]) || false;
         if (responseCode) {
           err.responseCode = responseCode;
+          err.permanent = isPermanentResponseCode(responseCode);
         }
         if (command) {
           err.command = command;
@@ -10275,12 +10428,12 @@ var init_smtp_connection = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/xoauth2/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/xoauth2/index.js
 import { Stream } from "node:stream";
 import crypto7 from "node:crypto";
 var XOAuth2, xoauth2_default;
 var init_xoauth2 = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/xoauth2/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/xoauth2/index.js"() {
     init_fetch();
     init_shared();
     init_errors();
@@ -10614,11 +10767,11 @@ var init_xoauth2 = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/smtp-pool/pool-resource.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/smtp-pool/pool-resource.js
 import { EventEmitter as EventEmitter3 } from "node:events";
 var PoolResource;
 var init_pool_resource = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/smtp-pool/pool-resource.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/smtp-pool/pool-resource.js"() {
     init_smtp_connection();
     init_shared();
     init_xoauth2();
@@ -10898,10 +11051,10 @@ var init_pool_resource = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/well-known/services.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/well-known/services.js
 var services;
 var init_services = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/well-known/services.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/well-known/services.js"() {
     services = {
       "126": {
         "description": "126 Mail (NetEase)",
@@ -11107,6 +11260,13 @@ var init_services = __esm({
         "description": "GoDaddy Email (Europe)",
         "host": "smtp.europe.secureserver.net",
         "port": 25
+      },
+      "Groundmail": {
+        "description": "Groundmail",
+        "host": "smtp.groundmail.dev",
+        "port": 587,
+        "secure": false,
+        "requireTLS": true
       },
       "hot.ee": {
         "description": "Hot.ee (Estonian email provider)",
@@ -11582,7 +11742,7 @@ var init_services = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/well-known/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/well-known/index.js
 function normalizeKey(key) {
   return key.replace(/[^a-zA-Z0-9.-]/g, "").toLowerCase();
 }
@@ -11601,7 +11761,7 @@ function wellKnown(key) {
 }
 var normalized;
 var init_well_known = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/well-known/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/well-known/index.js"() {
     init_services();
     normalized = {};
     Object.keys(services).forEach((key) => {
@@ -11618,11 +11778,11 @@ var init_well_known = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/smtp-pool/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/smtp-pool/index.js
 import { EventEmitter as EventEmitter4 } from "node:events";
 var REQUEUE_BASE_DELAY, REQUEUE_MAX_DELAY, SMTPPool, smtp_pool_default;
 var init_smtp_pool = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/smtp-pool/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/smtp-pool/index.js"() {
     init_pool_resource();
     init_smtp_connection();
     init_well_known();
@@ -11680,6 +11840,7 @@ var init_smtp_pool = __esm({
         this._queue = [];
         this._connections = [];
         this._connectionCounter = 0;
+        this._pending = 0;
         this.idling = true;
         setImmediate(() => {
           if (this.idling) {
@@ -11710,10 +11871,18 @@ var init_smtp_pool = __esm({
           setImmediate(() => callback(err));
           return false;
         }
+        let counted = true;
+        this._pending++;
         this._queue.push({
           mail,
           requeueAttempts: 0,
-          callback
+          callback: (err, info) => {
+            if (counted) {
+              counted = false;
+              this._pending--;
+            }
+            callback(err, info);
+          }
         });
         if (this.idling && this._queue.length >= this.options.maxConnections) {
           this.idling = false;
@@ -12023,6 +12192,19 @@ var init_smtp_pool = __esm({
       isIdle() {
         return this.idling;
       }
+      /**
+       * Counts the messages the pool has not finished with yet: the ones waiting in the queue
+       * plus the ones a connection is transmitting right now. isIdle() only tells whether the
+       * pool can take another message, it is already true while a message is still being sent,
+       * so use this to check that nothing would be lost by closing the pool. A message that is
+       * re-queued after its connection dropped is counted until its callback runs, also while it waits to be put back on the queue, and
+       * it is no longer counted by the time its callback runs.
+       *
+       * @returns Number of queued and in-flight messages
+       */
+      pendingCount() {
+        return this._pending;
+      }
       verify(callback) {
         let promise;
         if (!callback) {
@@ -12114,11 +12296,11 @@ var init_smtp_pool = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/smtp-transport/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/smtp-transport/index.js
 import { EventEmitter as EventEmitter5 } from "node:events";
 var MESSAGE_AUTH_KEYS, SMTPTransport, smtp_transport_default;
 var init_smtp_transport = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/smtp-transport/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/smtp-transport/index.js"() {
     init_smtp_connection();
     init_well_known();
     init_shared();
@@ -12446,12 +12628,12 @@ var init_smtp_transport = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/sendmail-transport/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/sendmail-transport/index.js
 import { spawn } from "node:child_process";
 import { pipeline as pipeline2 } from "node:stream";
 var STDIN_ERROR_EXIT_WAIT, SendmailTransport, sendmail_transport_default;
 var init_sendmail_transport = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/sendmail-transport/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/sendmail-transport/index.js"() {
     init_package_info();
     init_shared();
     init_errors();
@@ -12620,10 +12802,10 @@ var init_sendmail_transport = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/stream-transport/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/stream-transport/index.js
 var StreamTransport, stream_transport_default;
 var init_stream_transport = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/stream-transport/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/stream-transport/index.js"() {
     init_package_info();
     init_shared();
     init_le_windows();
@@ -12717,10 +12899,10 @@ var init_stream_transport = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/json-transport/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/json-transport/index.js
 var JSONTransport, json_transport_default;
 var init_json_transport = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/json-transport/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/json-transport/index.js"() {
     init_package_info();
     init_shared();
     JSONTransport = class {
@@ -12776,7 +12958,7 @@ var init_json_transport = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/ses-transport/index.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/ses-transport/index.js
 import EventEmitter6 from "node:events";
 function tagSesError(err) {
   if (err && typeof err === "object" && !err.code) {
@@ -12786,7 +12968,7 @@ function tagSesError(err) {
 }
 var SESTransport, ses_transport_default;
 var init_ses_transport = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/ses-transport/index.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/ses-transport/index.js"() {
     init_package_info();
     init_shared();
     init_errors();
@@ -12968,7 +13150,7 @@ var init_ses_transport = __esm({
   }
 });
 
-// node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/nodemailer.js
+// node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/nodemailer.js
 function createTransport(transporter, defaults) {
   let options;
   if (
@@ -13091,7 +13273,7 @@ function getTestMessageUrl(info) {
 }
 var etherealApi, etherealWeb, etherealApiKey, etherealCache, testAccount, nodemailer, nodemailer_default;
 var init_nodemailer = __esm({
-  "node_modules/.pnpm/nodemailer@10.1.7/node_modules/nodemailer/dist/esm/nodemailer.js"() {
+  "node_modules/.pnpm/nodemailer@10.3.1/node_modules/nodemailer/dist/esm/nodemailer.js"() {
     init_mailer();
     init_shared();
     init_smtp_pool();
@@ -13130,18 +13312,22 @@ function decodeInlineAttachment(contentBase64) {
   if (!isInlineAttachmentBase64WithinLimit(contentBase64)) {
     throw new Error("Inline attachment exceeds the 25 MiB decoded size limit.");
   }
-  const content = Buffer.from(contentBase64, "base64");
-  if (content.length > MAX_INLINE_ATTACHMENT_BYTES) {
+  const content2 = Buffer.from(contentBase64, "base64");
+  if (content2.length > MAX_INLINE_ATTACHMENT_BYTES) {
     throw new Error("Inline attachment exceeds the 25 MiB decoded size limit.");
   }
-  return content;
+  return content2;
 }
-var MAX_INLINE_ATTACHMENT_BYTES, MAX_IMAP_ATTACHMENT_BYTES, MAX_INLINE_ATTACHMENT_BASE64_CHARS, MAX_INLINE_ATTACHMENT_BASE64_INPUT_CHARS;
+var MAX_INLINE_ATTACHMENT_BYTES, MAX_IMAP_ATTACHMENT_BYTES, MAX_FETCH_ATTACHMENT_BYTES, MAX_FETCH_ATTACHMENT_BASE64_CHARS, MAX_FETCH_ATTACHMENT_RESPONSE_BYTES, FETCH_ATTACHMENT_TOO_LARGE, MAX_INLINE_ATTACHMENT_BASE64_CHARS, MAX_INLINE_ATTACHMENT_BASE64_INPUT_CHARS;
 var init_attachmentLimits = __esm({
   "src/utils/attachmentLimits.ts"() {
     "use strict";
     MAX_INLINE_ATTACHMENT_BYTES = 25 * 1024 * 1024;
     MAX_IMAP_ATTACHMENT_BYTES = MAX_INLINE_ATTACHMENT_BYTES;
+    MAX_FETCH_ATTACHMENT_BYTES = 3 * 1024 * 1024;
+    MAX_FETCH_ATTACHMENT_BASE64_CHARS = Math.ceil(MAX_FETCH_ATTACHMENT_BYTES / 3) * 4;
+    MAX_FETCH_ATTACHMENT_RESPONSE_BYTES = 9 * 1024 * 1024;
+    FETCH_ATTACHMENT_TOO_LARGE = "Attachment exceeds the 3 MiB inline limit. Use save-attachment to write it to an allowed directory instead.";
     MAX_INLINE_ATTACHMENT_BASE64_CHARS = Math.ceil(MAX_INLINE_ATTACHMENT_BYTES / 3) * 4;
     MAX_INLINE_ATTACHMENT_BASE64_INPUT_CHARS = MAX_INLINE_ATTACHMENT_BASE64_CHARS * 2;
   }
@@ -13224,12 +13410,12 @@ function canonicalRoots(requested) {
   }
   return resolved;
 }
-function explicitRoots(env) {
-  const raw = env[ATTACHMENT_READ_ROOTS_ENV];
+function explicitRoots(env, variable = ATTACHMENT_READ_ROOTS_ENV) {
+  const raw = env[variable];
   const extraRoots = raw === void 0 ? [] : raw.split(delimiter2).map((root) => root.trim()).filter(Boolean);
   for (const root of extraRoots) {
     if (!isAbsolute(root)) {
-      throw new Error(`${ATTACHMENT_READ_ROOTS_ENV} entries must be absolute paths.`);
+      throw new Error(`${variable} entries must be absolute paths.`);
     }
   }
   return canonicalRoots(extraRoots);
@@ -41234,8 +41420,8 @@ var require_libmime = __commonJS({
        * @param {String} headers Headers string
        * @return {Object} An object of headers, where header keys are object keys and every value is an Array of the values for that key
        */
-      decodeHeaders(headers) {
-        let lines = headers.split(/\r?\n|\r/), headersObj = {}, header, i, len;
+      decodeHeaders(headers2) {
+        let lines = headers2.split(/\r?\n|\r/), headersObj = {}, header, i, len;
         let headersPos = 0;
         while (headersPos < lines.length && lines[headersPos] === "") {
           headersPos++;
@@ -41688,16 +41874,16 @@ var require_headers = __commonJS({
        * @param {string | Buffer | HeaderLine[] | false} [headers] Raw header source or already parsed lines.
        * @param {LibmimeOptions} [config] Optional libmime configuration.
        */
-      constructor(headers, config) {
+      constructor(headers2, config) {
         config = config || {};
-        if (Array.isArray(headers)) {
+        if (Array.isArray(headers2)) {
           this.changed = true;
           this.headers = false;
           this.parsed = true;
-          this.lines = headers;
+          this.lines = headers2;
         } else {
           this.changed = false;
-          this.headers = headers || false;
+          this.headers = headers2 || false;
           this.parsed = false;
           this.lines = false;
         }
@@ -41885,7 +42071,7 @@ var require_headers = __commonJS({
         }
         let lines = this._getLines();
         const ending = lineEnd || "\r\n";
-        let headers = lines.map((line) => this._normalizeLineBreaks(line.line, ending)).filter((line) => line !== "").map((line) => this._buildHeaderLine(line)).reduce(
+        let headers2 = lines.map((line) => this._normalizeLineBreaks(line.line, ending)).filter((line) => line !== "").map((line) => this._buildHeaderLine(line)).reduce(
           (joined, line, idx) => {
             if (idx) {
               joined.push(Buffer.from(ending, "binary"));
@@ -41896,14 +42082,14 @@ var require_headers = __commonJS({
           /** @type {Buffer[]} */
           []
         );
-        headers.push(Buffer.from(ending + ending, "binary"));
+        headers2.push(Buffer.from(ending + ending, "binary"));
         if (this.mbox) {
-          headers.unshift(Buffer.from(this.mbox + ending, "binary"));
+          headers2.unshift(Buffer.from(this.mbox + ending, "binary"));
         }
         if (this.http) {
-          headers.unshift(Buffer.from(this.http + ending, "binary"));
+          headers2.unshift(Buffer.from(this.http + ending, "binary"));
         }
-        return Buffer.concat(headers);
+        return Buffer.concat(headers2);
       }
       /**
        * @param {string} key
@@ -42111,15 +42297,15 @@ var require_mime_node = __commonJS({
           return;
         }
         this.headers = new Headers(Buffer.concat(this._headersLines, this._headerlen), this.config);
-        let headers = this.headers;
-        this._parsedContentDisposition = this.libmime.parseHeaderValue(headers.getFirst("Content-Disposition"));
+        let headers2 = this.headers;
+        this._parsedContentDisposition = this.libmime.parseHeaderValue(headers2.getFirst("Content-Disposition"));
         let parsedContentDisposition = (
           /** @type {StructuredHeader} */
           this._parsedContentDisposition
         );
         let contentHeader;
-        if (headers.get("Content-Type").length) {
-          contentHeader = headers.getFirst("Content-Type");
+        if (headers2.get("Content-Type").length) {
+          contentHeader = headers2.getFirst("Content-Type");
         } else {
           if (parsedContentDisposition.params.filename) {
             let extension = pathlib.parse(parsedContentDisposition.params.filename).ext.replace(/^\./, "");
@@ -42140,7 +42326,7 @@ var require_mime_node = __commonJS({
           /** @type {StructuredHeader} */
           this._parsedContentType
         );
-        this.encoding = headers.getFirst("Content-Transfer-Encoding").replace(/\(.*\)/g, "").toLowerCase().trim();
+        this.encoding = headers2.getFirst("Content-Transfer-Encoding").replace(/\(.*\)/g, "").toLowerCase().trim();
         this.contentType = (parsedContentType.value || "").toLowerCase().trim() || false;
         this.charset = parsedContentType.params.charset || false;
         this.disposition = (parsedContentDisposition.value || "").toLowerCase().trim() || false;
@@ -42179,11 +42365,11 @@ var require_mime_node = __commonJS({
         if (!this.headers) {
           this.parseHeaders();
         }
-        let headers = (
+        let headers2 = (
           /** @type {HeadersType} */
           this.headers
         );
-        return headers.build();
+        return headers2.build();
       }
       /**
        * @param {string | false} [contentType]
@@ -42193,7 +42379,7 @@ var require_mime_node = __commonJS({
         if (!this.headers) {
           this.parseHeaders();
         }
-        let headers = (
+        let headers2 = (
           /** @type {HeadersType} */
           this.headers
         );
@@ -42211,7 +42397,7 @@ var require_mime_node = __commonJS({
         if (!this.delSp && parsedContentType.params.delsp) {
           delete parsedContentType.params.delsp;
         }
-        headers.update("Content-Type", this.libmime.buildHeaderValue(parsedContentType));
+        headers2.update("Content-Type", this.libmime.buildHeaderValue(parsedContentType));
       }
       /**
        * @param {string | false} [charset]
@@ -42221,7 +42407,7 @@ var require_mime_node = __commonJS({
         if (!this.headers) {
           this.parseHeaders();
         }
-        let headers = (
+        let headers2 = (
           /** @type {HeadersType} */
           this.headers
         );
@@ -42244,7 +42430,7 @@ var require_mime_node = __commonJS({
         if (!parsedContentType.value) {
           parsedContentType.value = "text/plain";
         }
-        headers.update("Content-Type", this.libmime.buildHeaderValue(parsedContentType));
+        headers2.update("Content-Type", this.libmime.buildHeaderValue(parsedContentType));
       }
       /**
        * @param {string | false} [filename]
@@ -42254,7 +42440,7 @@ var require_mime_node = __commonJS({
         if (!this.headers) {
           this.parseHeaders();
         }
-        let headers = (
+        let headers2 = (
           /** @type {HeadersType} */
           this.headers
         );
@@ -42269,7 +42455,7 @@ var require_mime_node = __commonJS({
         this.filename = (filename || "").toLowerCase().trim();
         if (parsedContentType.params.name) {
           delete parsedContentType.params.name;
-          headers.update("Content-Type", this.libmime.buildHeaderValue(parsedContentType));
+          headers2.update("Content-Type", this.libmime.buildHeaderValue(parsedContentType));
         }
         if (!this.filename) {
           if (!parsedContentDisposition.value) {
@@ -42282,7 +42468,7 @@ var require_mime_node = __commonJS({
         if (!parsedContentDisposition.value) {
           parsedContentDisposition.value = "attachment";
         }
-        headers.update("Content-Disposition", this.libmime.buildHeaderValue(parsedContentDisposition));
+        headers2.update("Content-Disposition", this.libmime.buildHeaderValue(parsedContentDisposition));
       }
       /**
        * @returns {import('stream').Transform | import('stream').PassThrough}
@@ -42308,13 +42494,13 @@ var require_mime_node = __commonJS({
         if (!this.headers) {
           this.parseHeaders();
         }
-        let headers = (
+        let headers2 = (
           /** @type {HeadersType} */
           this.headers
         );
         encoding = (encoding || "").toString().toLowerCase().trim();
         if (encoding && encoding !== this.encoding) {
-          headers.update("Content-Transfer-Encoding", encoding);
+          headers2.update("Content-Transfer-Encoding", encoding);
         } else {
           encoding = this.encoding;
         }
@@ -42901,8 +43087,8 @@ var require_flowed_decoder = __commonJS({
           if (this.config.encoding === "base64") {
             currentBody = Buffer.from(currentBody.toString("binary"), "base64");
           }
-          let content = this.libmime.decodeFlowed(currentBody.toString("binary"), this.config.delSp);
-          this.push(Buffer.from(content, "binary"));
+          let content2 = this.libmime.decodeFlowed(currentBody.toString("binary"), this.config.delSp);
+          this.push(Buffer.from(content2, "binary"));
         }
         return callback();
       }
@@ -49719,13 +49905,13 @@ var require_proxy_connection = __commonJS({
       return await new Promise((resolve4, reject) => {
         let settled = false;
         let timer = null;
-        let headers = "";
+        let headers2 = "";
         const onSocketData = (chunk) => {
-          let searchFrom = Math.max(0, headers.length - 3);
-          headers += chunk.toString("binary");
-          let terminator = headers.indexOf("\r\n\r\n", searchFrom);
+          let searchFrom = Math.max(0, headers2.length - 3);
+          headers2 += chunk.toString("binary");
+          let terminator = headers2.indexOf("\r\n\r\n", searchFrom);
           if (terminator < 0) {
-            if (headers.length > MAX_RESPONSE_HEADER_BYTES2) {
+            if (headers2.length > MAX_RESPONSE_HEADER_BYTES2) {
               fail(proxyError("Proxy response headers too large", "EPROXY"));
             }
             return;
@@ -49733,12 +49919,12 @@ var require_proxy_connection = __commonJS({
           socket.removeListener("data", onSocketData);
           socket.pause();
           let headerBytes = terminator + 4;
-          let consumedFromChunk = chunk.length - (headers.length - headerBytes);
+          let consumedFromChunk = chunk.length - (headers2.length - headerBytes);
           if (consumedFromChunk < chunk.length) {
             socket.unshift(chunk.subarray(consumedFromChunk));
           }
-          headers = headers.slice(0, terminator);
-          let status = headers.match(/^HTTP\/\d+\.\d+ (\d+)/i);
+          headers2 = headers2.slice(0, terminator);
+          let status = headers2.match(/^HTTP\/\d+\.\d+ (\d+)/i);
           if (!status || (status[1] || "").charAt(0) !== "2") {
             return fail(proxyError(`Invalid response from proxy${status ? `: ${status[1]}` : ""}`, "EPROXY"));
           }
@@ -49819,11 +50005,11 @@ var require_proxy_connection = __commonJS({
       });
     };
     var resolveIPv4 = async (hostname, deadline) => {
-      let addresses = await deadline.race(dns3.resolve4(hostname));
-      if (!addresses || !addresses.length) {
+      let addresses2 = await deadline.race(dns3.resolve4(hostname));
+      if (!addresses2 || !addresses2.length) {
         throw proxyError(`Could not resolve an IPv4 address for ${hostname}`, "EPROXY");
       }
-      return addresses[0];
+      return addresses2[0];
     };
     var socksConnect = async ({ logger, proxyUrl, protocol, proxyHost, proxyPort, host, port, deadline }) => {
       let proxyType = protocol === "socks4" || protocol === "socks4a" ? 4 : 5;
@@ -54339,16 +54525,16 @@ var require_append = __commonJS({
       parseUintValue,
       MAX_UINT32_DIGITS
     } = require_tools2();
-    module.exports = async (connection, destination, content, flags, idate) => {
+    module.exports = async (connection, destination, content2, flags, idate) => {
       if (![connection.states.AUTHENTICATED, connection.states.SELECTED].includes(connection.state) || !destination) {
         return;
       }
-      if (typeof content === "string") {
-        content = Buffer.from(content);
+      if (typeof content2 === "string") {
+        content2 = Buffer.from(content2);
       }
       if (connection.capabilities.has("APPENDLIMIT")) {
         let appendLimit = connection.capabilities.get("APPENDLIMIT");
-        if (typeof appendLimit === "number" && appendLimit < content.length) {
+        if (typeof appendLimit === "number" && appendLimit < content2.length) {
           let err = new Error("Message content too big for APPENDLIMIT=" + appendLimit);
           err.serverResponseCode = "APPENDLIMIT";
           throw err;
@@ -54367,9 +54553,9 @@ var require_append = __commonJS({
       }
       let isLiteral8 = false;
       if (connection.capabilities.has("BINARY") && !connection.disableBinary) {
-        isLiteral8 = content.indexOf(Buffer.from([0])) >= 0;
+        isLiteral8 = content2.indexOf(Buffer.from([0])) >= 0;
       }
-      attributes.push({ type: "LITERAL", value: content, isLiteral8 });
+      attributes.push({ type: "LITERAL", value: content2, isLiteral8 });
       let map2 = { destination };
       if (connection.mailbox && connection.mailbox.path) {
         map2.path = connection.mailbox.path;
@@ -55903,10 +56089,10 @@ var require_imap_flow = __commonJS({
           return true;
         }
         if (parsed.tag === "+" && this.commandParts.length) {
-          let content = this.commandParts.shift();
+          let content2 = this.commandParts.shift();
           try {
-            this.write(content);
-            this.log.debug({ src: "c", msg: `(* ${content.length}B continuation *)`, cid: this.id });
+            this.write(content2);
+            this.log.debug({ src: "c", msg: `(* ${content2.length}B continuation *)`, cid: this.id });
           } catch (err) {
             logConnectionError(this, "Failed to send literal continuation", err);
           }
@@ -57564,8 +57750,8 @@ var require_imap_flow = __commonJS({
        * @example
        * await client.append('INBOX', rawMessageBuffer, ['\\Seen'], new Date(2000, 1, 1));
        */
-      async append(path3, content, flags, idate) {
-        return await this.run("APPEND", path3, content, flags, idate) || false;
+      async append(path3, content2, flags, idate) {
+        return await this.run("APPEND", path3, content2, flags, idate) || false;
       }
       /**
        * @typedef {Object} CopyResponseObject
@@ -58051,10 +58237,10 @@ var require_imap_flow = __commonJS({
         if (!part) {
           meta.contentType = "message/rfc822";
         } else if (mime) {
-          let headers = new Headers(mime);
-          let contentType = libmime.parseHeaderValue(headers.getFirst("Content-Type"));
-          let transferEncoding = libmime.parseHeaderValue(headers.getFirst("Content-Transfer-Encoding"));
-          let disposition = libmime.parseHeaderValue(headers.getFirst("Content-Disposition"));
+          let headers2 = new Headers(mime);
+          let contentType = libmime.parseHeaderValue(headers2.getFirst("Content-Type"));
+          let transferEncoding = libmime.parseHeaderValue(headers2.getFirst("Content-Transfer-Encoding"));
+          let disposition = libmime.parseHeaderValue(headers2.getFirst("Content-Disposition"));
           if (contentType.value.toLowerCase().trim()) {
             meta.contentType = contentType.value.toLowerCase().trim();
           }
@@ -58272,7 +58458,7 @@ var require_imap_flow = __commonJS({
           return { response: false };
         }
         let data = {};
-        for (let [part, content] of response.bodyParts) {
+        for (let [part, content2] of response.bodyParts) {
           let keyParts = part.split(".mime");
           if (isUnsafeKey(keyParts[0])) {
             continue;
@@ -58280,9 +58466,9 @@ var require_imap_flow = __commonJS({
           if (keyParts.length === 1) {
             let key = keyParts[0];
             if (!data[key]) {
-              data[key] = { content };
+              data[key] = { content: content2 };
             } else {
-              data[key].content = content;
+              data[key].content = content2;
             }
           } else if (keyParts.length === 2) {
             let key = keyParts[0];
@@ -58292,10 +58478,10 @@ var require_imap_flow = __commonJS({
             if (!data[key].meta) {
               data[key].meta = {};
             }
-            let headers = new Headers(content);
-            let contentType = libmime.parseHeaderValue(headers.getFirst("Content-Type"));
-            let transferEncoding = libmime.parseHeaderValue(headers.getFirst("Content-Transfer-Encoding"));
-            let disposition = libmime.parseHeaderValue(headers.getFirst("Content-Disposition"));
+            let headers2 = new Headers(content2);
+            let contentType = libmime.parseHeaderValue(headers2.getFirst("Content-Type"));
+            let transferEncoding = libmime.parseHeaderValue(headers2.getFirst("Content-Transfer-Encoding"));
+            let disposition = libmime.parseHeaderValue(headers2.getFirst("Content-Disposition"));
             if (contentType.value.toLowerCase().trim()) {
               data[key].meta.contentType = contentType.value.toLowerCase().trim();
             }
@@ -58663,6 +58849,17 @@ var require_imap_flow = __commonJS({
   }
 });
 
+// src/utils/attachmentName.ts
+function sameAttachmentName(stored, requested) {
+  if (stored == null || requested == null) return false;
+  return stored.normalize("NFC") === requested.normalize("NFC");
+}
+var init_attachmentName = __esm({
+  "src/utils/attachmentName.ts"() {
+    "use strict";
+  }
+});
+
 // src/utils/mailboxName.ts
 function mailboxNameKey(name2) {
   return name2.trim().normalize("NFC").toLowerCase();
@@ -58753,11 +58950,18 @@ function extractBoundary(source) {
   const match = source.match(/boundary="?([^";\s\r\n]+)"?/i);
   return match ? match[1] : null;
 }
-function getHeader(headers, name2) {
+function getHeader(headers2, name2) {
   const regex = new RegExp(`^${name2}:\\s*(.+(?:\\r?\\n[ \\t]+.+)*)`, "im");
-  const match = headers.match(regex);
+  const match = headers2.match(regex);
   if (!match) return null;
   return match[1].replace(/\r?\n[ \t]+/g, " ").trim();
+}
+function decodeBytes(bytes, charset) {
+  try {
+    return decodeText(bytes, charset.trim().toLowerCase());
+  } catch {
+    return bytes.toString("utf8");
+  }
 }
 function parseParams(value) {
   const pieces = [];
@@ -58790,6 +58994,94 @@ function parseParams(value) {
   }
   return params;
 }
+function decodeEncodedWords(text) {
+  return text.replace(/(\?=)\s+(?==\?)/g, "$1").replace(
+    /=\?([^?\s]+)\?([bq])\?([^?]*)\?=/gi,
+    (_all, charset, kind, body) => {
+      const bytes = kind.toLowerCase() === "b" ? Buffer.from(body, "base64") : Buffer.from(
+        body.replace(/_/g, " ").replace(
+          /=([0-9a-f]{2})/gi,
+          (_m, hex) => String.fromCharCode(parseInt(hex, 16))
+        ),
+        "latin1"
+      );
+      return decodeBytes(bytes, charset.split("*")[0]);
+    }
+  );
+}
+function decodeExtendedValue(segments) {
+  let charset = "utf-8";
+  const chunks = [];
+  segments.forEach((segment, index) => {
+    let value = segment.value;
+    if (!segment.encoded) {
+      chunks.push(Buffer.from(value, "utf8"));
+      return;
+    }
+    if (index === 0) {
+      const head = value.match(/^([^']*)'[^']*'([\s\S]*)$/);
+      if (head) {
+        charset = head[1] || charset;
+        value = head[2];
+      }
+    }
+    chunks.push(
+      Buffer.from(
+        value.replace(
+          /%([0-9a-f]{2})/gi,
+          (_m, hex) => String.fromCharCode(parseInt(hex, 16))
+        ),
+        "latin1"
+      )
+    );
+  });
+  return decodeBytes(Buffer.concat(chunks), charset);
+}
+function paramValue(params, name2) {
+  const extended = params.get(`${name2}*`);
+  if (extended !== void 0) return decodeExtendedValue([{ value: extended, encoded: true }]);
+  const segments = [];
+  for (let i = 0; ; i++) {
+    const encoded = params.get(`${name2}*${i}*`);
+    const plain = params.get(`${name2}*${i}`);
+    if (encoded !== void 0) segments.push({ value: encoded, encoded: true });
+    else if (plain !== void 0) segments.push({ value: plain, encoded: false });
+    else break;
+  }
+  if (segments.length > 0) return decodeExtendedValue(segments);
+  const value = params.get(name2);
+  return value === void 0 ? null : decodeEncodedWords(value);
+}
+function extractFilename(headers2) {
+  const dispHeader = getHeader(headers2, "Content-Disposition");
+  if (dispHeader) {
+    const filename = paramValue(parseParams(dispHeader), "filename")?.trim();
+    if (filename) return filename;
+  }
+  const ctHeader = getHeader(headers2, "Content-Type");
+  if (ctHeader) {
+    const name2 = paramValue(parseParams(ctHeader), "name")?.trim();
+    if (name2) return name2;
+  }
+  return null;
+}
+function isInlineDisposition(headers2) {
+  const dispHeader = getHeader(headers2, "Content-Disposition");
+  if (!dispHeader) return false;
+  return dispHeader.toLowerCase().startsWith("inline");
+}
+function extractContentId(headers2) {
+  const raw = getHeader(headers2, "Content-ID");
+  if (!raw) return null;
+  const id = raw.replace(/^<+/, "").replace(/>+$/, "").trim().toLowerCase();
+  return id || null;
+}
+function isEmbeddedResource(headers2, referenced) {
+  if (!isInlineDisposition(headers2)) return false;
+  const cid = extractContentId(headers2);
+  if (!cid) return false;
+  return referenced().has(cid);
+}
 function cidReferences(html) {
   const refs = /* @__PURE__ */ new Set();
   for (const match of html.matchAll(/cid:([^\s"'<>()]+)/gi)) {
@@ -58802,14 +59094,32 @@ function cidReferences(html) {
   }
   return refs;
 }
-function extractMimeType(headers) {
-  const ctHeader = getHeader(headers, "Content-Type");
+function collectCidReferences(parts) {
+  const refs = /* @__PURE__ */ new Set();
+  for (const part of parts) {
+    if (extractMimeType(part.headers) !== "text/html") continue;
+    const encoding = getHeader(part.headers, "Content-Transfer-Encoding");
+    const html = decodePartText(decodeBody(part.body, encoding), extractCharset(part.headers));
+    for (const ref of cidReferences(html)) refs.add(ref);
+  }
+  return refs;
+}
+function extractSize(headers2) {
+  const dispHeader = getHeader(headers2, "Content-Disposition");
+  if (dispHeader) {
+    const sizeMatch = dispHeader.match(/(?:^|;)\s*size\s*=\s*"?(\d+)/i);
+    if (sizeMatch) return parseInt(sizeMatch[1], 10);
+  }
+  return 0;
+}
+function extractMimeType(headers2) {
+  const ctHeader = getHeader(headers2, "Content-Type");
   if (!ctHeader) return "application/octet-stream";
   const typeMatch = ctHeader.match(/^([^;\s]+)/);
   return typeMatch ? typeMatch[1].toLowerCase() : "application/octet-stream";
 }
-function extractCharset(headers) {
-  const ct = getHeader(headers, "Content-Type");
+function extractCharset(headers2) {
+  const ct = getHeader(headers2, "Content-Type");
   const m = ct?.match(/charset\s*=\s*"?([^";\s]+)"?/i);
   return m ? m[1].toLowerCase() : null;
 }
@@ -58826,6 +59136,10 @@ function decodePartText(bytes, charset) {
     return decodeWindows1252(bytes);
   }
 }
+function base64DecodedSize(base64Body) {
+  const cleaned = base64Body.replace(/[^A-Za-z0-9+/]/g, "");
+  return Math.floor(cleaned.length * 3 / 4);
+}
 function splitMimeParts(source, boundary) {
   const parts = [];
   const boundaryDelim = `--${boundary}`;
@@ -58835,9 +59149,9 @@ function splitMimeParts(source, boundary) {
     if (!trimmed || trimmed.startsWith("--")) continue;
     const blankLineIdx = trimmed.search(/\r?\n\r?\n/);
     if (blankLineIdx === -1) continue;
-    const headers = trimmed.substring(0, blankLineIdx);
+    const headers2 = trimmed.substring(0, blankLineIdx);
     const body = trimmed.substring(blankLineIdx).replace(/^\r?\n\r?\n/, "");
-    parts.push({ headers, body });
+    parts.push({ headers: headers2, body });
   }
   return parts;
 }
@@ -58852,9 +59166,9 @@ function splitMimePartsOnBoundaryLines(source, boundary) {
       const section = source.slice(start, match.index);
       const blankLineIdx = section.search(/\r?\n\r?\n/);
       if (blankLineIdx === -1) return [];
-      const headers = section.slice(0, blankLineIdx);
+      const headers2 = section.slice(0, blankLineIdx);
       const body = section.slice(blankLineIdx).replace(/^\r?\n\r?\n/, "").replace(/\r?\n$/, "");
-      parts.push({ headers, body });
+      parts.push({ headers: headers2, body });
     }
     if (match[1]) {
       closed = start !== void 0;
@@ -58907,6 +59221,33 @@ function decodeQuotedPrintable(body) {
   }
   return Buffer.from(bytes);
 }
+function estimateSize(body, encoding) {
+  const enc = (encoding || "").toLowerCase().trim();
+  if (enc === "base64") return base64DecodedSize(body);
+  if (enc === "quoted-printable") return decodeQuotedPrintable(body).length;
+  return body.length;
+}
+function parseMimeAttachments(source) {
+  if (!source || !source.trim()) return [];
+  const boundary = extractBoundary(source);
+  if (!boundary) return [];
+  const parts = walkLeafParts(source, boundary);
+  let refs;
+  const referenced = () => refs ??= collectCidReferences(parts);
+  const attachments = [];
+  for (const part of parts) {
+    const filename = extractFilename(part.headers);
+    if (!filename) continue;
+    if (isEmbeddedResource(part.headers, referenced)) continue;
+    const encoding = getHeader(part.headers, "Content-Transfer-Encoding");
+    attachments.push({
+      name: filename,
+      mimeType: extractMimeType(part.headers),
+      size: extractSize(part.headers) || estimateSize(part.body, encoding)
+    });
+  }
+  return attachments;
+}
 function extractHtmlBody(source) {
   if (!source || !source.trim()) return null;
   const boundary = extractBoundary(source);
@@ -58921,18 +59262,18 @@ function extractHtmlBody(source) {
   }
   const blankLineIdx = source.search(/\r?\n\r?\n/);
   if (blankLineIdx === -1) return null;
-  const headers = source.substring(0, blankLineIdx);
-  if (extractMimeType(headers) !== "text/html") return null;
+  const headers2 = source.substring(0, blankLineIdx);
+  if (extractMimeType(headers2) !== "text/html") return null;
   const body = source.substring(blankLineIdx).replace(/^\r?\n\r?\n/, "");
-  const encoding = getHeader(headers, "Content-Transfer-Encoding");
-  return decodePartText(decodeBody(body, encoding), extractCharset(headers));
+  const encoding = getHeader(headers2, "Content-Transfer-Encoding");
+  return decodePartText(decodeBody(body, encoding), extractCharset(headers2));
 }
 function extractTextBody(source, options = {}) {
   if (!source || !source.trim()) return null;
   const blankLineIdx = source.search(/\r?\n\r?\n/);
   if (blankLineIdx === -1) return null;
-  const headers = source.substring(0, blankLineIdx);
-  const contentType = getHeader(headers, "Content-Type");
+  const headers2 = source.substring(0, blankLineIdx);
+  const contentType = getHeader(headers2, "Content-Type");
   const multipart = contentType !== null && /^multipart\//i.test(contentType);
   const boundary = multipart ? parseParams(contentType).get("boundary") ?? null : null;
   const partText = (body2, partHeaders) => {
@@ -58958,22 +59299,23 @@ function extractTextBody(source, options = {}) {
     }
     return null;
   }
-  const ct = extractMimeType(headers);
+  const ct = extractMimeType(headers2);
   if (ct !== "text/plain" && contentType !== null) return null;
   const body = source.substring(blankLineIdx).replace(/^\r?\n\r?\n/, "");
-  return partText(body, headers);
+  return partText(body, headers2);
 }
 var MAX_MIME_DEPTH;
 var init_mimeParse = __esm({
   "src/utils/mimeParse.ts"() {
     "use strict";
     init_textDecode();
+    init_attachmentName();
     MAX_MIME_DEPTH = 20;
   }
 });
 
 // src/utils/headers.ts
-function decodeEncodedWords(value) {
+function decodeEncodedWords2(value) {
   if (!value.includes("=?")) return value;
   const joined = value.replace(/(\?=)\s+(=\?)/g, "$1$2");
   return joined.replace(
@@ -59028,42 +59370,42 @@ function parseDateHeader(value) {
   }
   return void 0;
 }
-function splitFusedDate(headers) {
-  const i = headers.findIndex((h) => h.name.toLowerCase() === "date");
+function splitFusedDate(headers2) {
+  const i = headers2.findIndex((h) => h.name.toLowerCase() === "date");
   if (i === -1) return void 0;
-  const m = /^([A-Za-z][A-Za-z0-9-]*):[ \t]?(.*)$/.exec(headers[i].value);
+  const m = /^([A-Za-z][A-Za-z0-9-]*):[ \t]?(.*)$/.exec(headers2[i].value);
   if (!m) return void 0;
   const name2 = m[1];
   if (!FUSABLE_HEADER_NAMES.has(name2.toLowerCase()) && !/^x-/i.test(name2)) return void 0;
-  headers.splice(i, 1, { name: headers[i].name, value: "" }, { name: name2, value: m[2].trim() });
+  headers2.splice(i, 1, { name: headers2[i].name, value: "" }, { name: name2, value: m[2].trim() });
   return name2;
 }
 function parseHeaderBlock(input) {
   const text = (input ?? "").replace(/\r\n|\r/g, "\n");
   const blank = text.search(/\n\n/);
   const raw = (blank === -1 ? text : text.slice(0, blank)).replace(/\n+$/, "");
-  const headers = [];
+  const headers2 = [];
   for (const line of raw.split("\n")) {
-    if (/^[ \t]/.test(line) && headers.length) {
-      headers[headers.length - 1].value += " " + line.trim();
+    if (/^[ \t]/.test(line) && headers2.length) {
+      headers2[headers2.length - 1].value += " " + line.trim();
       continue;
     }
     const m = /^([!-9;-~]+):[ \t]?(.*)$/.exec(line);
     if (!m) continue;
-    headers.push({ name: m[1], value: m[2].trim() });
+    headers2.push({ name: m[1], value: m[2].trim() });
   }
   const warnings = [];
-  const fused = splitFusedDate(headers);
+  const fused = splitFusedDate(headers2);
   if (fused) {
     warnings.push(
       `The Date: header arrived with no value and the ${fused}: header joined onto it (Mail.app's all-headers property does this for a Date: it cannot parse). Split back into Date: and ${fused}:; the send date is unknown from this source.`
     );
   }
-  const first = (name2) => headers.find((h) => h.name.toLowerCase() === name2.toLowerCase())?.value;
-  const all = (name2) => headers.filter((h) => h.name.toLowerCase() === name2.toLowerCase()).map((h) => h.value);
+  const first = (name2) => headers2.find((h) => h.name.toLowerCase() === name2.toLowerCase())?.value;
+  const all = (name2) => headers2.filter((h) => h.name.toLowerCase() === name2.toLowerCase()).map((h) => h.value);
   const decoded = (name2) => {
     const v = first(name2);
-    return v === void 0 ? void 0 : decodeEncodedWords(v);
+    return v === void 0 ? void 0 : decodeEncodedWords2(v);
   };
   const dateHeader = first("Date") || void 0;
   let date;
@@ -59076,7 +59418,7 @@ function parseHeaderBlock(input) {
   const referencesRaw = first("References");
   return {
     raw,
-    headers,
+    headers: headers2,
     date,
     dateHeader,
     messageId: messageIdRaw ? bareId(messageIdRaw) || void 0 : void 0,
@@ -59195,6 +59537,298 @@ var init_headers = __esm({
   }
 });
 
+// src/services/savedDraftMime.ts
+import { randomUUID } from "node:crypto";
+import { readFileSync, statSync as statSync2 } from "node:fs";
+import { basename } from "node:path";
+function parse2(raw, id = "0", depth = 0, budget = { parts: 0 }) {
+  if (depth > 20 || ++budget.parts > 200)
+    throw new Error("Draft MIME nesting/part limit exceeded.");
+  const separator = /\r?\n\r?\n/.exec(raw);
+  if (!separator) throw new Error("Draft has no MIME header/body boundary.");
+  const eol = separator[0].startsWith("\r") ? "\r\n" : "\n";
+  const fields = [];
+  for (const line of raw.slice(0, separator.index).split(/\r?\n/)) {
+    if (/[\r\0]/.test(line)) throw new Error("Malformed draft MIME header; editing refused.");
+    if (/^[ \t]/.test(line) && fields.length) {
+      fields[fields.length - 1].raw += eol + line;
+      fields[fields.length - 1].value += " " + line.trim();
+    } else {
+      const m = /^([!#$%&'*+\-.^_`|~0-9A-Za-z]+):[ \t]*(.*)$/.exec(line);
+      if (!m || /[\r\0]/.test(line))
+        throw new Error("Malformed draft MIME header; editing refused.");
+      fields.push({ name: m[1].toLowerCase(), value: m[2], raw: line });
+    }
+  }
+  for (const name2 of [
+    "from",
+    "sender",
+    "to",
+    "cc",
+    "bcc",
+    "reply-to",
+    "subject",
+    "message-id",
+    "content-type",
+    "content-transfer-encoding",
+    "content-disposition"
+  ]) {
+    if (fields.filter((f) => f.name === name2).length > 1)
+      throw new Error(`Ambiguous duplicate ${name2} header.`);
+  }
+  if (fields.some((f) => /^(resent-|dkim-signature$|arc-|content-md5$)/.test(f.name))) {
+    throw new Error("Signed or resent draft headers cannot be safely edited in this version.");
+  }
+  const ct = parseHeaderValue(fields.find((f) => f.name === "content-type")?.value || "text/plain");
+  const cd = parseHeaderValue(
+    fields.find((f) => f.name === "content-disposition")?.value || "inline"
+  );
+  const type = ct.value.toLowerCase();
+  if (/^(multipart\/(signed|encrypted)|application\/(x-)?pkcs7-mime)$/.test(type)) {
+    throw new Error("Signed/encrypted drafts cannot be edited.");
+  }
+  const filename = cd.params.filename || ct.params.name;
+  const p = {
+    id,
+    fields,
+    body: raw.slice(separator.index + separator[0].length),
+    eol,
+    type,
+    filename,
+    attachment: cd.value.toLowerCase() === "attachment" || !!filename,
+    cid: fields.find((f) => f.name === "content-id")?.value.replace(/^<|>$/g, "")
+  };
+  if (type.startsWith("multipart/")) {
+    if (!["multipart/mixed", "multipart/alternative", "multipart/related"].includes(type) || p.attachment) {
+      throw new Error("Unsupported multipart draft structure.");
+    }
+    const b = ct.params.boundary;
+    if (!b || b.length > 70 || /[\r\n\0]/.test(b)) throw new Error("Invalid MIME boundary.");
+    p.boundary = b;
+    const escaped = b.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const markers = [
+      ...p.body.matchAll(new RegExp(`(^|\\n)--${escaped}(--)?[ \\t]*(\\r?\\n|$)`, "g"))
+    ];
+    if (markers.length < 2 || markers[0][2] || !markers.at(-1)?.[2] || markers.slice(0, -1).some((m) => m[2])) {
+      throw new Error("Incomplete or ambiguous multipart draft.");
+    }
+    p.preamble = p.body.slice(0, markers[0].index + markers[0][1].length);
+    p.epilogue = p.body.slice(markers.at(-1).index + markers.at(-1)[0].length);
+    p.children = markers.slice(0, -1).map(
+      (m, i) => parse2(
+        p.body.slice(m.index + m[0].length, markers[i + 1].index + markers[i + 1][1].length),
+        id === "0" ? String(i + 1) : `${id}.${i + 1}`,
+        depth + 1,
+        budget
+      )
+    );
+  }
+  return p;
+}
+function leaves(p) {
+  return p.children ? p.children.flatMap(leaves) : [p];
+}
+function headers(p) {
+  return parseHeaderBlock(
+    decodeHeaderBytes(Buffer.from(p.fields.map((f) => f.raw).join(p.eol), "latin1"))
+  );
+}
+function addresses(p, name2) {
+  const h = headers(p).headers.find((f) => f.name.toLowerCase() === name2)?.value;
+  if (!h) return [];
+  const result = addressparser_default(h, { flatten: true }).map((a) => a.address);
+  if (result.some((a) => !a || !/^[^\s@<>]+@[^\s@<>]+$/.test(a)))
+    throw new Error(`Invalid draft ${name2} address.`);
+  return result;
+}
+function content(root) {
+  const bodyParts = leaves(root).filter((p) => !p.attachment);
+  if (["text/plain", "text/html"].some((type) => bodyParts.filter((p) => p.type === type).length > 1)) {
+    throw new Error("Ambiguous multiple body parts; editing refused.");
+  }
+  const raw = render(root);
+  const text = extractTextBody(raw);
+  const html = extractHtmlBody(raw);
+  if (text === null && html === null)
+    throw new Error("Draft body cannot be previewed; editing refused.");
+  if ((text?.length ?? 0) > 1e5 || (html?.length ?? 0) > 1e5)
+    throw new Error("Draft body exceeds the preview limit.");
+  const from = addresses(root, "from");
+  if (from.length !== 1) throw new Error("Draft must have exactly one From address.");
+  const cids = cidReferences(html ?? "");
+  return {
+    from: from[0],
+    to: addresses(root, "to"),
+    cc: addresses(root, "cc"),
+    bcc: addresses(root, "bcc"),
+    subject: headers(root).subject ?? "",
+    body: text ?? html ?? "",
+    isHtml: text === null,
+    ...text !== null && html !== null ? { htmlBody: html } : {},
+    attachments: leaves(root).filter((p) => p.attachment || !["text/plain", "text/html"].includes(p.type)).map((p) => ({
+      partId: p.id,
+      name: p.filename ?? "(unnamed)",
+      mimeType: p.type,
+      size: parseMimeAttachments(render(p))[0]?.size ?? Buffer.byteLength(p.body, "latin1"),
+      removable: !p.cid || !cids.has(p.cid.toLowerCase())
+    }))
+  };
+}
+function previewSavedDraftMime(raw) {
+  return content(parse2(raw.toString("latin1")));
+}
+function setFields(p, replacement, names) {
+  p.fields = [
+    ...p.fields.filter((f) => !names.includes(f.name)),
+    ...replacement.filter((f) => names.includes(f.name))
+  ];
+}
+function rebuildMultipart(p) {
+  p.body = (p.preamble ?? "") + p.children.map((child) => {
+    const raw = render(child);
+    return `--${p.boundary}${p.eol}${raw}${raw.endsWith("\n") ? "" : p.eol}`;
+  }).join("") + `--${p.boundary}--${p.eol}` + (p.epilogue ?? "");
+}
+async function attachmentPart(input) {
+  const file = typeof input === "string" ? resolveAttachmentReadPath(input) : void 0;
+  if (file && statSync2(file).size > MAX_INLINE_ATTACHMENT_BYTES)
+    throw new Error("Attachment exceeds the 25 MiB size limit.");
+  const filename = file ? basename(file) : input.filename;
+  const bytes = file ? readFileSync(file) : decodeInlineAttachment(input.contentBase64);
+  const raw = await new mail_composer_default({
+    attachments: [{ filename, content: bytes }],
+    disableFileAccess: true,
+    disableUrlAccess: true
+  }).compile().build();
+  const generated = parse2(raw.toString("latin1"));
+  const part = leaves(generated).find((p) => p.attachment);
+  if (!part) throw new Error("Attachment could not be composed.");
+  part.fields = part.fields.filter((f) => f.name.startsWith("content-"));
+  return part;
+}
+async function patchSavedDraftMime(raw, changes) {
+  const root = parse2(raw.toString("latin1"));
+  const before = content(root);
+  const bodyParts = leaves(root).filter(
+    (p) => !p.attachment && ["text/plain", "text/html"].includes(p.type)
+  );
+  const plain = bodyParts.filter((p) => p.type === "text/plain");
+  const html = bodyParts.filter((p) => p.type === "text/html");
+  if (changes.body !== void 0 || changes.htmlBody !== void 0) {
+    if (plain.length > 1 || html.length > 1 || changes.body !== void 0 && plain.length !== 1 || changes.htmlBody !== void 0 && html.length !== 1) {
+      throw new Error("Body edit is ambiguous or targets a missing MIME alternative.");
+    }
+    if (plain.length && html.length && (changes.body === void 0 || changes.htmlBody === void 0)) {
+      throw new Error("Replace both body and htmlBody so no stale MIME alternative survives.");
+    }
+    for (const [p, text] of [
+      [plain[0], changes.body],
+      [html[0], changes.htmlBody]
+    ]) {
+      if (!p || text === void 0) continue;
+      setFields(
+        p,
+        [
+          {
+            name: "content-type",
+            value: `${p.type}; charset=utf-8`,
+            raw: `Content-Type: ${p.type}; charset=utf-8`
+          },
+          {
+            name: "content-transfer-encoding",
+            value: "base64",
+            raw: "Content-Transfer-Encoding: base64"
+          }
+        ],
+        ["content-type", "content-transfer-encoding"]
+      );
+      p.body = (Buffer.from(text, "utf8").toString("base64").match(/.{1,76}/g) ?? [""]).join(p.eol) + p.eol;
+    }
+  }
+  const removals = new Set(changes.removeAttachments ?? []);
+  for (const id of removals) {
+    const att = before.attachments.find((a) => a.partId === id);
+    if (!att || !att.removable || id === "0")
+      throw new Error(`Attachment part ${id} is missing or cannot be removed safely.`);
+  }
+  const walk = (p) => {
+    if (!p.children) return;
+    p.children = p.children.filter((child) => !removals.has(child.id));
+    for (const child of p.children) walk(child);
+    if (!p.children.length) throw new Error("Editing would leave an empty multipart.");
+    if (changes.body !== void 0 || changes.htmlBody !== void 0 || removals.size)
+      rebuildMultipart(p);
+  };
+  walk(root);
+  const added = [];
+  for (const input of changes.addAttachments ?? []) added.push(await attachmentPart(input));
+  if (added.length) {
+    if (root.type !== "multipart/mixed") {
+      const inner = {
+        ...root,
+        fields: root.fields.filter((f) => f.name.startsWith("content-"))
+      };
+      root.fields = root.fields.filter((f) => !f.name.startsWith("content-"));
+      root.boundary = `amcp_${randomUUID()}`;
+      root.type = "multipart/mixed";
+      root.children = [inner];
+      root.preamble = root.epilogue = "";
+      root.fields.push({
+        name: "content-type",
+        value: `multipart/mixed; boundary="${root.boundary}"`,
+        raw: `Content-Type: multipart/mixed; boundary="${root.boundary}"`
+      });
+    }
+    root.children.push(...added);
+    rebuildMultipart(root);
+  }
+  const names = ["subject", "to", "cc", "bcc"];
+  const changed = names.filter((name2) => changes[name2] !== void 0);
+  if (changed.length) {
+    for (const name2 of changed) {
+      const v = changes[name2];
+      const entries = typeof v === "string" ? [v] : v;
+      if (entries.some((s) => /[\r\n\0]/.test(s)))
+        throw new Error("Header edits cannot contain line breaks or NUL.");
+      if (name2 !== "subject" && entries.some((s) => {
+        const a = addressparser_default(s, { flatten: true });
+        return a.length !== 1 || !/^[^\s@<>]+@[^\s@<>]+$/.test(a[0]?.address ?? "");
+      })) {
+        throw new Error("Each recipient must be one valid mailbox address.");
+      }
+    }
+    const composer = new mail_composer_default({
+      subject: changes.subject,
+      to: changes.to,
+      cc: changes.cc,
+      bcc: changes.bcc,
+      text: "",
+      disableFileAccess: true,
+      disableUrlAccess: true
+    }).compile();
+    composer.keepBcc = true;
+    const generated = parse2((await composer.build()).toString("latin1"));
+    setFields(root, generated.fields, changed);
+  }
+  const result = Buffer.from(render(root), "latin1");
+  previewSavedDraftMime(result);
+  return result;
+}
+var render;
+var init_savedDraftMime = __esm({
+  "src/services/savedDraftMime.ts"() {
+    "use strict";
+    init_mail_composer();
+    init_addressparser();
+    init_mime_funcs();
+    init_headers();
+    init_mimeParse();
+    init_attachmentLimits();
+    init_attachmentReadPolicy();
+    render = (p) => p.fields.map((f) => f.raw).join(p.eol) + p.eol + p.eol + p.body;
+  }
+});
+
 // src/services/auditLog.ts
 function classifyCountStatus(readable, expected, observed) {
   if (!readable) return { status: "unknown", unknownReason: "count-unreadable" };
@@ -59266,6 +59900,7 @@ __export(imapClient_exports, {
   imapThread: () => imapThread,
   imapUnflagMessage: () => imapUnflagMessage,
   imapUnreadCount: () => imapUnreadCount,
+  imapUpdateSavedDraft: () => imapUpdateSavedDraft,
   isGmailHost: () => isGmailHost,
   isImapAccount: () => isImapAccount,
   listImapAccountLabels: () => listImapAccountLabels,
@@ -60487,6 +61122,202 @@ async function imapAppendDraft(account, raw, deps = {}) {
     return { mailbox: path3, account: cfg.accountLabel };
   });
 }
+async function imapUpdateSavedDraft(input, deps = {}) {
+  const ref = decodeImapId(input.draftId);
+  if (!ref || !ref.account || !ref.path || !Number.isSafeInteger(ref.uid) || ref.uid < 1 || ref.uid > 4294967295) {
+    throw new Error(
+      "update-saved-draft requires an imap: id from a configured account's Drafts mailbox; no AppleScript fallback."
+    );
+  }
+  if (!input.dryRun && (!/^[a-f0-9]{64}$/i.test(input.approvedSha256 ?? "") || !/^[1-9]\d*$/.test(input.approvedUidValidity ?? "") || !input.changes || !Object.values(input.changes).some((v) => v !== void 0))) {
+    throw new Error(
+      "Updating requires changes and the approvedSha256/approvedUidValidity from a fresh preview."
+    );
+  }
+  const selectedDeps = depsForMessageRef(ref, deps);
+  if (!deps.config && listImapAccountSpecs().filter((spec) => specMatchesSelector(spec, ref.account)).length !== 1) {
+    throw new Error(
+      "Draft account is absent or ambiguous; exactly one configured IMAP login must match the id. No fallback is permitted."
+    );
+  }
+  return withClient(selectedDeps, async (client) => {
+    const boxes = (await client.list()).filter(
+      (b) => !b.flags?.has("\\Noselect") && (b.specialUse?.toLowerCase() === "\\drafts" || b.flags?.has("\\Drafts"))
+    );
+    if (boxes.length !== 1)
+      throw new Error(
+        "Drafts mailbox is absent or ambiguous; exactly one SPECIAL-USE \\Drafts mailbox is required."
+      );
+    if (boxes[0].path !== ref.path)
+      throw new Error("The message is not in the account's exact SPECIAL-USE \\Drafts mailbox.");
+    if (!input.dryRun && !client.capabilities?.has("UIDPLUS")) {
+      throw new Error(
+        "Saved-draft replacement requires UIDPLUS for APPENDUID and targeted UID EXPUNGE; no global EXPUNGE is permitted."
+      );
+    }
+    const lock = await client.getMailboxLock(ref.path, { readOnly: input.dryRun });
+    try {
+      const uidValidity = client.mailbox && client.mailbox.uidValidity?.toString();
+      if (!uidValidity || !/^[1-9]\d*$/.test(uidValidity))
+        throw new Error("Draft mailbox has no usable UIDVALIDITY.");
+      if (!input.dryRun && client.mailbox && client.mailbox.readOnly)
+        throw new Error("Drafts mailbox is read-only; nothing was appended.");
+      const read = async (uid) => {
+        const m = await client.fetchOne(
+          String(uid),
+          {
+            uid: true,
+            flags: true,
+            size: true,
+            source: { start: 0, maxLength: MAX_RFC822_FILE_BYTES + 1 }
+          },
+          { uid: true }
+        );
+        if (!m || m.uid !== uid)
+          throw new Error(`Draft UID ${uid} is missing or changed; re-list Drafts.`);
+        if (!m.flags?.has("\\Draft") || m.flags.has("\\Deleted"))
+          throw new Error(`UID ${uid} is not an active draft; editing refused.`);
+        if (!m.source?.length) throw new Error("IMAP returned no stored draft MIME.");
+        const bytes = asBuffer(m.source);
+        if (bytes.length > MAX_RFC822_FILE_BYTES || m.size !== void 0 && Math.abs(m.size - bytes.length) > 1024 + m.size * 0.02)
+          throw new Error("Draft source is oversized or incomplete; editing refused.");
+        return {
+          bytes,
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+          flags: [...m.flags].filter((f) => f !== "\\Recent" && f !== "\\Deleted")
+        };
+      };
+      const current = await read(ref.uid);
+      const preview = {
+        ...previewSavedDraftMime(current.bytes),
+        draftId: input.draftId,
+        uid: ref.uid,
+        uidValidity,
+        sha256: current.sha256
+      };
+      if (!input.dryRun && (input.approvedUidValidity !== uidValidity || input.approvedSha256?.toLowerCase() !== current.sha256))
+        throw new Error(
+          "Draft changed since preview (UIDVALIDITY or MIME SHA-256); review its current revision again."
+        );
+      const replacement = input.changes ? await patchSavedDraftMime(current.bytes, input.changes) : current.bytes;
+      const proposed = previewSavedDraftMime(replacement);
+      if (replacement.length > MAX_RFC822_FILE_BYTES)
+        throw new Error("Edited draft exceeds the 25 MiB stored-MIME limit.");
+      if (input.dryRun)
+        return {
+          ok: true,
+          status: "preview",
+          sourceDraftId: input.draftId,
+          draftId: input.draftId,
+          preview,
+          ...input.changes ? { proposed } : {}
+        };
+      if (replacement.equals(current.bytes))
+        return {
+          ok: true,
+          status: "unchanged",
+          sourceDraftId: input.draftId,
+          draftId: input.draftId,
+          preview,
+          sourceRemoved: false
+        };
+      const fresh = await read(ref.uid);
+      if (fresh.sha256 !== current.sha256 || !client.mailbox || client.mailbox.uidValidity?.toString() !== uidValidity)
+        throw new Error("Draft changed while preparing the edit; nothing appended.");
+      let appended;
+      try {
+        appended = await client.append(ref.path, replacement, fresh.flags);
+      } catch (error2) {
+        const status = error2 && typeof error2 === "object" && "responseStatus" in error2 ? String(error2.responseStatus).toUpperCase() : "";
+        const rejected = status === "NO" || status === "BAD";
+        return {
+          ok: false,
+          status: rejected ? "append_failed" : "append_unknown",
+          sourceDraftId: input.draftId,
+          sourceRemoved: false,
+          error: `APPEND ${rejected ? "was rejected" : "outcome is uncertain"}: ${errText(error2)}. Source was not removed. Re-list Drafts before any retry.`
+        };
+      }
+      if (!appended)
+        return {
+          ok: false,
+          status: "append_failed",
+          sourceDraftId: input.draftId,
+          sourceRemoved: false,
+          error: "Server rejected APPEND; source was not removed."
+        };
+      const newUid = appended.uid;
+      if (!newUid || !Number.isSafeInteger(newUid) || newUid > 4294967295 || newUid === ref.uid || appended.uidValidity?.toString() !== uidValidity) {
+        return {
+          ok: false,
+          status: "append_unknown",
+          sourceDraftId: input.draftId,
+          sourceRemoved: false,
+          error: "APPEND returned no trustworthy new UID/UIDVALIDITY. Source was not removed. Re-list Drafts; do not blindly repeat the edit."
+        };
+      }
+      const draftId = encodeImapId(ref.account, ref.path, newUid);
+      const replacementSha256 = createHash("sha256").update(replacement).digest("hex");
+      let savedPreview;
+      try {
+        const saved = await read(newUid);
+        if (saved.sha256 !== replacementSha256)
+          throw new Error("Stored replacement MIME differs from APPEND bytes.");
+        savedPreview = {
+          ...previewSavedDraftMime(saved.bytes),
+          draftId,
+          uid: newUid,
+          uidValidity,
+          sha256: saved.sha256
+        };
+      } catch (error2) {
+        return {
+          ok: false,
+          status: "append_unknown",
+          sourceDraftId: input.draftId,
+          draftId,
+          sourceRemoved: false,
+          error: `${errText(error2)} Source was not removed; inspect both draft IDs before retrying.`
+        };
+      }
+      let removalOutcome = "not_attempted";
+      try {
+        const original = await read(ref.uid);
+        if (original.sha256 !== current.sha256 || !client.mailbox || client.mailbox.uidValidity?.toString() !== uidValidity)
+          throw new Error("Source revision changed during APPEND; cleanup refused.");
+        removalOutcome = "uncertain";
+        if (!await client.messageDelete([ref.uid], { uid: true })) {
+          removalOutcome = "not_removed";
+          throw new Error("Server rejected removal of the old draft.");
+        }
+        if (await client.fetchOne(String(ref.uid), { uid: true }, { uid: true })) {
+          removalOutcome = "not_removed";
+          throw new Error("Old draft removal was not confirmed.");
+        }
+      } catch (error2) {
+        return {
+          ok: false,
+          status: "cleanup_failed",
+          sourceDraftId: input.draftId,
+          draftId,
+          preview: savedPreview,
+          sourceRemoved: removalOutcome === "uncertain" ? void 0 : false,
+          error: `${errText(error2)} Replacement is saved; inspect both IDs. No cleanup retry was attempted.`
+        };
+      }
+      return {
+        ok: true,
+        status: "updated",
+        sourceDraftId: input.draftId,
+        draftId,
+        preview: savedPreview,
+        sourceRemoved: true
+      };
+    } finally {
+      lock.release();
+    }
+  });
+}
 async function withMailbox(path3, deps, fn) {
   return withClient(deps, async (client) => {
     const lock = await client.getMailboxLock(path3);
@@ -60960,13 +61791,15 @@ async function embeddedContentIds(client, uid, root) {
 function bodyStructureHasAttachments(node) {
   return !!node && collectAttachments(node).length > 0;
 }
-async function streamToBuffer(content, maxBytes) {
+async function streamToBuffer(content2, maxBytes) {
   const chunks = [];
   let total = 0;
-  for await (const chunk of content) {
+  for await (const chunk of content2) {
     total += chunk.byteLength;
     if (total > maxBytes) {
-      throw new Error(`IMAP attachment exceeds the ${maxBytes / 1024 / 1024} MiB size limit.`);
+      throw new AttachmentSizeLimitError(
+        `IMAP attachment exceeds the ${maxBytes / 1024 / 1024} MiB size limit.`
+      );
     }
     chunks.push(Buffer.from(chunk));
   }
@@ -61045,7 +61878,7 @@ async function imapListAttachments(id, deps = {}) {
     return { success: true, attachments };
   });
 }
-async function imapFetchAttachment(id, attachmentName, deps = {}) {
+async function imapFetchAttachment(id, attachmentName, deps = {}, mode = "save") {
   const ref = decodeImapId(id);
   if (!ref) return { success: false, error: `Not an IMAP message id: "${id}".` };
   return withMailbox(ref.path, depsForMessageRef(ref, deps), async (client) => {
@@ -61058,7 +61891,7 @@ async function imapFetchAttachment(id, attachmentName, deps = {}) {
       [],
       await embeddedContentIds(client, ref.uid, msg.bodyStructure)
     );
-    const match = atts.find((a) => a.filename === attachmentName);
+    const match = atts.find((a) => sameAttachmentName(a.filename, attachmentName));
     if (!match) {
       const names = atts.map((a) => a.filename).join(", ") || "none";
       return {
@@ -61066,16 +61899,46 @@ async function imapFetchAttachment(id, attachmentName, deps = {}) {
         error: `Attachment "${attachmentName}" not found on UID ${ref.uid}. Available: ${names}.`
       };
     }
-    const expected = decodedSizeWithoutBody(match).size;
-    if (expected > MAX_IMAP_ATTACHMENT_BYTES) {
-      return {
-        success: false,
-        error: `IMAP attachment "${attachmentName}" is ${expected} bytes; the maximum is ${MAX_IMAP_ATTACHMENT_BYTES} bytes (25 MiB).`
-      };
+    const maxBytes = mode === "inline" ? MAX_FETCH_ATTACHMENT_BYTES : MAX_IMAP_ATTACHMENT_BYTES;
+    if (mode === "save") {
+      const expected = decodedSizeWithoutBody(match);
+      if (expected.size > maxBytes) {
+        return {
+          success: false,
+          error: `IMAP attachment "${attachmentName}" is ${expected.size} bytes; the maximum is ${maxBytes} bytes (25 MiB).`
+        };
+      }
     }
     try {
-      const dl = await client.download(String(ref.uid), match.part, { uid: true });
-      const buf = await streamToBuffer(dl.content, MAX_IMAP_ATTACHMENT_BYTES);
+      if (mode === "inline") {
+        const encoded = match.encodedSize;
+        if (!Number.isSafeInteger(encoded) || encoded < 0 || encoded > MAX_IMAP_ATTACHMENT_BYTES) {
+          return {
+            success: false,
+            error: "Attachment is too large to verify inline. Use save-attachment instead."
+          };
+        }
+        const probePart = match.part === "1" && !msg.bodyStructure.childNodes ? "text" : match.part;
+        const probeStart = Math.max(0, encoded - 1);
+        const probe = await client.fetchOne(
+          String(ref.uid),
+          { bodyParts: [{ key: probePart, start: probeStart, maxLength: encoded > 0 ? 2 : 1 }] },
+          { uid: true }
+        );
+        const tail = probe && probe.bodyParts?.get(probePart.toLowerCase());
+        if (!tail || tail.length !== (encoded > 0 ? 1 : 0)) {
+          return {
+            success: false,
+            error: "Could not verify the complete attachment inline. Use save-attachment instead."
+          };
+        }
+      }
+      const dl = await client.download(
+        String(ref.uid),
+        match.part,
+        mode === "inline" ? { uid: true, maxBytes: MAX_IMAP_ATTACHMENT_BYTES + 1 } : { uid: true }
+      );
+      const buf = await streamToBuffer(dl.content, maxBytes);
       return {
         success: true,
         base64: buf.toString("base64"),
@@ -61083,6 +61946,9 @@ async function imapFetchAttachment(id, attachmentName, deps = {}) {
         mimeType: match.mimeType
       };
     } catch (e) {
+      if (mode === "inline" && e instanceof AttachmentSizeLimitError) {
+        return { success: false, error: FETCH_ATTACHMENT_TOO_LARGE };
+      }
       return { success: false, error: `IMAP attachment fetch failed: ${errText(e)}` };
     }
   });
@@ -61261,7 +62127,7 @@ async function imapThread(id, deps = {}, limit = 50) {
     true
   );
 }
-var import_imapflow, IMAP_ENV, defaultConnect, SPECIAL_USE_ALIASES, NOT_DELETED, LARGE_MAILBOX_MESSAGES, FIRST_SEARCH_WINDOW, MAX_WINDOW, MAX_UNSCOPED_SEARCH_DEPTH, COLOR_FETCH_CHUNK, ROW_QUERY, ROW_QUERY_NO_STRUCTURE, ROW_QUERY_HEADERS_ONLY, DELETED_MARGIN, poolConnect, pools, connecting, SENT_COPY_GMAIL_POLL_MS, SENT_COPY_GMAIL_POLL_INTERVAL_MS, GMAIL_HOST, MAX_COMPOSE_SOURCE_BYTES, MAX_RFC822_INLINE_BYTES, MAX_RFC822_FILE_BYTES, HEADER_WINDOW_BYTES, MAIL_FLAG_BITS, FLAG_COLOR_NAMES, imapMarkRead, imapMarkUnread, FALLBACK_TRASH_PATH, BASE64_TAIL_WINDOW, QP_EXACT_MAX_BYTES, MAX_HTML_SCAN_BYTES, imapBatchMarkRead, imapBatchMarkUnread, imapBatchFlag, imapBatchUnflag, imapBatchDelete;
+var import_imapflow, IMAP_ENV, defaultConnect, SPECIAL_USE_ALIASES, NOT_DELETED, LARGE_MAILBOX_MESSAGES, FIRST_SEARCH_WINDOW, MAX_WINDOW, MAX_UNSCOPED_SEARCH_DEPTH, COLOR_FETCH_CHUNK, ROW_QUERY, ROW_QUERY_NO_STRUCTURE, ROW_QUERY_HEADERS_ONLY, DELETED_MARGIN, poolConnect, pools, connecting, SENT_COPY_GMAIL_POLL_MS, SENT_COPY_GMAIL_POLL_INTERVAL_MS, GMAIL_HOST, MAX_COMPOSE_SOURCE_BYTES, MAX_RFC822_INLINE_BYTES, MAX_RFC822_FILE_BYTES, HEADER_WINDOW_BYTES, MAIL_FLAG_BITS, FLAG_COLOR_NAMES, imapMarkRead, imapMarkUnread, FALLBACK_TRASH_PATH, BASE64_TAIL_WINDOW, QP_EXACT_MAX_BYTES, MAX_HTML_SCAN_BYTES, AttachmentSizeLimitError, imapBatchMarkRead, imapBatchMarkUnread, imapBatchFlag, imapBatchUnflag, imapBatchDelete;
 var init_imapClient = __esm({
   "src/services/imapClient.ts"() {
     "use strict";
@@ -61269,9 +62135,11 @@ var init_imapClient = __esm({
     import_imapflow = __toESM(require_imap_flow(), 1);
     init_smtpMailer();
     init_docsUrls();
+    init_attachmentName();
     init_mailboxName();
     init_messageLocation();
     init_mimeParse();
+    init_savedDraftMime();
     init_headers();
     init_auditLog();
     init_attachmentLimits();
@@ -61384,6 +62252,8 @@ var init_imapClient = __esm({
     BASE64_TAIL_WINDOW = 1024;
     QP_EXACT_MAX_BYTES = 64 * 1024;
     MAX_HTML_SCAN_BYTES = 2 * 1024 * 1024;
+    AttachmentSizeLimitError = class extends Error {
+    };
     imapBatchMarkRead = (ids, deps = {}) => imapBatch(ids, deps, async (c, uids) => {
       assertMutated(
         await c.messageFlagsAdd(uids, ["\\Seen"], { uid: true }),
@@ -61754,7 +62624,7 @@ var init_smtpMailer = __esm({
 // src/cli.ts
 init_smtpMailer();
 init_docsUrls();
-import { readFileSync, realpathSync as realpathSync2 } from "fs";
+import { readFileSync as readFileSync2, realpathSync as realpathSync2 } from "fs";
 import { fileURLToPath } from "url";
 import { parseArgs } from "util";
 
@@ -61850,7 +62720,7 @@ ${SETUP_GUIDE_URL}`;
 async function runCli(argv, deps = {}) {
   const send = deps.send ?? sendViaSmtp;
   const resolveConfig = deps.resolveConfig ?? resolveSmtpConfig;
-  const readTextFile = deps.readTextFile ?? ((p) => readFileSync(p, "utf8"));
+  const readTextFile = deps.readTextFile ?? ((p) => readFileSync2(p, "utf8"));
   const out = deps.stdout ?? ((l) => console.log(l));
   const err = deps.stderr ?? ((l) => console.error(l));
   const env = deps.env ?? process.env;

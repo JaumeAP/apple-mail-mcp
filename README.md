@@ -221,6 +221,7 @@ tool, and troubleshooting. Verify any time by running the **`doctor`** tool.
 | **Send Email**        | Compose and send new emails (attach by file path or inline base64 content; optional `inReplyTo`/`references` threading over SMTP)        |
 | **Send Serial Email** | Mail merge — send personalized emails to a list of recipients with {{placeholder}} support                                               |
 | **Create Draft**      | Save emails to Drafts folder (attach by file path or inline base64 content; threaded drafts filed over IMAP)                             |
+| **Update Saved Draft** | Preview and partially edit a stored IMAP draft, retaining unchanged MIME and returning the new UID and revision |
 | **Reply**             | Reply to messages (with reply-all support and attachments)                                                                               |
 | **Forward**           | Forward messages to new recipients (with extra attachments)                                                                              |
 | **Get Thread**        | Group a conversation by normalized subject (across AppleScript or IMAP)                                                                  |
@@ -1024,6 +1025,68 @@ to an unthreaded Mail.app draft. The result names the Drafts `mailbox`, the `acc
 the draft's `messageId`. Without threading headers, `create-draft` is unchanged
 (AppleScript).
 
+#### `update-saved-draft`
+
+Preview or edit an existing **stored** draft (#372). Requires a configured IMAP
+account and exactly one selectable SPECIAL-USE `\Drafts` mailbox; there is no
+AppleScript or SMTP fallback. The message itself must carry `\Draft` and must
+not be marked `\Deleted`. Editing requires UIDPLUS, so removal uses **UID
+EXPUNGE**, never a global EXPUNGE that could remove unrelated messages.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `draftId` | string | Yes | Fresh `imap:` ID from `list-messages` on Drafts. Numeric IDs are refused. |
+| `dryRun` | boolean | No | Defaults to `true`: only read and preview, including proposed changes when supplied. |
+| `approvedSha256` | string | For an update | `preview.sha256` of the current stored source. |
+| `approvedUidValidity` | string | For an update | `preview.uidValidity` of the current source mailbox. The UID is encoded in `draftId` and also returned in the preview. |
+| `changes` | object | For an update | Partial patch; omitted fields remain unchanged. |
+
+`changes` accepts `subject`, `to`, `cc`, `bcc`, `body`, `htmlBody`,
+`addAttachments` and `removeAttachments`. An explicit `[]` clears a recipient
+field. `body` replaces an existing text/plain part and `htmlBody` an existing
+text/html part. When both alternatives exist, **supply both** to avoid leaving
+a stale rendering. Missing or ambiguous body alternatives, signed/encrypted
+content, malformed MIME and unreadable bodies are refused before writing.
+
+Unchanged envelope/threading headers, native signatures and encoded MIME parts
+are retained. A changed body is the complete replacement for that body,
+including any signature it contains. `addAttachments` uses the same allowlisted
+file paths / inline `{filename, contentBase64}` inputs as `create-draft` (up to
+20 additions). `removeAttachments` takes the current preview's **partId** values,
+so duplicate filenames are not ambiguous; embedded CID images cannot be removed.
+The source and resulting stored MIME are each capped at 25 MiB, and each body
+representation in the preview at 100,000 characters.
+
+**Workflow:** list Drafts, call with `dryRun: true`, review `preview` and any
+`proposed` changes with the user, then call with `dryRun: false`, the same
+`draftId`, the current preview's approval tokens and the approved `changes`.
+The tokens identify the **source**; a proposed preview is not yet a stored
+revision. A changed UIDVALIDITY or source SHA-256 refuses the edit. The format
+matches the UIDVALIDITY/UID/MIME-SHA-256 revision used in the proposed
+[`send-saved-draft` work (#241)](https://github.com/sweetrb/apple-mail-mcp/pull/241).
+That send feature is separate and is not introduced here.
+
+**Returns:** `status: preview`, `updated` or `unchanged`, `sourceDraftId`,
+`draftId`, the stored `preview` (From, To/Cc/Bcc, subject, bodies, attachment
+metadata and revision), and optionally `proposed`. On update, the replacement
+is APPENDed and its UID and stored bytes verified **before** the old UID is
+removed. Use the **new** `draftId` and revision afterwards.
+
+Failures are separate outcomes: `append_failed` leaves the source untouched;
+`append_unknown` preserves it and reports any known replacement ID;
+`cleanup_failed` reports the saved replacement preview and both IDs. Inspect
+Drafts before retrying: neither APPEND nor cleanup is retried automatically.
+`sourceRemoved` is true only after confirmation; it is omitted when a cleanup
+connection failure leaves the outcome uncertain.
+IMAP does not provide an atomic cross-client compare-and-replace. The source is
+checked again before APPEND and cleanup; a concurrently created UID is never
+deleted, but a racing edit or connection failure may leave multiple versions.
+
+**⚠️ Safety:** This overwrites a draft only and never sends mail. Confirm the
+patch with the user before `dryRun: false`. A successful edit removes the old
+revision after confirming its replacement; a cleanup failure is not a reason
+to repeat the already saved edit.
+
 #### `get-thread`
 
 Group a conversation by normalized subject (across the AppleScript or IMAP backend).
@@ -1049,6 +1112,12 @@ Return an attachment's bytes as base64 (the read counterpart to inline-base64 se
 | `attachmentName` | string | Yes      | Attachment filename (from `list-attachments`) |
 
 **Returns:** The attachment bytes, base64-encoded (also in `structuredContent.contentBase64`).
+
+**Inline limit:** 3 MiB of decoded bytes on either backend. The result keeps
+both base64 representations; its total serialized size is also bounded to
+leave room under the MCP SDK's default 10 MiB stdio read buffer. Larger or
+unverifiable inline results return an error directing you to `save-attachment`.
+IMAP saves retain their separate 25 MiB limit and the existing allowed roots.
 
 ---
 
@@ -1160,7 +1229,7 @@ is chosen.
 
 **AppleScript transport quoting (v2.19.12):** every draft (`send: false`) and any send that falls back to AppleScript (SMTP not configured) also gets the original quoted — an "On \<date\>, \<sender\> wrote:" attribution line followed by the `> `-prefixed original body, built the same way as the SMTP path. Mail's own `reply`/`forward` AppleScript commands generate this quote internally but expose no way to read it back, so it's built here instead of relying on Mail's (unreadable) copy. Unlike SMTP, this path has no sending-identity restriction — it's read-only source lookup, not sending.
 
-**Sender on the AppleScript transport (2.20.15, #294):** Mail's `reply`/`forward` commands set no sender, so Mail would answer from its default sending account. The reply or forward is now sent from the account the original sits in: the original's to/cc address that belongs to that account — or, for a message you sent, its own From address — else the account's first address. The sender is read back before saving or sending; a mismatch deletes the compose and returns an error. A message in an "On My Mac" mailbox has no account, so its recipients are matched against every enabled account and, with no match, the sender is left to Mail. The same applies to `forward-message`.
+**Sender on the AppleScript transport (2.20.15, #294):** Mail's `reply`/`forward` commands set no sender, so Mail would answer from its default sending account. The reply or forward is now sent from the account the original sits in: the original's to/cc address that belongs to that account — or, for a message you sent, its own From address. When none of its to/cc addresses belongs to that account (a message another account forwarded in), the to/cc address that belongs to any other enabled account is used; otherwise the account's first address. The sender is read back before saving or sending; a mismatch deletes the compose and returns an error. A message in an "On My Mac" mailbox has no account, so its recipients are matched against every enabled account and, with no match, the sender is left to Mail. The same applies to `forward-message`.
 
 **Failure behavior:** SMTP and AppleScript-content replies stop if the original source or plain-text body cannot be read, rather than silently dropping the quote. Numeric-message replies can recover text from raw MIME when Mail.app's decoded content is unavailable. A genuinely empty original body is allowed; an unreadable body is not. Native-editor mode preserves Mail's own reply history and requires the original source to be readable, but does not reconstruct its plain-text quote. Once SMTP is selected, a missing password, unreadable source, missing reply address or `Message-ID`, or known SMTP refusal returns an error. Partial acceptance and uncertain submission use the [structured SMTP outcomes](#smtp-submission-outcomes) above instead of implying that nothing was sent. The tool does not silently switch to AppleScript or create an unthreaded new message. With SMTP unconfigured and transport omitted, AppleScript remains available. `send: false` saves a Mail.app draft; combining it with `transport: "smtp"` is rejected before composing.
 
@@ -2346,6 +2415,18 @@ The entrypoint is written as:
   Paths are canonicalized before use, so symlink escapes are rejected. `/tmp`
   is world-writable and is a convenience root, not a user-content trust
   boundary. Inline base64 attachments are unaffected.
+- **Attachment save boundary** - `save-attachment` (and `get-message-rfc822`'s
+  `savePath`) create files only under `~/Downloads`, `~/Desktop`, `~/Documents`,
+  iCloud Drive, `~/Library/CloudStorage` and the temporary directories, and never
+  overwrite. Hidden files and folders, credential locations and every other
+  `~/Library` folder (LaunchAgents, Application Support, this server's own
+  config) are refused, so an instruction smuggled into an email cannot plant a
+  login item or a shell startup file. Set `APPLE_MAIL_MCP_ATTACHMENT_SAVE_ROOTS`
+  to a colon-separated list of absolute roots to allow another location.
+- **Tool annotations** - every tool declares `readOnlyHint`, and the sending,
+  deleting and overwriting tools declare `destructiveHint` (sending tools also
+  `openWorldHint`), so a client can auto-approve reads while still asking before
+  mail leaves the machine.
 
 ---
 
@@ -2362,9 +2443,9 @@ The entrypoint is written as:
 | Message ID format                                                            | Message IDs must be numeric (AppleScript ids) or `imap:…` tokens from the IMAP read path (validated by schema)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Batch size cap                                                               | Batch operations are limited to 100 messages per request                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Date filter format                                                           | Date filters must be valid parseable dates (e.g., "January 1, 2026" or "2026-03-15"); bare numbers or non-date strings are rejected                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| Attachment save path restrictions                                            | `save-attachment` only allows saving to home directory, `/tmp`, `/private/tmp`, and `/Volumes`; path traversal is blocked                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Attachment save path restrictions                                            | `save-attachment` saves only into Downloads, Desktop, Documents, iCloud Drive, CloudStorage or temp directories (plus `APPLE_MAIL_MCP_ATTACHMENT_SAVE_ROOTS`); protected and hidden paths, traversal and overwrites are refused                                                                                                                                                                                                                                                                                                                                                                      |
 | Attachment count limit                                                       | `send-email` and `create-draft` accept a maximum of 20 file attachments                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| IMAP attachment fetch size                                                   | `fetch-attachment` / `save-attachment` over IMAP refuse a part larger than 25 MiB — rejected before download when the server declares the size, and the stream is cut off at the limit when it does not                                                                                                                                                                                                                                                                                                                                                                                              |
+| Attachment fetch size                                                        | `fetch-attachment` refuses inline results over 3 MiB on either backend. IMAP `save-attachment` retains its separate 25 MiB download limit.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 ### Mail.app `<blockquote>` wrapping on macOS 15+ (workaround in v1.6.0)
 

@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [2.20.57-jap.1] - 2026-11-17 (JaumeAP fork)
+
+Merges upstream 2.20.50 to 2.20.57. Where both sides had solved the same problem, upstream's version is kept and the fork's is removed:
+
+- **Attachment save policy** is upstream's (2.20.54): `isProtectedSaveTarget` / `isWithinSaveRoots` in `utils/attachmentReadPolicy.ts` and `APPLE_MAIL_MCP_ATTACHMENT_SAVE_ROOTS`. The fork's `ALLOWED_SAVE_ROOTS`, `canonicalRoots`, `canonicalTmpdir`, `isProtectedPath` save check and the `stagingDirectory` option are gone.
+- **Tool annotations** are upstream's `annotationsFor` table; the fork's `withSafetyAnnotations` is applied on top of it for the tool-mode gate.
+- **Attachment names** are compared with upstream's `sameAttachmentName` (NFC, #370).
+
+Kept from the fork: SMTP sender identities (`APPLE_MAIL_MCP_SMTP_IDENTITIES`), the tool-mode gate, `set-account-settings`, `send-email` with `draftId`, the windows-1252 decoder and `cid:` references. Upstream adds `update-saved-draft` (2.20.57), the inline-attachment size bound (2.20.51), the forwarded-in reply sender fix (2.20.52, the fork's own fix from 2.20.22-jap.3 is superseded) and dependency floors for `hono`, `@hono/node-server` and `minimatch`. `build/` is regenerated.
+
 ## [2.20.50-jap.3] - 2026-11-17 (JaumeAP fork)
 
 ### Added
@@ -397,6 +407,58 @@ Fixes from a review of the fork's own changes (`a98e669..origin/main`).
   longer refused, and a root in `APPLE_MAIL_MCP_ATTACHMENT_READ_ROOTS` lifts
   the Library rule beneath it.
 
+## [2.20.57] - 2026-11-11
+
+### Added
+
+- **`update-saved-draft` (#372):** preview and partially edit stored IMAP drafts, including subject, To/Cc/Bcc, existing plain/HTML bodies and explicit attachment additions/removals. Unchanged headers, native formatting, signatures, threading and encoded attachments are retained. The current UIDVALIDITY, UID and MIME SHA-256 pin the source revision. The tool never sends mail or uses SMTP/AppleScript. A replacement is APPENDed and verified before targeted UID EXPUNGE removes the old revision; UIDPLUS is required, uncertain APPENDs preserve the source, and cleanup failures return both IDs and the saved replacement preview without retrying. Includes stale-revision, non-draft, ambiguous-account/mailbox and failure-path tests. Verified live against a Gmail Drafts mailbox (preview, apply, UID replacement, stale-revision refusal); that run found Gmail's `RFC822.SIZE` differs from the fetched bytes by a few bytes, so the size cross-check now tolerates drift (1 KiB + 2%) instead of requiring equality.
+
+## [2.20.56] - 2026-11-11
+
+### Changed
+
+- Dependency bump via Dependabot; committed bundle rebuilt. (automated)
+
+## [2.20.55] - 2026-11-04
+
+### Fixed
+
+- **`save-attachment` and `fetch-attachment` could not find attachments whose names contain non-ASCII characters (#370).** Mail.app stores those filenames decomposed (NFD — `ä` as `a` + U+0308) for messages sent from a Mac, while clients pass them precomposed (NFC), so the exact comparisons failed with "Attachment … not found … Available: <the same-looking name>". Attachment names are now compared NFC on both sides on every path: the IMAP backend (`imapFetchAttachment`), the MIME-source fallback (`extractMimeAttachment`), and the AppleScript save, which now tests Mail's stored name against the caller's spelling and its NFC and NFD forms. Case is still significant, and the saved file keeps the caller's name. Same class as #253 (mailbox names). Reported, with both comparisons pinpointed, by @SandroK — thank you.
+
+## [2.20.54] - 2026-11-04
+
+### Security
+
+- **`save-attachment` could create files anywhere under the home folder.** The protected-path rules (hidden segments, credential roots, `~/Library` outside iCloud Drive and CloudStorage) were applied only to outbound attachment _reads_; the save side checked nothing but "under `$HOME`, `/tmp` or `/Volumes`" plus no-overwrite. An instruction smuggled into an email could therefore lead the model to write a new `~/Library/LaunchAgents/*.plist`, a `~/.zshenv`, or this server's own `~/Library/Application Support/apple-mail-mcp/config.json` (whose keys, including the SMTP settings, are merged into the environment). Every save target (`save-attachment` on both backends and `get-message-rfc822`'s `savePath`) is now checked against those rules on both the typed and the resolved path, and saves are limited to `~/Downloads`, `~/Desktop`, `~/Documents`, iCloud Drive, `~/Library/CloudStorage` and the temporary directories. Reported privately by Alejandro San Martin Lamas — thank you.
+- **Every tool now declares MCP annotations.** Only one tool carried a hint before, so clients could not auto-approve reads while still asking before a send. Reads are `readOnlyHint: true`; deletes, overwrites (`save-template`) and rule creation/enabling are `destructiveHint: true`; `send-email`, `send-serial-email`, `reply-to-message` and `forward-message` are destructive and `openWorldHint: true`. A new tool cannot register without a classification (`src/tools/toolAnnotations.ts`).
+
+### Changed
+
+- **Saving to other folders now needs `APPLE_MAIL_MCP_ATTACHMENT_SAVE_ROOTS`.** The home folder as a whole and `/Volumes` are no longer default save roots. To keep saving somewhere else (an external disk, a project folder), set `APPLE_MAIL_MCP_ATTACHMENT_SAVE_ROOTS` to a colon-separated list of absolute paths, in the environment or `config.json`. Hidden and credential locations stay refused even inside a configured root, and a root containing the whole home folder does not lift the `~/Library` rule.
+
+## [2.20.53] - 2026-11-04
+
+### Changed
+
+- Dependency bump via Dependabot; committed bundle rebuilt. (automated)
+
+## [2.20.52] - 2026-11-02
+
+### Fixed
+
+- **`reply-to-message` and `forward-message` (AppleScript path) answered a forwarded-in message from the wrong address.** A mail sent to `a@work.example` and forwarded by the server into a mailbox of another account (`b@home.example`) sits in an account none of whose addresses appear in its to/cc. The sender fell back to that account's first address, so the reply left from `b@home.example` although the sender had written to `a@work.example`. When the account the message sits in has no matching to/cc address, the to/cc addresses are now matched against every other enabled account before that fallback, so the reply leaves from the address the sender wrote to. The original's own sender is not used in this second pass, and the existing read-back of `sender` still refuses a mismatch.
+- Removed two stray `|||||||` merge-conflict marker lines that #357 and #359 had left in this changelog (documentation only).
+
+## [2.20.51] - 2026-11-01
+
+### Changed
+
+- `fetch-attachment` now refuses inline results over 3 MiB of decoded bytes
+  on both backends. A 4 MiB attachment that previously returned inline must be
+  saved with `save-attachment` to an allowed directory instead. IMAP saves keep
+  their separate 25 MiB limit; allowed roots are unchanged. Oversized or
+  unverifiable inline results return an error rather than truncated content.
+
 ## [2.20.50] - 2026-10-31
 
 ### Changed
@@ -419,8 +481,6 @@ Fixes from a review of the fork's own changes (`a98e669..origin/main`).
     read from All Mail and Important). A merged multi-account result always
     names them. Over IMAP, a search names them when it covers more than one
     mailbox; its `imap:` ids encode the mailbox, but not readably.
-
-||||||| fd18dcf
 
 ## [2.20.49] - 2026-10-31
 
@@ -451,8 +511,6 @@ Fixes from a review of the fork's own changes (`a98e669..origin/main`).
   boundaries only as MIME delimiter lines, so body text cannot silently
   truncate the quotation. Existing AppleScript composition and IMAP account
   matching are unchanged.
-
-||||||| fd18dcf
 
 ## [2.20.48] - 2026-10-31
 

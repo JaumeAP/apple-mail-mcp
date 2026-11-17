@@ -155,8 +155,10 @@ test("produces a deterministic, self-contained archive with unchanged source lau
     responses.find((response) => response.id === 1).result.serverInfo.version,
     first.version
   );
-  // 52 upstream tools plus the fork's own (account settings, restart-mail, ...).
-  assert.equal(responses.find((response) => response.id === 2).result.tools.length, 56);
+  const tools = responses.find((response) => response.id === 2).result.tools;
+  // 53 upstream tools plus the fork's own (account settings, sync-mail, restart-mail).
+  assert.equal(tools.length, 57);
+  assert.ok(tools.some((tool) => tool.name === "update-saved-draft"));
 });
 
 test("optionally bundles local artwork and changes only generated manifest icon fields", (t) => {
