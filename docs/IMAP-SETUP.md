@@ -275,6 +275,14 @@ and `secure` default to the primary values; `user` defaults to `from`;
 falls back to the primary password. `doctor` reports how many identities are
 configured and flags an invalid list.
 
+Where identities apply: `send-email`, `send-serial-email` (its `account`) and the
+`apple-mail-send` CLI (`--from`). `reply-to-message` and `forward-message` stay on
+the primary login; reply from an identity with `send-email` and `inReplyTo`, or
+with `transport: "applescript"`. If `secure` is set on an identity without a
+`port`, the port defaults to 465 (or 587 when `secure` is false), not to the
+primary port. A malformed `APPLE_MAIL_MCP_SMTP_IDENTITIES` makes every SMTP send
+fail with an error naming the variable, so a typo is never ignored silently.
+
 ---
 
 ## Step 5 (optional) — New-mail push (IMAP IDLE)

@@ -163,6 +163,18 @@ describe("resolveSmtpConfig identities", () => {
     }
   });
 
+  it.each([
+    { from: "a@example.test", secure: "false" },
+    { from: "a@example.test", user: 5 },
+    { from: "a@example.test", port: "465" },
+    { from: "a@example.test", port: 0 },
+    { from: "a@example.test", password: 1234 },
+  ])("rejects an identity with a wrongly typed field %j, naming the variable", (identity) => {
+    expect(() => resolveSmtpConfig(withIdentities([identity]), "a@example.test")).toThrow(
+      /APPLE_MAIL_MCP_SMTP_IDENTITIES/
+    );
+  });
+
   it("never falls back to the primary password for an identity", () => {
     const env = withIdentities([
       {

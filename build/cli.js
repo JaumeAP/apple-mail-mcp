@@ -61503,6 +61503,18 @@ function parseSmtpIdentities(env) {
   return parsed.map((entry) => {
     const from = entry?.from;
     if (typeof from !== "string" || !from.trim()) throw invalid('every entry needs a "from"');
+    const fields = entry;
+    for (const key of ["user", "host", "password", "keychainService", "keychainAccount"]) {
+      if (fields[key] !== void 0 && typeof fields[key] !== "string") {
+        throw invalid(`"${key}" of ${from.trim()} must be a string`);
+      }
+    }
+    if (fields.secure !== void 0 && typeof fields.secure !== "boolean") {
+      throw invalid(`"secure" of ${from.trim()} must be true or false`);
+    }
+    if (fields.port !== void 0 && !(Number.isInteger(fields.port) && fields.port > 0)) {
+      throw invalid(`"port" of ${from.trim()} must be a positive integer`);
+    }
     return { ...entry, from: from.trim() };
   });
 }
@@ -61890,7 +61902,7 @@ async function runCli(argv, deps = {}) {
   }
   let config;
   try {
-    config = resolveConfig(env);
+    config = resolveConfig(env, values.from);
   } catch (e) {
     err(e instanceof Error ? e.message : String(e));
     err(`Setup guide: ${SETUP_GUIDE_URL}`);

@@ -66001,6 +66001,18 @@ function parseSmtpIdentities(env) {
   return parsed.map((entry) => {
     const from = entry?.from;
     if (typeof from !== "string" || !from.trim()) throw invalid('every entry needs a "from"');
+    const fields = entry;
+    for (const key of ["user", "host", "password", "keychainService", "keychainAccount"]) {
+      if (fields[key] !== void 0 && typeof fields[key] !== "string") {
+        throw invalid(`"${key}" of ${from.trim()} must be a string`);
+      }
+    }
+    if (fields.secure !== void 0 && typeof fields.secure !== "boolean") {
+      throw invalid(`"secure" of ${from.trim()} must be true or false`);
+    }
+    if (fields.port !== void 0 && !(Number.isInteger(fields.port) && fields.port > 0)) {
+      throw invalid(`"port" of ${from.trim()} must be a positive integer`);
+    }
     return { ...entry, from: from.trim() };
   });
 }
@@ -108820,7 +108832,7 @@ function createSerialEmailHandler(deps) {
             "A Mail.app account label cannot select an SMTP identity. Use a configured sender email address, omit account to use the configured SMTP sender, or explicitly select transport=applescript."
           );
         }
-        const config2 = deps.smtpConfig();
+        const config2 = deps.smtpConfig(account);
         const from = account ? resolveSmtpFrom(account, config2) : void 0;
         results = await deps.smtpSend(recipients, subject, body, config2, {
           delayMs,
@@ -111096,7 +111108,7 @@ registerTool(
   },
   createSerialEmailHandler({
     smtpConfigured: isSmtpConfigured,
-    smtpConfig: resolveSmtpConfig,
+    smtpConfig: (from) => resolveSmtpConfig(process.env, from),
     smtpSend: sendSerialViaSmtp,
     appleScriptSend: (...args) => mailManager.sendSerialEmail(...args)
   })

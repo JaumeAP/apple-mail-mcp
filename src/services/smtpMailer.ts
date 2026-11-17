@@ -300,6 +300,21 @@ export function parseSmtpIdentities(env: NodeJS.ProcessEnv): SmtpIdentity[] {
   return parsed.map((entry) => {
     const from = (entry as { from?: unknown } | null)?.from;
     if (typeof from !== "string" || !from.trim()) throw invalid('every entry needs a "from"');
+    const fields = entry as Record<string, unknown>;
+    for (const key of ["user", "host", "password", "keychainService", "keychainAccount"]) {
+      if (fields[key] !== undefined && typeof fields[key] !== "string") {
+        throw invalid(`"${key}" of ${from.trim()} must be a string`);
+      }
+    }
+    if (fields.secure !== undefined && typeof fields.secure !== "boolean") {
+      throw invalid(`"secure" of ${from.trim()} must be true or false`);
+    }
+    if (
+      fields.port !== undefined &&
+      !(Number.isInteger(fields.port) && (fields.port as number) > 0)
+    ) {
+      throw invalid(`"port" of ${from.trim()} must be a positive integer`);
+    }
     return { ...(entry as SmtpIdentity), from: from.trim() };
   });
 }
