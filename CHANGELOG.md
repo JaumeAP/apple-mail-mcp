@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [2.20.50-jap.3] - 2026-11-17 (JaumeAP fork)
+
+### Added
+
+- **SMTP sender identities (`APPLE_MAIL_MCP_SMTP_IDENTITIES`).** A JSON array of extra senders with their own SMTP login. A requested From that matches an identity's `from` is sent with that identity's user and Keychain password; `host`, `port` and `secure` default to the primary values, and an identity never falls back to the primary password. Anything else behaves as before. Applies to `send-email`, `send-serial-email` and the `apple-mail-send` CLI; `reply-to-message` and `forward-message` stay on the primary login. `doctor` reports how many identities are configured and flags an invalid list. See `docs/IMAP-SETUP.md`. `build/` is regenerated.
+
 ## [2.20.50-jap.2] - 2026-11-04 (JaumeAP fork)
 
 ### Fixed
@@ -390,6 +396,7 @@ Fixes from a review of the fork's own changes (`a98e669..origin/main`).
 - Inline base64 attachments staged under a `TMPDIR` inside `~/Library` are no
   longer refused, and a root in `APPLE_MAIL_MCP_ATTACHMENT_READ_ROOTS` lifts
   the Library rule beneath it.
+
 ## [2.20.50] - 2026-10-31
 
 ### Changed
@@ -414,6 +421,7 @@ Fixes from a review of the fork's own changes (`a98e669..origin/main`).
     mailbox; its `imap:` ids encode the mailbox, but not readably.
 
 ||||||| fd18dcf
+
 ## [2.20.49] - 2026-10-31
 
 ### Fixed
@@ -445,6 +453,7 @@ Fixes from a review of the fork's own changes (`a98e669..origin/main`).
   matching are unchanged.
 
 ||||||| fd18dcf
+
 ## [2.20.48] - 2026-10-31
 
 ### Fixed
