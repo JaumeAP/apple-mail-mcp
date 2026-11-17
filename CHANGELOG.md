@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [2.20.50-jap.3] - 2026-11-17 (JaumeAP fork)
+
+### Added
+
+- **SMTP sender identities (`APPLE_MAIL_MCP_SMTP_IDENTITIES`).** A JSON array of extra senders with their own SMTP login. A requested From that matches an identity's `from` is sent with that identity's user and Keychain password; `host`, `port` and `secure` default to the primary values, and an identity never falls back to the primary password. Anything else behaves as before. `doctor` reports how many identities are configured and flags an invalid list. See `docs/IMAP-SETUP.md`. `build/` is regenerated.
+
 ## [2.20.50-jap.2] - 2026-11-04 (JaumeAP fork)
 
 ### Fixed
