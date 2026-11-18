@@ -59919,6 +59919,8 @@ __export(imapClient_exports, {
   unscopedSearchOffsetError: () => unscopedSearchOffsetError
 });
 import { createHash } from "node:crypto";
+import { readFileSync as readFileSync2 } from "node:fs";
+import { rootCertificates } from "node:tls";
 function encodeImapId(account, path3, uid) {
   const payload = Buffer.from(JSON.stringify({ a: account, p: path3, u: uid }), "utf8").toString(
     "base64url"
@@ -60013,7 +60015,8 @@ function listImapAccountSpecs(env = process.env) {
             port,
             password: str(a.password),
             keychainService: str(a.keychainService),
-            keychainAccount: str(a.keychainAccount)
+            keychainAccount: str(a.keychainAccount),
+            tlsCaFile: str(a.tlsCaFile)
           });
         }
       }
@@ -60043,7 +60046,8 @@ function specToConfig(spec, allowPlaintext = false) {
     allowPlaintext,
     user: spec.user,
     pass,
-    accountLabel: spec.accountLabel
+    accountLabel: spec.accountLabel,
+    tlsCaFile: spec.tlsCaFile
   };
 }
 function isImapAccount(account, env = process.env) {
@@ -60088,11 +60092,23 @@ function resolveImapConfig(env = process.env, account) {
   }
   return specToConfig(spec, isTruthySetting(env[IMAP_ENV.allowPlaintext]));
 }
+function tlsWithExtraCa(cfg) {
+  let pem;
+  try {
+    pem = readFileSync2(cfg.tlsCaFile, "utf8");
+  } catch (e) {
+    throw new Error(
+      `Cannot read tlsCaFile "${cfg.tlsCaFile}" for IMAP account "${cfg.accountLabel}": ${e instanceof Error ? e.message : String(e)}`
+    );
+  }
+  return { ca: [...rootCertificates, pem] };
+}
 function buildImapConnectionOptions(cfg) {
   return {
     host: cfg.host,
     port: cfg.port,
     secure: cfg.secure,
+    ...cfg.tlsCaFile ? { tls: tlsWithExtraCa(cfg) } : {},
     // ImapFlow reads this as a tri-state, and the distinction matters:
     //   true      -> require STARTTLS; fail if the server does not offer it
     //   false     -> NEVER STARTTLS, even if the server advertises it
@@ -62624,7 +62640,7 @@ var init_smtpMailer = __esm({
 // src/cli.ts
 init_smtpMailer();
 init_docsUrls();
-import { readFileSync as readFileSync2, realpathSync as realpathSync2 } from "fs";
+import { readFileSync as readFileSync3, realpathSync as realpathSync2 } from "fs";
 import { fileURLToPath } from "url";
 import { parseArgs } from "util";
 
@@ -62720,7 +62736,7 @@ ${SETUP_GUIDE_URL}`;
 async function runCli(argv, deps = {}) {
   const send = deps.send ?? sendViaSmtp;
   const resolveConfig = deps.resolveConfig ?? resolveSmtpConfig;
-  const readTextFile = deps.readTextFile ?? ((p) => readFileSync2(p, "utf8"));
+  const readTextFile = deps.readTextFile ?? ((p) => readFileSync3(p, "utf8"));
   const out = deps.stdout ?? ((l) => console.log(l));
   const err = deps.stderr ?? ((l) => console.error(l));
   const env = deps.env ?? process.env;

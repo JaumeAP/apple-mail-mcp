@@ -67722,6 +67722,8 @@ __export(imapClient_exports, {
   unscopedSearchOffsetError: () => unscopedSearchOffsetError
 });
 import { createHash } from "node:crypto";
+import { readFileSync as readFileSync2 } from "node:fs";
+import { rootCertificates } from "node:tls";
 function encodeImapId(account, path3, uid) {
   const payload = Buffer.from(JSON.stringify({ a: account, p: path3, u: uid }), "utf8").toString(
     "base64url"
@@ -67816,7 +67818,8 @@ function listImapAccountSpecs(env = process.env) {
             port,
             password: str(a.password),
             keychainService: str(a.keychainService),
-            keychainAccount: str(a.keychainAccount)
+            keychainAccount: str(a.keychainAccount),
+            tlsCaFile: str(a.tlsCaFile)
           });
         }
       }
@@ -67846,7 +67849,8 @@ function specToConfig(spec, allowPlaintext = false) {
     allowPlaintext,
     user: spec.user,
     pass,
-    accountLabel: spec.accountLabel
+    accountLabel: spec.accountLabel,
+    tlsCaFile: spec.tlsCaFile
   };
 }
 function isImapAccount(account, env = process.env) {
@@ -67891,11 +67895,23 @@ function resolveImapConfig(env = process.env, account) {
   }
   return specToConfig(spec, isTruthySetting(env[IMAP_ENV.allowPlaintext]));
 }
+function tlsWithExtraCa(cfg) {
+  let pem;
+  try {
+    pem = readFileSync2(cfg.tlsCaFile, "utf8");
+  } catch (e) {
+    throw new Error(
+      `Cannot read tlsCaFile "${cfg.tlsCaFile}" for IMAP account "${cfg.accountLabel}": ${e instanceof Error ? e.message : String(e)}`
+    );
+  }
+  return { ca: [...rootCertificates, pem] };
+}
 function buildImapConnectionOptions(cfg) {
   return {
     host: cfg.host,
     port: cfg.port,
     secure: cfg.secure,
+    ...cfg.tlsCaFile ? { tls: tlsWithExtraCa(cfg) } : {},
     // ImapFlow reads this as a tri-state, and the distinction matters:
     //   true      -> require STARTTLS; fail if the server does not offer it
     //   false     -> NEVER STARTTLS, even if the server advertises it
@@ -100339,7 +100355,7 @@ init_headers();
 init_mailboxName();
 
 // src/services/templateStore.ts
-import { existsSync, mkdirSync, readFileSync as readFileSync2, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync as readFileSync3, writeFileSync } from "fs";
 import { dirname, join as join2 } from "path";
 import { homedir as homedir2 } from "os";
 function defaultTemplatesFile() {
@@ -100361,7 +100377,7 @@ var TemplateStore = class {
     this.loaded = true;
     try {
       if (!existsSync(this.file)) return;
-      const parsed = JSON.parse(readFileSync2(this.file, "utf8"));
+      const parsed = JSON.parse(readFileSync3(this.file, "utf8"));
       if (Array.isArray(parsed.templates)) {
         for (const t of parsed.templates) {
           if (t && typeof t.id === "string") this.templates.set(t.id, t);
@@ -100412,7 +100428,7 @@ var TemplateStore = class {
 };
 
 // src/services/stalledMailboxStore.ts
-import { mkdirSync as mkdirSync2, readFileSync as readFileSync3, renameSync, unlinkSync, writeFileSync as writeFileSync2 } from "fs";
+import { mkdirSync as mkdirSync2, readFileSync as readFileSync4, renameSync, unlinkSync, writeFileSync as writeFileSync2 } from "fs";
 import { dirname as dirname2, join as join3 } from "path";
 import { homedir as homedir3 } from "os";
 var STALLED_MAILBOX_TTL_MS = 7 * 24 * 60 * 60 * 1e3;
@@ -100479,7 +100495,7 @@ var StalledMailboxStore = class {
     const out = /* @__PURE__ */ new Map();
     let text;
     try {
-      text = readFileSync3(this.file, "utf8");
+      text = readFileSync4(this.file, "utf8");
     } catch {
       return out;
     }
@@ -101329,7 +101345,7 @@ function searchContactsDb(query, opts) {
 
 // src/utils/envelopeIndex.ts
 init_mimeParse();
-import { closeSync as closeSync2, existsSync as existsSync5, openSync as openSync2, readFileSync as readFileSync4, readSync as readSync2, readdirSync as readdirSync4 } from "fs";
+import { closeSync as closeSync2, existsSync as existsSync5, openSync as openSync2, readFileSync as readFileSync5, readSync as readSync2, readdirSync as readdirSync4 } from "fs";
 import { join as join8 } from "path";
 import { homedir as homedir6 } from "os";
 
@@ -102518,7 +102534,7 @@ function readMessageFromStore(id, opts = {}) {
   for (const path3 of emlxCandidates(store.versionDir, location.accountId, location.path, id)) {
     let bytes;
     try {
-      bytes = readFileSync4(path3);
+      bytes = readFileSync5(path3);
     } catch {
       continue;
     }
@@ -109115,7 +109131,7 @@ ${actionStmts.join("\n")}
 
 // src/index.ts
 init_smtpMailer();
-import { readFileSync as readFileSync6, writeFileSync as writeFileSync5 } from "fs";
+import { readFileSync as readFileSync7, writeFileSync as writeFileSync5 } from "fs";
 import { join as joinPath } from "path";
 
 // src/tools/compose.ts
@@ -110725,7 +110741,7 @@ var ImapIdleWatcher = class {
 };
 
 // src/services/fileConfig.ts
-import { existsSync as existsSync7, readFileSync as readFileSync5 } from "fs";
+import { existsSync as existsSync7, readFileSync as readFileSync6 } from "fs";
 import { join as join11 } from "path";
 import { homedir as homedir8 } from "os";
 function fileConfigPath(env = process.env) {
@@ -110737,7 +110753,7 @@ function loadFileConfig(env = process.env, path3 = fileConfigPath(env)) {
   const applied = [];
   try {
     if (!existsSync7(path3)) return applied;
-    const parsed = JSON.parse(readFileSync5(path3, "utf8"));
+    const parsed = JSON.parse(readFileSync6(path3, "utf8"));
     if (!parsed || typeof parsed !== "object") return applied;
     for (const [k, v] of Object.entries(parsed)) {
       if (typeof v !== "string") continue;
@@ -111162,7 +111178,7 @@ var toolMode = (() => {
 })();
 function readConfigText() {
   try {
-    return { text: readFileSync6(fileConfigPath(), "utf8") };
+    return { text: readFileSync7(fileConfigPath(), "utf8") };
   } catch (error63) {
     const code = error63.code;
     return code === "ENOENT" ? {} : { unreadable: code ?? String(error63) };

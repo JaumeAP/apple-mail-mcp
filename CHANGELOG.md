@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [2.20.57-jap.2] - 2026-11-18 (JaumeAP fork)
+
+### Added
+
+- **`tlsCaFile` for an IMAP account.** A per-account entry of `APPLE_MAIL_MCP_IMAP_ACCOUNTS` may name a PEM file with extra CA certificates. They are added to Node's built-in roots and verification stays on. It fixes `unable to verify the first certificate` against a server that sends only its own certificate and not the intermediate CA: Mail.app and `openssl` tolerate that, Node does not. An unreadable file fails the connection with an error naming the account and the path. See `docs/IMAP-SETUP.md`. `build/` is regenerated.
+
 ## [2.20.57-jap.1] - 2026-11-17 (JaumeAP fork)
 
 Merges upstream 2.20.50 to 2.20.57. Where both sides had solved the same problem, upstream's version is kept and the fork's is removed:

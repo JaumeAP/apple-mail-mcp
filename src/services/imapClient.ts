@@ -34,6 +34,8 @@ import {
   SEARCH_DEADLINE_ENV,
 } from "@/utils/callStop.js";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { rootCertificates } from "node:tls";
 import { ImapFlow } from "imapflow";
 import { readKeychainPassword } from "@/services/smtpMailer.js";
 import { SETUP_HINT } from "@/utils/docsUrls.js";
@@ -82,6 +84,14 @@ export interface ImapConfig {
   user: string;
   pass: string;
   accountLabel: string;
+  /**
+   * PEM file with extra CA certificates to trust for this account, added to
+   * Node's built-in roots (never replacing them, never disabling verification).
+   * For a server that sends only its leaf certificate: Node does not fetch the
+   * missing intermediate, so the chain fails to verify. Set per account in
+   * `APPLE_MAIL_MCP_IMAP_ACCOUNTS` as `tlsCaFile`.
+   */
+  tlsCaFile?: string;
 }
 
 export interface ImapSearchArgs {
@@ -351,6 +361,7 @@ interface ImapAccountSpec {
   password?: string;
   keychainService?: string;
   keychainAccount?: string;
+  tlsCaFile?: string;
 }
 
 function isTruthySetting(value: string | undefined): boolean {
@@ -461,6 +472,7 @@ function listImapAccountSpecs(env: NodeJS.ProcessEnv = process.env): ImapAccount
             password: str(a.password),
             keychainService: str(a.keychainService),
             keychainAccount: str(a.keychainAccount),
+            tlsCaFile: str(a.tlsCaFile),
           });
         }
       }
@@ -493,6 +505,7 @@ function specToConfig(spec: ImapAccountSpec, allowPlaintext = false): ImapConfig
     user: spec.user,
     pass,
     accountLabel: spec.accountLabel,
+    tlsCaFile: spec.tlsCaFile,
   };
 }
 
@@ -579,12 +592,32 @@ export function resolveImapConfig(
   return specToConfig(spec, isTruthySetting(env[IMAP_ENV.allowPlaintext]));
 }
 
+/**
+ * TLS options trusting `tlsCaFile` on top of Node's built-in roots. `ca` replaces
+ * the default list rather than extending it, so the roots are passed back in:
+ * without them the account would trust only the file. Verification stays on.
+ */
+function tlsWithExtraCa(cfg: ImapConfig): { ca: string[] } {
+  let pem: string;
+  try {
+    pem = readFileSync(cfg.tlsCaFile as string, "utf8");
+  } catch (e) {
+    throw new Error(
+      `Cannot read tlsCaFile "${cfg.tlsCaFile}" for IMAP account "${cfg.accountLabel}": ${
+        e instanceof Error ? e.message : String(e)
+      }`
+    );
+  }
+  return { ca: [...rootCertificates, pem] };
+}
+
 /** Build transport options with STARTTLS required unless explicitly opted out. */
 export function buildImapConnectionOptions(cfg: ImapConfig) {
   return {
     host: cfg.host,
     port: cfg.port,
     secure: cfg.secure,
+    ...(cfg.tlsCaFile ? { tls: tlsWithExtraCa(cfg) } : {}),
     // ImapFlow reads this as a tri-state, and the distinction matters:
     //   true      -> require STARTTLS; fail if the server does not offer it
     //   false     -> NEVER STARTTLS, even if the server advertises it
