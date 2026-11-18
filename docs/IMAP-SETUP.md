@@ -216,8 +216,19 @@ vars above define the first/default account; the array adds the rest:
 ```
 
 Each array entry accepts: `account`, `user`, `host`, `port`, `password`
-(discouraged — prefer Keychain), `keychainService`, `keychainAccount`. Each
-account keeps its own pooled IMAP connection.
+(discouraged — prefer Keychain), `keychainService`, `keychainAccount`,
+`tlsCaFile`. Each account keeps its own pooled IMAP connection.
+
+`tlsCaFile` is the path of a PEM file with extra CA certificates to trust for
+that account, added to Node's built-in roots (verification stays on). Use it
+when `doctor` says `unable to verify the first certificate` and the server sends
+only its own certificate without the intermediate CA: Mail.app and `openssl`
+tolerate that, Node does not. Find the intermediate in the certificate's
+`CA Issuers` URL (`openssl s_client -connect host:993 -servername host | openssl
+x509 -noout -text`), download it and convert it with `openssl x509 -inform DER -in
+ca.crt -out ca.pem`. The certificate must also cover the `host` you configure: a
+`*.example.net` certificate does not cover `imap.example.com`, so use the
+server's own name. Asking the provider to serve the full chain is the real fix.
 
 **The array alone is enough.** You do not need the legacy single-account vars:
 listing every account in `APPLE_MAIL_MCP_IMAP_ACCOUNTS` and setting none of

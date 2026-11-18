@@ -57,6 +57,10 @@ import {
 import { MAX_FETCH_ATTACHMENT_BYTES, MAX_IMAP_ATTACHMENT_BYTES } from "@/utils/attachmentLimits.js";
 import { ImapFlow } from "imapflow";
 import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { rootCertificates } from "node:tls";
 
 const cfg: ImapConfig = {
   host: "imap.gmail.com",
@@ -2806,6 +2810,52 @@ describe("mail transport TLS policy", () => {
       secure: false,
       doSTARTTLS: undefined,
     });
+  });
+});
+
+describe("tlsCaFile: an extra CA for a server that sends only its leaf certificate", () => {
+  const PEM = "-----BEGIN CERTIFICATE-----\nextra\n-----END CERTIFICATE-----\n";
+  const dirs: string[] = [];
+  const pemFile = () => {
+    const dir = mkdtempSync(join(tmpdir(), "mail-mcp-ca-"));
+    dirs.push(dir);
+    const file = join(dir, "ca.pem");
+    writeFileSync(file, PEM);
+    return file;
+  };
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("adds no tls option when the account sets none", () => {
+    expect("tls" in buildImapConnectionOptions(cfg)).toBe(false);
+  });
+
+  it("adds the file to Node's built-in roots and leaves verification on", () => {
+    const opts = buildImapConnectionOptions({ ...cfg, tlsCaFile: pemFile() }) as {
+      tls?: { ca: string[]; rejectUnauthorized?: boolean };
+    };
+    // Replacing the default list would trust only the file.
+    expect(opts.tls?.ca.slice(0, -1)).toEqual([...rootCertificates]);
+    expect(opts.tls?.ca.at(-1)).toBe(PEM);
+    expect(opts.tls && "rejectUnauthorized" in opts.tls).toBe(false);
+  });
+
+  it("names the account and the path when the file cannot be read", () => {
+    expect(() => buildImapConnectionOptions({ ...cfg, tlsCaFile: "/nonexistent/ca.pem" })).toThrow(
+      new RegExp(`tlsCaFile "/nonexistent/ca.pem" for IMAP account "${cfg.accountLabel}"`)
+    );
+  });
+
+  it("is read from a per-account IMAP_ACCOUNTS entry", () => {
+    const env = {
+      [IMAP_ENV.accounts]: JSON.stringify([
+        { account: "A", user: "a@example.com", password: "p", tlsCaFile: "/ca/a.pem" },
+        { account: "B", user: "b@example.com", password: "p" },
+      ]),
+    };
+    expect(resolveImapConfig(env, "A").tlsCaFile).toBe("/ca/a.pem");
+    expect(resolveImapConfig(env, "B").tlsCaFile).toBeUndefined();
   });
 });
 
