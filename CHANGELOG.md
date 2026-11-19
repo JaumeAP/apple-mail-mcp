@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+## [2.20.62-jap.1] - 2026-11-19 (JaumeAP fork)
+
+Merges upstream 2.20.58 to 2.20.62. Where both sides had solved the same problem, upstream's version is kept and the fork's is removed:
+
+- **SMTP sender identities** are upstream's (2.20.59, #383, carried forward from the fork's #378): an identity can no longer carry a `password`, which is read from the Keychain only, and a `from` listed twice is refused. A fork config that still has `password` in `APPLE_MAIL_MCP_SMTP_IDENTITIES` now fails with an error naming the identity.
+- **Server-side tool gate** (`APPLE_MAIL_MCP_MODE`) is upstream's (2.20.60, #384): the "fork only" note in the README is gone, and `sync-mail` and `restart-mail` stay in the fork's writing-tool list.
+- **Account settings** are upstream's (2.20.61, #385).
+- **windows-1252 decoding** is upstream's `src/utils/textDecode.ts` (2.20.58, #377).
+
+Kept from the fork: `sync-mail`, `restart-mail`, the default-sender lookup, the TLS certificate fix, `tlsCaFile` and the localized special mailbox fix. Upstream also takes dependency bumps: `nodemailer` 10.5.0, `typescript-eslint` 8.72.2 and `vite` 8.3.8. `build/` is regenerated.
+
 ## [2.20.57-jap.4] - 2026-11-19 (JaumeAP fork)
 
 ### Fixed
