@@ -156,7 +156,7 @@ test("produces a deterministic, self-contained archive with unchanged source lau
     first.version
   );
   const tools = responses.find((response) => response.id === 2).result.tools;
-  // 53 upstream tools plus the fork's own (account settings, sync-mail, restart-mail).
+  // 55 upstream tools plus the fork's own (sync-mail, restart-mail).
   assert.equal(tools.length, 57);
   assert.ok(tools.some((tool) => tool.name === "update-saved-draft"));
 });
