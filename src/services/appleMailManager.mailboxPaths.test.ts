@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveAppleMailboxPath } from "@/services/appleMailManager.js";
+import { parseRoleMailboxes, resolveAppleMailboxPath } from "@/services/appleMailManager.js";
 
 const EXCHANGE_PATHS = ["Inbox", "Archive", "Archive/Inbox", "Sent Items", "Deleted Items"];
 
@@ -44,5 +44,34 @@ describe("AppleScript mailbox path resolution", () => {
     expect(resolveAppleMailboxPath("_Foo", paths)).toBe("_Foo");
     expect(resolveAppleMailboxPath("_foo", paths)).toBe("_Foo");
     expect(resolveAppleMailboxPath("_Bar/_Baz", paths)).toBe("_Bar/_Baz");
+  });
+
+  // A Catalan Exchange account has no mailbox called INBOX or Sent Items, so the
+  // name/alias resolver leaves the name alone and the role lookup takes over.
+  it("does not resolve a localized special mailbox by name", () => {
+    const paths = ["Safata d'entrada", "Elements enviats"];
+    expect(resolveAppleMailboxPath("INBOX", paths)).toBe("INBOX");
+    expect(resolveAppleMailboxPath("Sent", paths)).toBe("Sent");
+  });
+});
+
+describe("Mail role mailbox parsing", () => {
+  it("maps each role to its path and ignores malformed records", () => {
+    const output = [
+      "inbox\x1fSafata d'entrada",
+      "sent\x1fElements enviats",
+      "junk",
+      "",
+      "trash\x1fArxiu/Elements suprimits",
+    ].join("\x1e");
+    expect(parseRoleMailboxes(output)).toEqual({
+      inbox: "Safata d'entrada",
+      sent: "Elements enviats",
+      trash: "Arxiu/Elements suprimits",
+    });
+  });
+
+  it("returns an empty map for an account with no special mailboxes", () => {
+    expect(parseRoleMailboxes("")).toEqual({});
   });
 });

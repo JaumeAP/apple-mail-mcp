@@ -104037,6 +104037,21 @@ var MAILBOX_ALIASES = {
 function mailboxLeaf(path3) {
   return path3.split("/").at(-1) ?? path3;
 }
+var MAILBOX_ROLES = {
+  inbox: { role: "inbox", unified: "inbox" },
+  sent: { role: "sent", unified: "sent mailbox" },
+  drafts: { role: "drafts", unified: "drafts mailbox" },
+  trash: { role: "trash", unified: "trash mailbox" },
+  junk: { role: "junk", unified: "junk mailbox" }
+};
+function parseRoleMailboxes(output2) {
+  const roles = {};
+  for (const record2 of output2.split(RECORD_SEP2)) {
+    const [role, path3] = record2.split(FIELD_SEP2);
+    if (role && path3) roles[role] = path3;
+  }
+  return roles;
+}
 function resolveAppleMailboxPath(mailbox, actualPaths, exactPathOnly = false) {
   if (actualPaths.length === 0) return mailbox;
   const candidates = [
@@ -105258,7 +105273,51 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * @returns Actual mailbox name, or original if not found
    */
   resolveMailbox(mailbox, account, exactPathOnly = false) {
-    return resolveAppleMailboxPath(mailbox, this.getCachedMailboxNames(account), exactPathOnly);
+    const names = this.getCachedMailboxNames(account);
+    const resolved = resolveAppleMailboxPath(mailbox, names, exactPathOnly);
+    if (exactPathOnly || names.length === 0 || names.includes(resolved)) return resolved;
+    const role = MAILBOX_ROLES[mailbox.trim().toLowerCase()];
+    const viaRole = role ? this.getRoleMailboxPath(role, account) : void 0;
+    return viaRole && names.includes(viaRole) ? viaRole : resolved;
+  }
+  /** Canonical path of the account's mailbox for a role, or undefined when Mail has none. */
+  getRoleMailboxPath(role, account) {
+    const entry = this.cache.mailboxNames.get(account);
+    if (!entry) return void 0;
+    entry.roles ??= this.fetchRoleMailboxes(account) ?? void 0;
+    return entry.roles?.[role.role];
+  }
+  /**
+   * Reads each role's mailbox for one account from Mail's unified special
+   * mailboxes (`inbox`, `sent mailbox`, …), whose `mailboxes` are the
+   * per-account ones. Null when the read fails or the account is the local store.
+   */
+  fetchRoleMailboxes(account) {
+    if (isLocalStoreLabel(account)) return null;
+    const safeAccount = escapeForAppleScript(account);
+    const blocks = Object.values(MAILBOX_ROLES).map(
+      ({ role, unified }) => `
+        try
+          repeat with _roleMb in mailboxes of ${unified}
+            try
+              if name of account of _roleMb is "${safeAccount}" then
+                ${mailboxPathFragment("_roleMb", "_rolePath")}
+                set end of _roleOut to "${role}${FIELD_SEP2}" & _rolePath
+                exit repeat
+              end if
+            end try
+          end repeat
+        end try`
+    );
+    const script = buildAppLevelScript(`
+      set _roleOut to {}
+      ${blocks.join("\n")}
+      set AppleScript's text item delimiters to "${RECORD_SEP2}"
+      return _roleOut as text
+    `);
+    const result = executeAppleScript(guardMailRunning(script));
+    if (!result.success || result.output.startsWith(MAIL_NOT_RUNNING_MARKER)) return null;
+    return parseRoleMailboxes(result.output.trim());
   }
   /**
    * The 1-based position of `path` in the account's cached mailbox list, which is

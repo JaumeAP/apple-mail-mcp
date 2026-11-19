@@ -1763,6 +1763,31 @@ function mailboxLeaf(path: string): string {
 }
 
 /**
+ * Mailbox roles Mail.app knows in any language, keyed by the lowercase name a
+ * caller uses, with the AppleScript expression for the unified mailbox of that
+ * role (its `mailboxes` are the per-account ones). Used when no mailbox is
+ * literally called "INBOX"/"Sent"/…, e.g. an Exchange account in Catalan
+ * ("Safata d'entrada", "Elements enviats").
+ */
+const MAILBOX_ROLES: Record<string, { role: string; unified: string }> = {
+  inbox: { role: "inbox", unified: "inbox" },
+  sent: { role: "sent", unified: "sent mailbox" },
+  drafts: { role: "drafts", unified: "drafts mailbox" },
+  trash: { role: "trash", unified: "trash mailbox" },
+  junk: { role: "junk", unified: "junk mailbox" },
+};
+
+/** Parses `role<FIELD_SEP>path` records (RECORD_SEP-joined) into a role → path map. */
+export function parseRoleMailboxes(output: string): Record<string, string> {
+  const roles: Record<string, string> = {};
+  for (const record of output.split(RECORD_SEP)) {
+    const [role, path] = record.split(FIELD_SEP);
+    if (role && path) roles[role] = path;
+  }
+  return roles;
+}
+
+/**
  * Resolve a user-supplied mailbox reference against canonical mailbox paths.
  * Exact paths win, which intentionally makes "Inbox" select the top-level
  * mailbox even when Archive/Inbox also exists. Legacy leaf names remain valid
@@ -1955,7 +1980,13 @@ export class AppleMailManager {
     accounts: null as { data: Account[]; expiry: number } | null,
     mailboxNames: new Map<
       string,
-      { data: string[]; expiry: number; receivingServerHost?: string }
+      {
+        data: string[];
+        expiry: number;
+        receivingServerHost?: string;
+        /** Role (inbox, sent, …) → canonical path, from Mail's own special mailboxes. */
+        roles?: Record<string, string>;
+      }
     >(),
     /** Account name → Mail account id (the host part of its mailbox URLs). */
     accountIds: null as { data: Map<string, string>; expiry: number } | null,
@@ -3343,7 +3374,59 @@ ${indent}end try${this.sanitizeFragment("_uacct", indent)}${this.sanitizeFragmen
    * @returns Actual mailbox name, or original if not found
    */
   private resolveMailbox(mailbox: string, account: string, exactPathOnly = false): string {
-    return resolveAppleMailboxPath(mailbox, this.getCachedMailboxNames(account), exactPathOnly);
+    const names = this.getCachedMailboxNames(account);
+    const resolved = resolveAppleMailboxPath(mailbox, names, exactPathOnly);
+    if (exactPathOnly || names.length === 0 || names.includes(resolved)) return resolved;
+    // Nothing matched by name or English alias: ask Mail which mailbox of this
+    // account has that role, so localized names ("Safata d'entrada") resolve.
+    const role = MAILBOX_ROLES[mailbox.trim().toLowerCase()];
+    const viaRole = role ? this.getRoleMailboxPath(role, account) : undefined;
+    return viaRole && names.includes(viaRole) ? viaRole : resolved;
+  }
+
+  /** Canonical path of the account's mailbox for a role, or undefined when Mail has none. */
+  private getRoleMailboxPath(
+    role: (typeof MAILBOX_ROLES)[string],
+    account: string
+  ): string | undefined {
+    const entry = this.cache.mailboxNames.get(account);
+    if (!entry) return undefined;
+    // A failed read is not cached, so it is retried once Mail answers.
+    entry.roles ??= this.fetchRoleMailboxes(account) ?? undefined;
+    return entry.roles?.[role.role];
+  }
+
+  /**
+   * Reads each role's mailbox for one account from Mail's unified special
+   * mailboxes (`inbox`, `sent mailbox`, …), whose `mailboxes` are the
+   * per-account ones. Null when the read fails or the account is the local store.
+   */
+  private fetchRoleMailboxes(account: string): Record<string, string> | null {
+    if (isLocalStoreLabel(account)) return null;
+    const safeAccount = escapeForAppleScript(account);
+    const blocks = Object.values(MAILBOX_ROLES).map(
+      ({ role, unified }) => `
+        try
+          repeat with _roleMb in mailboxes of ${unified}
+            try
+              if name of account of _roleMb is "${safeAccount}" then
+                ${mailboxPathFragment("_roleMb", "_rolePath")}
+                set end of _roleOut to "${role}${FIELD_SEP}" & _rolePath
+                exit repeat
+              end if
+            end try
+          end repeat
+        end try`
+    );
+    const script = buildAppLevelScript(`
+      set _roleOut to {}
+      ${blocks.join("\n")}
+      set AppleScript's text item delimiters to "${RECORD_SEP}"
+      return _roleOut as text
+    `);
+    const result = executeAppleScript(guardMailRunning(script));
+    if (!result.success || result.output.startsWith(MAIL_NOT_RUNNING_MARKER)) return null;
+    return parseRoleMailboxes(result.output.trim());
   }
 
   /**

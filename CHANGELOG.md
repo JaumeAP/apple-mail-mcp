@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [2.20.57-jap.4] - 2026-11-19 (JaumeAP fork)
+
+### Fixed
+
+- **A localized special mailbox now resolves from its role.** An AppleScript account whose mailboxes are not named `INBOX`, `Sent Items` and so on (for example Exchange in Catalan: `Safata d'entrada`, `Elements enviats`) failed with `Mailbox "INBOX" not found`, because the alias table only knows English names. When no name or alias matches, `resolveMailbox` now asks Mail which mailbox of the account has the role (`inbox`, `sent mailbox`, `drafts mailbox`, `trash mailbox`, `junk mailbox`), read from Mail's unified mailboxes. A name that already resolves is untouched and costs no extra call. Not tested on Gmail; the local store is skipped. `build/` is regenerated.
+
 ## [2.20.57-jap.3] - 2026-11-18 (JaumeAP fork)
 
 ### Fixed
